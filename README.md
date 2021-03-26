@@ -90,6 +90,16 @@ but for introducing enclosures of integrals into the proof context. As
 with `interval_intro`, keywords `lower`, `upper`, and `as`, are
 supported.
 
+The `plot` tactic produces correct function graphs, that is, two curves
+that are guaranteed to enclose the given function on the given input
+interval. It is invoked as `plot f x1 x2`. An output range can optionally
+be passed: `plot f x1 x2 y1 y2`. If not, it is computed on the fly.
+
+The `Interval.Plot` file provides a `Plot` command that can be used to
+display a function graph. This is done by invoking the `gnuplot` command,
+which thus needs to be installed. If a string is passed as an optional
+argument, instead of invoking `gnuplot`, a file is created with the
+corresponding Gnuplot script.
 
 Fine-tuning
 -----------
@@ -159,8 +169,9 @@ arguments, if any):
     prove goals that are feasible using automatic differentiation. As
     with `i_autodiff`, the `i_taylor` parameter is only meaningful for
     the `interval` and `interval_intro` tactics. It is implicit for the
-    `integral` and `integral_intro` tactics, as Taylor models of the
-    integrand are computed with respect to the integration variable.
+    `integral`, `integral_intro`, and `plot` tactics, as Taylor models of
+    the integrand (respectively, plotted function) are computed with
+    respect to its variable.
 
   - `i_degree (d:nat)`
 
@@ -195,6 +206,14 @@ arguments, if any):
     `integral_intro` will compute an enclosure of the integral accurate
     to three decimal digits, assuming `i_fuel` is large enough.
 
+  - `i_size (w h:positive)`
+
+    Instruct the `plot` tactic to target a resolution of `w` by `h`
+    pixels. This parameter is meaningless for the other tactics. It
+    defaults to a resolution of `512x384`. The tactic will subdivide the
+    input interval into `w` subintervals, and it will try to ensure that
+    the function graph is no larger than a few pixels vertically.
+
   - `i_delay`
 
     Prevent Coq from verifying the generated proof at invocation time.
@@ -215,8 +234,8 @@ Examples
 --------
 
 ```coq
-Require Import Reals.
-Require Import Interval.Tactic.
+From Coq Require Import Reals.
+From Interval Require Import Tactic.
 
 Open Scope R_scope.
 
@@ -275,7 +294,7 @@ Proof.
   interval with (i_bisect x, i_autodiff x).
 Qed.
 
-Require Import Coquelicot.Coquelicot.
+From Coquelicot Require Import Coquelicot.
 
 Goal
   Rabs (RInt (fun x => atan (sqrt (x*x + 2)) / (sqrt (x*x + 2) * (x*x + 1))) 0 1
@@ -291,4 +310,17 @@ Proof.
   refine ((fun H => Rle_antisym _ _ (proj2 H) (proj1 H)) _).
   integral with (i_prec 10).
 Qed.
+
+From Interval Require Import Plot.
+
+Definition p1 := ltac:(plot (fun x => x^2 * sin (x^2)) (-4) 4).
+Plot p1.
+
+Definition p2 := ltac:(
+  plot (fun x => sin (x + exp x))
+    0 6 (-5/4) (5/4) with (i_size 120 90, i_degree 6)).
+Plot p2 as "picture.gnuplot".
+
+Plot ltac:(plot (fun x => sqrt (1 - x^2) * sin (x * 200)) (-1) 1
+  with (i_degree 1, i_size 100 300)).
 ```
