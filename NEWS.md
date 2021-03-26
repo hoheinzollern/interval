@@ -1,3 +1,9 @@
+Version 4.2.0
+-------------
+
+* added tactic `plot` for computing a function graph
+* added command `Plot` for passing a function graph to Gnuplot
+
 Version 4.1.1
 -------------
 
