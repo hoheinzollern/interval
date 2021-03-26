@@ -26,10 +26,10 @@ Require Import Interval.
 Require Import Float.
 Require Import Transcend.
 
-Module FloatIntervalFull (F : FloatOps with Definition sensible_format := true) <: IntervalOps.
+Module FloatIntervalFull (F'' : FloatOps with Definition sensible_format := true) <: IntervalOps.
 
-Module T := TranscendentalFloatFast F.
-Include FloatInterval F.
+Module T := TranscendentalFloatFast F''.
+Include FloatInterval F''.
 
 Definition c3 := F.fromZ 3.
 Definition c4 := F.fromZ 4.
