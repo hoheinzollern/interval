@@ -1,5 +1,5 @@
-Require Import Reals.
-Require Import Interval.Tactic.
+From Coq Require Import Reals.
+From Interval Require Import Tactic.
 
 Open Scope R_scope.
 
@@ -58,7 +58,7 @@ Proof.
   interval with (i_bisect x, i_autodiff x).
 Qed.
 
-Require Import Coquelicot.Coquelicot.
+From Coquelicot Require Import Coquelicot.
 
 Goal
   Rabs (RInt (fun x => atan (sqrt (x*x + 2)) / (sqrt (x*x + 2) * (x*x + 1))) 0 1
@@ -84,3 +84,12 @@ Proof.
   interval.
 Qed.
 *)
+
+Definition p1 := ltac:(plot (fun x => x^2 * sin (x^2)) (-4) 4).
+
+Definition p2 := ltac:(
+  plot (fun x => sin (x + exp x))
+    0 6 (-5/4) (5/4) with (i_size 120 90, i_degree 6)).
+
+Definition p3 := ltac:(plot (fun x => sqrt (1 - x^2) * sin (x * 200)) (-1) 1
+  with (i_degree 1, i_size 100 300)).
