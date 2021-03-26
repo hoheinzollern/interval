@@ -22,47 +22,47 @@ build-image:
   tags:
     - shell
 
-.docker_template: &docker_definition
+.docker_template:
   image: "$BUILD_IMAGE"
   tags:
     - docker
 
-.build_template: &build_definition
+build-minimal:
   stage: build
   script:
-    - PATH=/home/user/.local/bin:$PATH
+    - opam switch minimal
     - eval `opam env`
     - autoconf
     - ./configure
     - ./remake all check
-  <<: *docker_definition
-
-build-minimal:
-  before_script:
-    - opam switch minimal
-  <<: *build_definition
+  extends: .docker_template
 
 build-latest:
-  before_script:
+  stage: build
+  script:
     - opam switch latest
-  <<: *build_definition
+    - eval `opam env`
+    - autoconf
+    - ./configure
+    - ./remake all check check-plot
+  extends: .docker_template
 
-.opam_template: &opam_definition
+.opam_template:
   stage: test
   script:
     - opam pin -y -n add coq-interval .
     - opam install -v coq-interval
-  <<: *docker_definition
+  extends: .docker_template
 
 opam-minimal:
   before_script:
     - opam switch minimal
-  <<: *opam_definition
+  extends: .opam_template
 
 opam-latest:
   before_script:
     - opam switch latest
-  <<: *opam_definition
+  extends: .opam_template
 
 pages:
   stage: deploy
@@ -77,4 +77,4 @@ pages:
     - public
   only:
     - master
-  <<: *docker_definition
+  extends: .docker_template

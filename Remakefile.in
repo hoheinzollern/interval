@@ -53,8 +53,6 @@ all: $(VOFILES)
 
 clean: src/clean testsuite/clean
 
-check: testsuite/check
-
 Remakefile: Remakefile.in config.status
 	./config.status Remakefile
 
@@ -95,7 +93,7 @@ src/clean:
 	find . -type d -name ".coq-native" -empty -prune -exec rmdir "{}" \;
 	rm -f Plot/interval_plot.ml Plot/interval_plot.cm* Plot/interval_plot.o
 
-testsuite/check: src/Tactic.vo
+check: src/Tactic.vo
 	set +e
 	cd testsuite
 	logfile="failures-`date '+%Y-%m-%d'`.log"
@@ -123,6 +121,18 @@ testsuite/check: src/Tactic.vo
 	fi
 	rm log.tmp
 	exit ${return_code}
+
+check-plot: src/Tactic.vo src/Plot.vo
+	cat > check_plot_tmp.v <<EOF
+	From Coq Require Import Reals.
+	From Interval Require Import Tactic Plot.
+	Open Scope R_scope.
+	Definition p := ltac:(plot (fun x => x^2) (-10) 10 with (i_size 20 20)).
+	Plot p as "check_plot_tmp.gp".
+	EOF
+	@COQC@ -R src Interval -I src/Plot check_plot_tmp.v
+	[ `wc -l < check_plot_tmp.gp` = 30 ]
+	rm check_plot_tmp.gp check_plot_tmp.v
 
 testsuite/clean:
 	rm -f testsuite/failures-*.log
