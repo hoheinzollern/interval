@@ -422,7 +422,8 @@ Ltac plot1_aux1 prec x1 x2 w h native tac_b :=
       | (reify_var :: ?vars)%list => vars
       end in
     eapply plot_ext ; [
-      let t := fresh "t" in intros t ;
+      let t := fresh "t" in
+      intros t ; hide_lhs ;
       let fapp := eval cbv beta in (f t) in
       reify_partial fapp (t :: vars) ;
       exact (fun H => H) |] ;
