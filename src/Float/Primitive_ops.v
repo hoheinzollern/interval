@@ -1,12 +1,10 @@
-From Coq Require Import ZArith Int63 Floats Psatz.
-From Flocq Require Import Raux.
+From Coq Require Import ZArith Reals Int63 Floats Psatz.
+From Flocq Require Import Zaux Raux BinarySingleNaN PrimFloat Sterbenz Mult_error.
 
 Require Import Xreal.
 Require Import Basic.
 Require Import Sig.
 Require Generic_proof.
-
-From Flocq Require Import BinarySingleNaN PrimFloat Sterbenz Mult_error.
 
 Module PrimitiveFloat <: FloatOps.
 

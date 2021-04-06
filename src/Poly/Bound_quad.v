@@ -20,7 +20,7 @@ the economic rights, and the successive licensors have only limited
 liability. See the COPYING file for more details.
 *)
 
-From Coq Require Import ZArith.
+From Coq Require Import ZArith Reals.
 From Flocq Require Import Raux.
 From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
 

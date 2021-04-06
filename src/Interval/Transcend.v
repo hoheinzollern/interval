@@ -18,7 +18,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import Reals Psatz.
-From Flocq Require Import Raux Digits.
+From Flocq Require Import Zaux Raux Digits.
 
 Require Import Stdlib.
 Require Import Xreal.

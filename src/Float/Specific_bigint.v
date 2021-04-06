@@ -17,9 +17,9 @@ the economic rights, and the successive licensors have only limited
 liability. See the COPYING file for more details.
 *)
 
-From Coq Require Import Bool Psatz.
+From Coq Require Import Bool ZArith Reals Psatz.
 From Bignums Require Import BigN BigZ.
-From Flocq Require Import Raux Digits.
+From Flocq Require Import Zaux Raux Digits.
 
 Require Import Basic.
 Require Import Generic.

@@ -17,8 +17,8 @@ the economic rights, and the successive licensors have only limited
 liability. See the COPYING file for more details.
 *)
 
-From Coq Require Import ZArith.
-From Flocq Require Import Raux.
+From Coq Require Import ZArith Reals.
+From Flocq Require Import Zaux Raux.
 
 Require Import Basic.
 Require Import Generic.

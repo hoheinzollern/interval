@@ -17,8 +17,8 @@ the economic rights, and the successive licensors have only limited
 liability. See the COPYING file for more details.
 *)
 
-From Coq Require Import ZArith Lia Bool Psatz.
-From Flocq Require Import Raux Digits Bracket.
+From Coq Require Import ZArith Reals Lia Bool Psatz.
+From Flocq Require Import Zaux Raux Digits Bracket.
 From mathcomp.ssreflect Require Import ssrbool.
 
 Require Import Xreal.

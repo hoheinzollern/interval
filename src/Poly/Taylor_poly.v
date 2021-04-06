@@ -21,7 +21,7 @@ liability. See the COPYING file for more details.
 *)
 
 
-From Coq Require Import BinPos.
+From Coq Require Import ZArith Reals.
 From Flocq Require Import Raux.
 From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
 

@@ -18,7 +18,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import Reals Bool ZArith.
-From Flocq Require Import Raux Div Sqrt.
+From Flocq Require Import Zaux Raux Div Sqrt.
 
 Require Import Xreal.
 Require Import Basic.

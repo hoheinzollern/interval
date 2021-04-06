@@ -18,7 +18,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import ZArith Reals Psatz.
-From Flocq Require Import Raux.
+From Flocq Require Import Zaux Raux.
 
 Require Import Xreal.
 Require Import Basic.
