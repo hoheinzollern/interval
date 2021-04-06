@@ -132,7 +132,7 @@ check-plot: src/Tactic.vo src/Plot.vo
 	EOF
 	@COQC@ -R src Interval -I src/Plot check_plot_tmp.v
 	[ `wc -l < check_plot_tmp.gp` = 30 ]
-	rm check_plot_tmp.gp check_plot_tmp.v
+	rm check_plot_tmp.*
 
 testsuite/clean:
 	rm -f testsuite/failures-*.log
