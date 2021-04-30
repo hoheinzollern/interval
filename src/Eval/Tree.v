@@ -180,6 +180,12 @@ Ltac get_vars t l :=
     end in
   aux t l.
 
+Module Compatibility. Definition Q2R := False. End Compatibility.
+Import Compatibility Rdefinitions.
+(* Q2R doesn't exist in Coq < 8.13 but is referenced in the next tactic,
+   so this just gives a fake definition for compatibility purpose.
+   This could be removed once we require Coq >= 8.13. *)
+
 Ltac reify t l :=
   let rec aux t :=
     let aux_u o a :=
@@ -214,6 +220,8 @@ Ltac reify t l :=
     | Rplus ?a ?b => aux_b Add a b
     | Rminus ?a ?b => aux_b Sub a b
     | Rmult ?a (Rinv ?b) => aux_b Div a b
+    | Q2R (QArith_base.Qmake ?a ?b) =>
+      aux_b Div constr:(IZR a) constr:(IZR (Zpos b))
     | Rmult ?a ?b => aux_b Mul a b
     | Rdiv ?a ?b => aux_b Div a b
     | Rnearbyint ?a ?b => aux_u (Nearbyint a) b
