@@ -241,6 +241,15 @@ Ltac reify t l :=
       match is_Z_const n with true => constr:(Econst (Int n)) end
     end
     | _ =>
+      let rec head t :=
+        lazymatch t with
+        | ?f _ => head f
+        | _ => t
+        end in
+      let h := head t in
+      let t' := eval unfold h in t in
+      aux t'
+    | _ =>
       let n := list_find t l in
       constr:(Evar n)
     end in

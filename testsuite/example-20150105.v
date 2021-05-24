@@ -1,4 +1,5 @@
-Require Import Reals Interval.Tactic.
+From Coq Require Import Reals.
+From Interval Require Import Tactic.
 
 Open Scope R_scope.
 
@@ -17,6 +18,5 @@ Goal forall x : R, Rabs x <= 35/100 ->
   Rabs ((r - exp x) / exp x) <= 17 * pow2 (-34).
 Proof.
 intros x Hx p q r.
-unfold r, p, q.
 interval with (i_prec 40, i_bisect x, i_taylor x, i_degree 3).
 Qed.

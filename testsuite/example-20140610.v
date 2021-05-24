@@ -1,5 +1,5 @@
-Require Import Reals.
-Require Import Interval.Tactic.
+From Coq Require Import Reals.
+From Interval Require Import Tactic.
 Local Open Scope R_scope.
 
 (*
@@ -23,7 +23,6 @@ Definition arp phi :=
 Goal forall phi, 0 <= phi <= max ->
   Rabs ((rp phi - arp phi) / rp phi) <= 23/16777216.
 Proof.
-unfold rp, arp, umf2, a, f, max.
 intros phi Hphi.
 (*
 Time interval with (i_bisect phi, i_autodiff phi). (* 15 s *)
