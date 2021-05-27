@@ -2589,7 +2589,7 @@ replace (get_sign _) with s; [ |now rewrite get_sign_equiv, Prim2B_B2Prim].
 rewrite <-(B2Prim_Prim2B (of_int63 _)).
 rewrite <-(B2Prim_Prim2B (of_int63 (_ + 1))).
 replace (_ == 0)%int63
-  with (Z.eqb (Int63.to_Z (normfr_mantissa f' >> of_Z (FloatOps.prec - e'') land 1)) 0).
+  with (Z.eqb (Int63.to_Z (normfr_mantissa f' >> of_Z (FloatOps.prec - e'') land 1)%int63) 0).
 2:{ now case Int63.eqbP; intro H; [rewrite H|rewrite Z.eqb_neq]. }
 rewrite Int63.land_spec', Int63.to_Z_1.
 rewrite !of_int63_equiv, Int63.add_spec, !lsr_spec, normfr_mantissa_equiv.
