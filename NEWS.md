@@ -1,8 +1,15 @@
+Version 4.3.0
+-------------
+
+* ensured compatibility from Coq 8.8 to 8.14
+* made reification unfold transparent constants
+* added reification of `Q2R` and thus of rational literals
+
 Version 4.2.0
 -------------
 
 * added tactic `plot` for computing a function graph
-* added command `Plot` for passing a function graph to Gnuplot
+* added command `Plot` for passing a function graph to Gnuplot (requires Coq >= 8.11)
 
 Version 4.1.1
 -------------
