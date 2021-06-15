@@ -169,7 +169,7 @@ let () =
              (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_constr),
               Vernacextend.TyNil)),
 #if COQVERSION >= 81400
-        (fun r ?loc ~atts ->
+        (fun r ?loc ~atts () ->
 #else
         (fun r ~atts ->
 #endif
@@ -188,7 +188,7 @@ let () =
                    (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_string),
                     Vernacextend.TyNil)))),
 #if COQVERSION >= 81400
-        (fun r s ?loc ~atts ->
+        (fun r s ?loc ~atts () ->
 #else
         (fun r s ~atts ->
 #endif
