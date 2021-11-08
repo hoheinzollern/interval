@@ -326,8 +326,8 @@ case x as [s|s| |s m e B]; [now case s..|now simpl| ].
 now rewrite real_correct, toX_Prim2B, Prim2B_B2Prim.
 Qed.
 
-Existing Instance Hprec.
-Existing Instance Hmax.
+Local Existing Instance Hprec.
+Local Existing Instance Hmax.
 
 Lemma of_int63_exact i :
   (Int63.to_Z i <= 2^53)%Z ->
@@ -965,8 +965,8 @@ case fx; [intros [ | ]..| |intros [ | ] mx ex];
   now rewrite Generic_proof.FtoR_abs.
 Qed.
 
-Existing Instance PrimFloat.Hprec.
-Existing Instance PrimFloat.Hmax.
+Local Existing Instance PrimFloat.Hprec.
+Local Existing Instance PrimFloat.Hmax.
 
 Lemma Bdiv2_correct x :
   is_finite x = true ->

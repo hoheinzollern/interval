@@ -26,6 +26,9 @@ Require Import Xreal.
 Require Import Basic.
 Require Import Generic.
 
+Local Existing Instance zpos_gt_0.
+Local Existing Instance valid_rnd_of_mode.
+
 Lemma FtoR_Rpos :
   forall beta m e,
   (0 < FtoR beta false m e)%R.

@@ -168,12 +168,12 @@ Definition FtoX {beta} (f : float beta) :=
   | Float s m e => Xreal (FtoR beta s m e)
   end.
 
-Instance zpos_gt_0 : forall prec, Prec_gt_0 (Zpos prec).
+Lemma zpos_gt_0 : forall prec, Prec_gt_0 (Zpos prec).
 Proof.
 easy.
 Qed.
 
-Instance valid_rnd_of_mode : forall mode, Valid_rnd (rnd_of_mode mode).
+Lemma valid_rnd_of_mode : forall mode, Valid_rnd (rnd_of_mode mode).
 Proof.
 destruct mode ; simpl ; auto with typeclass_instances.
 Qed.
