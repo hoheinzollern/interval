@@ -26,8 +26,8 @@ RUN opam init -y --no-setup -j1 --bare --disable-sandboxing && \
     opam switch create minimal ocaml-system && opam install -y $OPAM_PACKAGES && \
     opam switch create latest  ocaml-system && opam install -y $OPAM_PACKAGES && \
     opam install -y --switch=minimal coq.8.8.2 && \
-    opam install -y --switch=latest  coq.8.13.0 && \
+    opam install -y --switch=latest  coq.8.14.0 && \
     opam repository add coq-released https://coq.inria.fr/opam/released --all-switches && \
     opam install -y --switch=minimal coq-bignums.8.8.0  coq-flocq.3.1.0 coq-mathcomp-ssreflect.1.7.0  coq-coquelicot.3.0.3 && \
-    opam install -y --switch=latest  coq-bignums.8.13.0 coq-flocq.3.4.0 coq-mathcomp-ssreflect.1.12.0 coq-coquelicot.3.2.0 && \
+    opam install -y --switch=latest  coq-bignums.8.14.0 coq-flocq.4.0.0 coq-mathcomp-ssreflect.1.13.0 coq-coquelicot.3.2.0 && \
     opam clean -a -c -r -s --logs
