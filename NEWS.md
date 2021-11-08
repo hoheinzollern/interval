@@ -1,3 +1,8 @@
+Version 4.3.1
+-------------
+
+* made plotting more reliable when an output bound is close to zero
+
 Version 4.3.0
 -------------
 
