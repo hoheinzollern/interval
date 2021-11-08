@@ -380,11 +380,11 @@ Definition get_bounds (prec : F.precision) (l : list I.type): F.type * F.type :=
     | cons hi l => List.fold_left I.join l hi
     | nil => I.empty
     end in
-  (I.lower yi, I.upper yi).
-  (*
-  let mi := I.div prec (I.sub prec yi2 yi1) (I.fromZ prec 20) in
-  (I.sub prec yi1 mi, I.add prec yi2 mi)
-  *)
+  (* yl and yu might be subnormal (zero), which makes Gnuplot choke, so requantify them *)
+  let yl := I.lower yi in
+  let yu := I.upper yi in
+  let yw := F.sub_UP prec yu yl in
+  (F.sub_DN prec yu yw, F.add_UP prec yl yw).
 
 Ltac unify_eq native :=
   match goal with
