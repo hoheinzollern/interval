@@ -12,8 +12,14 @@ let get_current_context = Declare.get_current_context
 let get_current_context = Pfedit.get_current_context
 #endif
 
+#if COQVERSION >= 81500
+let constr_of_global gr = UnivGen.constr_of_monomorphic_global (Global.env ()) gr
+#else
+let constr_of_global = UnivGen.constr_of_monomorphic_global
+#endif
+
 let find_reference t x =
-  lazy (EConstr.of_constr (UnivGen.constr_of_monomorphic_global (Coqlib.gen_reference_in_modules "Interval" [t] x)))
+  lazy (EConstr.of_constr (constr_of_global (Coqlib.gen_reference_in_modules "Interval" [t] x)))
 
 let is_global evd c t = EConstr.eq_constr evd (Lazy.force c) t
 
@@ -157,6 +163,12 @@ let display_plot p f ~pstate =
 let __coq_plugin_name = "interval_plot"
 let _ = Mltop.add_known_module __coq_plugin_name
 
+#if COQVERSION >= 81500
+let vtreadproofopt = Vernacextend.vtreadproofopt
+#else
+let vtreadproofopt x = Vernacextend.VtReadProofOpt x
+#endif
+
 let () =
   Vernacextend.vernac_extend
     ~command:"VernacPlot"
@@ -174,7 +186,7 @@ let () =
         (fun r ~atts ->
 #endif
           Attributes.unsupported_attributes atts;
-          Vernacextend.VtReadProofOpt (display_plot r None)),
+          vtreadproofopt (display_plot r None)),
         None);
      Vernacextend.TyML
        (false,
@@ -193,5 +205,5 @@ let () =
         (fun r s ~atts ->
 #endif
           Attributes.unsupported_attributes atts;
-          Vernacextend.VtReadProofOpt (display_plot r (Some s))),
+          vtreadproofopt (display_plot r (Some s))),
         None)]

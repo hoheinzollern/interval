@@ -134,9 +134,9 @@ Definition mag x :=
   let (_, e) := PrimFloat.frshiftexp x in
   (Int63.to_Z e - FloatOps.shift)%Z.
 
-Definition valid_ub x := negb (x == neg_infinity)%float.
+Definition valid_ub x := negb (PrimFloat.eqb x neg_infinity).
 
-Definition valid_lb x := negb (x == infinity)%float.
+Definition valid_lb x := negb (PrimFloat.eqb x infinity).
 
 Definition Xcomparison_of_float_comparison c :=
   match c with
@@ -203,15 +203,15 @@ Definition nearbyint default (mode : rounding_mode) (f : type) :=
       | rnd_DN =>
         if get_sign f then
           let f'' := (- (of_int63 mh))%float in
-          if (f < f'')%float then (- (of_int63 (mh + 1)))%float else f''
+          if PrimFloat.ltb f f'' then (- (of_int63 (mh + 1)))%float else f''
         else
           of_int63 mh
       | rnd_UP =>
         if get_sign f then
-          (- (of_int63 mh))%float
+          PrimFloat.opp (of_int63 mh)
         else
           let f'' := of_int63 mh in
-          if (f'' < f)%float then of_int63 (mh + 1) else f''
+          if PrimFloat.ltb f'' f then of_int63 (mh + 1) else f''
       | rnd_NE =>
         let fl := of_int63 mh in
         let f' :=
@@ -219,7 +219,7 @@ Definition nearbyint default (mode : rounding_mode) (f : type) :=
             | FLt => fl
             | FGt => of_int63 (mh + 1)
             | FEq | FNotComparable (* never happens *) =>
-                if (mh land 1 == 0)%int63 then fl else of_int63 (mh + 1)
+                if Int63.eqb (mh land 1) 0 then fl else of_int63 (mh + 1)
             end in
         if get_sign f then (- f')%float else f'
       end
@@ -2588,7 +2588,7 @@ intros He'' Hf'e'' He''prec.
 replace (get_sign _) with s; [ |now rewrite get_sign_equiv, Prim2B_B2Prim].
 rewrite <-(B2Prim_Prim2B (of_int63 _)).
 rewrite <-(B2Prim_Prim2B (of_int63 (_ + 1))).
-replace (_ == 0)%int63
+replace (Int63.eqb _ 0)
   with (Z.eqb (Int63.to_Z (normfr_mantissa f' >> of_Z (FloatOps.prec - e'') land 1)%int63) 0).
 2:{ now case Int63.eqbP; intro H; [rewrite H|rewrite Z.eqb_neq]. }
 rewrite Int63.land_spec', Int63.to_Z_1.
