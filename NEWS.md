@@ -1,3 +1,9 @@
+Version 4.4.0
+-------------
+
+* ensured compatibility from Coq 8.8 to 8.15
+* made `interval` and `integral` usable in tactic-in-term contexts
+
 Version 4.3.1
 -------------
 
