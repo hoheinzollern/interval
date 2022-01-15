@@ -90,6 +90,14 @@ but for introducing enclosures of integrals into the proof context. As
 with `interval_intro`, keywords `lower`, `upper`, and `as`, are
 supported.
 
+Both `interval_intro` and `integral_intro` are available as degenerate
+forms that unify the obtained enclosure with the current goal. They
+are meant to be used when the goal is an existential variable, e.g.,
+in a tactic-in-term context. Those degenerate forms are named
+`interval` and `integral` for conciseness, but they should not be
+confused with the original tactics. For all intents and purposes, they
+behave like `interval_intro` and `integral_intro`.
+
 The `plot` tactic produces correct function graphs, that is, two curves
 that are guaranteed to enclose the given function on the given input
 interval. It is invoked as `plot f x1 x2`. An output range can optionally
@@ -310,6 +318,11 @@ Proof.
   refine ((fun H => Rle_antisym _ _ (proj2 H) (proj1 H)) _).
   integral with (i_prec 10).
 Qed.
+
+Definition bounded_by_1 x `(0 <= x <= PI/2) :=
+  ltac:(interval ((cos x)² + (sin x)²) with (i_taylor x)).
+
+Definition bounded_by_PI_4 := ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
 
 From Interval Require Import Plot.
 

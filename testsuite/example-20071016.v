@@ -85,6 +85,11 @@ Proof.
 Qed.
 *)
 
+Definition bounded_by_1 x `(0 <= x <= PI/2) :=
+  ltac:(interval ((cos x)² + (sin x)²) with (i_taylor x)).
+
+Definition bounded_by_PI_4 := ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
+
 Definition p1 := ltac:(plot (fun x => x^2 * sin (x^2)) (-4) 4).
 
 Definition p2 := ltac:(
