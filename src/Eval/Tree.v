@@ -122,18 +122,37 @@ Ltac list_add a l :=
 Ltac list_find a l :=
   let rec aux l n :=
     match l with
-    | nil       => false
     | cons a _  => n
     | cons _ ?l => aux l (S n)
     end in
   aux l O.
 
+Ltac hyp_on_var x :=
+  lazymatch goal with
+  | H : (?u <= x <= ?v)%R |- _ => true
+  | H : (?u <= x < ?v)%R |- _ => true
+  | H : (?u < x <= ?v)%R |- _ => true
+  | H : (?u < x < ?v)%R |- _ => true
+  | H : (?u <= x)%R |- _ => true
+  | H : (x >= ?u)%R |- _ => true
+  | H : (x <= ?v)%R |- _ => true
+  | H : (?v >= x)%R |- _ => true
+  | H : (Rabs x <= ?v)%R |- _ => true
+  | H : (?v >= Rabs x)%R |- _ => true
+  | H : (?u < x)%R |- _ => true
+  | H : (x > ?u)%R |- _ => true
+  | H : (x < ?v)%R |- _ => true
+  | H : (?v > x)%R |- _ => true
+  | H : (Rabs x < ?v)%R |- _ => true
+  | H : (?v > Rabs x)%R |- _ => true
+  end.
+
 Ltac get_vars t l :=
-  let rec aux t l :=
-    let aux_u a := aux a l in
+  let rec aux t l top :=
+    let aux_u a := aux a l top in
     let aux_b a b :=
-      let l := aux a l in
-      aux b l in
+      let l := aux a l top in
+      aux b l top in
     match True with
     | True =>
     lazymatch t with
@@ -176,9 +195,28 @@ Ltac get_vars t l :=
       let n := eval lazy in n in
       lazymatch is_Z_const n with true => l end
     end
-    | _ => list_add t l
+    | _ =>
+      let v := hyp_on_var t in
+      list_add t l
+    | _ =>
+      let rec head t :=
+        lazymatch t with
+        | ?f _ => head f
+        | _ => t
+        end in
+      let h := head t in
+      let t' := eval unfold h in t in
+      aux t' l false
+    | _ =>
+      lazymatch t with
+      | _ _ =>
+        lazymatch top with
+        | true => list_add t l
+        end
+      | _ => list_add t l
+      end
     end in
-  aux t l.
+  aux t l true.
 
 Module Compatibility. Definition Q2R := False. End Compatibility.
 Import Compatibility Rdefinitions.
@@ -241,6 +279,9 @@ Ltac reify t l :=
       match is_Z_const n with true => constr:(Econst (Int n)) end
     end
     | _ =>
+      let n := list_find t l in
+      constr:(Evar n)
+    | _ =>
       let rec head t :=
         lazymatch t with
         | ?f _ => head f
@@ -249,9 +290,6 @@ Ltac reify t l :=
       let h := head t in
       let t' := eval unfold h in t in
       aux t'
-    | _ =>
-      let n := list_find t l in
-      constr:(Evar n)
     end in
   aux t.
 
