@@ -180,6 +180,7 @@ Ltac get_vars t l :=
     | Rmult ?a (Rinv ?b) => aux_b a b
     | Rmult ?a ?b => aux_b a b
     | Rdiv ?a ?b => aux_b a b
+    | Rpower ?a ?b => aux_b a b
     | Rnearbyint ?a ?b => aux_u b
     | IZR (Raux.Ztrunc ?a) => aux_u a
     | IZR (Raux.Zfloor ?a) => aux_u a
@@ -262,6 +263,7 @@ Ltac reify t l :=
       aux_b Div constr:(IZR a) constr:(IZR (Zpos b))
     | Rmult ?a ?b => aux_b Mul a b
     | Rdiv ?a ?b => aux_b Div a b
+    | Rpower ?a ?b => aux (exp (b * ln a))
     | Rnearbyint ?a ?b => aux_u (Nearbyint a) b
     | IZR (Raux.Ztrunc ?a) => aux_u (Nearbyint rnd_ZR) a
     | IZR (Raux.Zfloor ?a) => aux_u (Nearbyint rnd_DN) a
