@@ -504,6 +504,24 @@ Definition inv prec xi :=
   | _ => Inan
   end.
 
+Definition invnz prec xi :=
+  match xi with
+  | Ibnd xl xu =>
+    match sign_strict_ xl xu with
+    | Xund =>
+      match sign_large_ xl xu with
+      | Xund => Inan
+      | Xeq => Inan
+      | Xlt => Ibnd F.nan (Fdivz_UP prec c1 xl)
+      | Xgt => Ibnd (Fdivz_DN prec c1 xu) F.nan
+      end
+    | Xeq => Inan
+    | _ =>
+      Ibnd (Fdivz_DN prec c1 xu) (Fdivz_UP prec c1 xl)
+    end
+  | _ => Inan
+  end.
+
 Definition div prec xi yi :=
   match xi, yi with
   | Ibnd xl xu, Ibnd yl yu =>
@@ -2369,6 +2387,123 @@ case (sign_strict_ xl xu) ;
   try (now (right; left)) ;
   try (now (right; right; left)) ;
   try (now (right; right; right)).
+Qed.
+
+Theorem invnz_correct :
+  forall prec xi x,
+  x <> Xreal 0 -> contains (convert xi) x -> contains (convert (invnz prec xi)) (Xinv x).
+Proof.
+intros prec xi x Zx Bx.
+generalize (inv_correct prec xi x Bx).
+unfold inv, invnz.
+destruct xi as [| xl xu] ; try easy.
+destruct (sign_strict_ xl xu) ; try easy.
+intros _.
+destruct x as [|x].
+{ revert Bx. simpl.
+  now case (_ && _). }
+unfold Xinv, Xinv'.
+rewrite is_zero_false.
+2: contradict Zx ; now rewrite Zx.
+generalize (sign_large_correct_ xl xu x Bx).
+case sign_large_ ; try easy.
+- intros [H1 [H2 H3]].
+  simpl.
+  rewrite valid_lb_nan.
+  unfold Fdivz_UP.
+  rewrite F.real_correct.
+  destruct F.toX as [|xlr] eqn:Hxl.
+  + rewrite F'.valid_ub_zero.
+    split.
+    now rewrite F'.nan_correct.
+    rewrite F.zero_correct.
+    apply Rlt_le, Rinv_lt_0_compat.
+    now destruct H1 as [H1 | ->].
+  + assert (Hx: (xlr <= x)%R).
+    { revert Bx.
+      simpl.
+      rewrite valid_lb_real by now rewrite Hxl.
+      destruct H3 as [xur [Hxu _]].
+      rewrite valid_ub_real by now rewrite Hxu.
+      rewrite Hxl.
+      now intros [H _]. }
+    assert (Hxlr: (xlr < 0)%R).
+    { apply Rle_lt_trans with (1 := Hx).
+      now destruct H1 as [H1 | ->]. }
+    destruct (F.div_UP_correct prec c1 xl) as [-> H].
+    * right ; right ; left.
+      unfold F.is_non_neg_real, F.is_neg_real.
+      split.
+      { unfold c1.
+        rewrite F.fromZ_correct by easy.
+        apply Rle_0_1. }
+      now rewrite Hxl.
+    * split.
+      now rewrite F'.nan_correct.
+      destruct (F.toX (F.div_UP prec c1 xl)) as [|yur].
+      easy.
+      revert H.
+      unfold c1.
+      rewrite F.fromZ_correct by easy.
+      rewrite Hxl.
+      simpl.
+      unfold Xdiv'.
+      rewrite is_zero_false.
+      apply Rle_trans.
+      unfold Rdiv.
+      rewrite Rmult_1_l.
+      apply Rle_Rinv_neg with (2 := Hx).
+      now destruct H1 as [H1 | ->].
+      now apply Rlt_not_eq.
+- intros [H1 [H2 H3]].
+  simpl.
+  rewrite valid_ub_nan.
+  unfold Fdivz_DN.
+  rewrite F.real_correct.
+  destruct F.toX as [|xur] eqn:Hxu.
+  + rewrite F'.valid_lb_zero.
+    split.
+    2: now rewrite F'.nan_correct.
+    rewrite F.zero_correct.
+    apply Rlt_le, Rinv_0_lt_compat.
+    now destruct H1 as [H1 | <-].
+  + assert (Hx: (x <= xur)%R).
+    { revert Bx.
+      simpl.
+      rewrite valid_ub_real by now rewrite Hxu.
+      destruct H3 as [xlr [Hxl _]].
+      rewrite valid_lb_real by now rewrite Hxl.
+      rewrite Hxu.
+      now intros [_ H]. }
+    assert (Hxur: (0 < xur)%R).
+    { apply Rlt_le_trans with (2 := Hx).
+      now destruct H1 as [H1 | <-]. }
+    destruct (F.div_DN_correct prec c1 xu) as [-> H].
+    * right ; right ; left.
+      unfold F.is_non_neg_real, F.is_pos_real.
+      split.
+      { unfold c1.
+        rewrite F.fromZ_correct by easy.
+        apply Rle_0_1. }
+      now rewrite Hxu.
+    * split.
+      2: now rewrite F'.nan_correct.
+      destruct (F.toX (F.div_DN prec c1 xu)) as [|ylr].
+      easy.
+      revert H.
+      unfold c1.
+      rewrite F.fromZ_correct by easy.
+      rewrite Hxu.
+      simpl.
+      unfold Xdiv'.
+      rewrite is_zero_false.
+      intros H.
+      apply Rle_trans with (1 := Ropp_le_cancel _ _ H).
+      unfold Rdiv.
+      rewrite Rmult_1_l.
+      apply Rle_Rinv_pos with (2 := Hx).
+      now destruct H1 as [H1 | <-].
+      now apply Rgt_not_eq.
 Qed.
 
 Theorem sqr_correct :

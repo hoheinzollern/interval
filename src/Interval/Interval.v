@@ -377,6 +377,7 @@ Parameter wider : precision -> type -> type -> bool.
 Parameter neg : type -> type.
 Parameter abs : type -> type.
 Parameter inv : precision -> type -> type.
+Parameter invnz : precision -> type -> type.
 Parameter sqr : precision -> type -> type.
 Parameter sqrt : precision -> type -> type.
 Parameter add : precision -> type -> type -> type.
@@ -402,6 +403,10 @@ Parameter neg_correct' :
   forall xi x,
   contains (convert (neg xi)) (Xneg x) ->
   contains (convert xi) x.
+
+Parameter invnz_correct :
+  forall prec xi x,
+  x <> Xreal 0 -> contains (convert xi) x -> contains (convert (invnz prec xi)) (Xinv x).
 
 Parameter cancel_add : precision -> type -> type -> type.
 Parameter cancel_sub : precision -> type -> type -> type.
@@ -617,6 +622,20 @@ generalize (I.inv_correct prec xi _ Hx).
 unfold Xinv', Xbind.
 case is_zero ; try easy.
 now case I.convert.
+Qed.
+
+Lemma invnz_correct :
+  forall prec xi x,
+  x <> 0%R ->
+  contains (I.convert xi) (Xreal x) ->
+  contains (I.convert (I.invnz prec xi)) (Xreal (/ x)).
+Proof.
+intros prec xi x Zx Hx.
+refine (_ (I.invnz_correct prec xi _ _ Hx)).
+unfold Xinv', Xbind.
+now rewrite is_zero_false.
+contradict Zx.
+now injection Zx.
 Qed.
 
 Lemma sqr_correct : forall prec, extension Rsqr (I.sqr prec).
