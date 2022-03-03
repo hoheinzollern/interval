@@ -189,7 +189,7 @@ Definition atan_fastP prec x :=
     if F'.lt c2 x then
       I.sub prec
        (I.mul2 prec pi4i)
-       (atan_fast0 prec (I.div prec i1 xi))
+       (atan_fast0 prec (I.inv prec xi))
     else
       let xm1i := I.sub prec xi i1 in
       let xp1i := I.add prec xi i1 in
@@ -454,9 +454,7 @@ apply atan_fast0_correct.
   now apply Rlt_le.
   apply Rlt_le, Rinv_0_lt_compat.
   lra.
-rewrite <- (Rmult_1_l (/ toR x)).
-apply J.div_correct with (2 := Ix).
-now apply I.fromZ_small_correct.
+now apply J.inv_correct.
   simpl.
   apply f_equal.
   rewrite atan_inv; lra.
@@ -550,7 +548,7 @@ Definition ln_fast prec x :=
     | Xlt =>
       let m := Z.opp (F.StoZ (F.mag (F.sub_UP prec c1 x))) in
       let prec := F.incr_prec prec (Z2P m) in
-      I.neg (ln_fast1P prec (I.div prec i1 xi))
+      I.neg (ln_fast1P prec (I.inv prec xi))
     | Xgt => if F.real x then ln_fast1P prec xi else I.nai
     | Xund => I.nai
     end
@@ -801,9 +799,7 @@ case_eq (F.classify x); intro Cx; [|easy..|];
       apply Rinv_le.
       { exact Hrx0. }
       now apply Rlt_le. }
-    rewrite <- (Rmult_1_l (/ _)).
-    apply J.div_correct.
-    { now apply I.fromZ_small_correct. }
+    apply J.inv_correct.
     rewrite I.bnd_correct, Hrx.
     { split ; apply Rle_refl. }
     { now apply I.valid_lb_real; rewrite Hrx. }
@@ -1635,7 +1631,7 @@ Definition tan_fastP prec x :=
     let prec := F.incr_prec prec (Z2P (m + 7)) in
     match sin_cos_reduce prec x (S (Z2nat m)) with
     | (s, c) =>
-      let v := I.sqrt prec (I.sub prec (I.div prec i1 (I.sqr prec c)) i1) in
+      let v := I.sqrt prec (I.sub prec (I.inv prec (I.sqr prec c)) i1) in
       match s, I.sign_large c with
       | Lt, Xgt => I.neg v
       | Gt, Xlt => I.neg v
@@ -1719,16 +1715,15 @@ case_eq (F'.le' x c1_2) ; intros Hx.
   generalize (sin_cos_reduce_correct prec (S (Z2nat (F.StoZ (F.mag x)))) x Rx Bx).
   case sin_cos_reduce.
   intros s c [Hc Hs].
-  assert (H: contains (I.convert (I.sqrt prec (I.sub prec (I.div prec i1 (I.sqr prec c)) i1))) (Xabs (Xdiv (Xreal (sin (toR x))) (Xreal (cos (toR x)))))).
+  assert (H: contains (I.convert (I.sqrt prec (I.sub prec (I.inv prec (I.sqr prec c)) i1))) (Xabs (Xdiv (Xreal (sin (toR x))) (Xreal (cos (toR x)))))).
     replace (Xabs (Xdiv (Xreal (sin (toR x))) (Xreal (cos (toR x)))))
-      with (Xsqrt (Xsub (Xdiv (Xreal 1) (Xsqr (Xreal (cos (toR x))))) (Xreal 1))).
+      with (Xsqrt (Xsub (Xinv (Xsqr (Xreal (cos (toR x))))) (Xreal 1))).
     apply I.sqrt_correct.
     apply I.sub_correct.
-    apply I.div_correct.
-    now apply I.fromZ_small_correct.
+    apply I.inv_correct.
     now apply I.sqr_correct.
     now apply I.fromZ_small_correct.
-    unfold Xdiv'.
+    unfold Xdiv', Xinv'.
     simpl.
     case is_zero_spec ; intros Zc.
     rewrite Rsqr_0_uniq with (1 := Zc).
@@ -1739,7 +1734,7 @@ case_eq (F'.le' x c1_2) ; intros Hx.
     apply Rmult_0_l.
     unfold Xsqrt'.
     simpl.
-    replace (1 / (Rsqr (cos (toR x))) - 1)%R with (Rsqr (sin (toR x) / cos (toR x))).
+    replace (/ (Rsqr (cos (toR x))) - 1)%R with (Rsqr (sin (toR x) / cos (toR x))).
     { set (e := (_²)%R).
       case (Rlt_or_le e 0); unfold e; intro H.
       { elim Rlt_not_le with (1 := H).

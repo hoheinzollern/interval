@@ -1114,12 +1114,11 @@ Let iEps := I.convert Epsilon.
 Hypothesis HEps : contains iEps (Xreal epsilon).
 Hypothesis eps_gt0 : 0 < epsilon.
 
-Definition i1 := I.fromZ_small 1.
 Definition im1 := I.fromZ_small (-1).
 
 Definition f0eps_int (alpha : Z) (beta : nat) :=
   I.mul prec (I.power_int prec im1 (Z.of_nat beta))
-    (f_int_fast (I.div prec i1 Epsilon) (- 2 - alpha) beta ).
+    (f_int_fast (I.inv prec Epsilon) (- 2 - alpha) beta ).
 
 Lemma f0eps_correct (alpha : Z) (beta : nat) (Halpha : (alpha <> -1)%Z) :
   contains (I.convert (f0eps_int alpha beta)) (Xreal (f0eps_lim alpha beta epsilon)).
@@ -1129,9 +1128,7 @@ apply: J.mul_correct.
   rewrite pow_powerRZ; apply: J.power_int_correct.
   exact: I.fromZ_small_correct.
 rewrite f_int_fast_f_int; apply: f_int_correct.
-  have -> : / epsilon = 1 / epsilon by field; lra.
-  apply: J.div_correct => // .
-  exact: I.fromZ_small_correct.
+  exact: J.inv_correct.
 exact: Rinv_0_lt_compat.
 by lia.
 Qed.
