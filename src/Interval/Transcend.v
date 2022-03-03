@@ -1917,7 +1917,7 @@ Definition exp_fast prec x :=
   | Xlt => expn_reduce prec (F.neg x)
   | Xgt =>
     let prec := F.incr_prec prec 1 in
-    match I.inv prec (expn_reduce prec x) with
+    match I.invnz prec (expn_reduce prec x) with
     | Ibnd _ _ as b => b
     | Inai => I.bnd c1 F.nan
     end
@@ -2201,7 +2201,7 @@ now apply I.fromZ_small_correct.
 (* pos *)
 generalize (F.incr_prec prec 1).
 clear prec. intro prec.
-case_eq (I.inv prec (expn_reduce prec x)) ; intros.
+case_eq (I.invnz prec (expn_reduce prec x)) ; intros.
 (* pos too big *)
 unfold c1.
 rewrite I.bnd_correct.
@@ -2219,7 +2219,11 @@ rewrite <- H0.
 rewrite <- (Ropp_involutive r).
 rewrite exp_Ropp.
 replace (Xreal (/ exp (- r))) with (Xinv (Xreal (exp (- toR x)))).
-apply I.inv_correct.
+apply I.invnz_correct.
+{ intros H1.
+  injection H1.
+  apply Rgt_not_eq.
+  apply exp_pos. }
 apply expn_reduce_correct.
 unfold toR.
 now rewrite Hr.
