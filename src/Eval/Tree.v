@@ -236,6 +236,9 @@ Ltac reify t l :=
       constr:(Ebinary o u v) in
     match True with
     | True =>
+      let n := list_find t l in
+      constr:(Evar n)
+    | True =>
     lazymatch t with
     | Ropp ?a => aux_u Neg a
     | Rabs ?a => aux_u Abs a
@@ -280,9 +283,6 @@ Ltac reify t l :=
       let n := eval lazy in n in
       match is_Z_const n with true => constr:(Econst (Int n)) end
     end
-    | _ =>
-      let n := list_find t l in
-      constr:(Evar n)
     | _ =>
       let rec head t :=
         lazymatch t with
