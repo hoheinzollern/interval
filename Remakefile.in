@@ -39,6 +39,7 @@ FILES = \
 	Tactics/Integral_helper \
 	Tactics/Interval_helper \
 	Tactics/Plot_helper \
+	Tactics/Root_helper \
 	Tactic_float \
 	@PLOT@ \
 	@PRIM_FLOAT@
