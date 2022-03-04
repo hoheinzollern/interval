@@ -1693,6 +1693,175 @@ simpl.
 apply eval_correct_ext with (1 := Hv) (2 := Hx).
 Qed.
 
+Definition root prec formula bounds xi :=
+  match nth 0 (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) formula
+    ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai) with
+  | (yi, yi') =>
+    match I.sign_strict yi with
+    | Xlt | Xgt => I.empty
+    | _ =>
+      let mi := J.midpoint xi in
+      let yi := nth 0 (BndValuator.eval prec formula (mi :: bounds)) I.nai in
+      I.meet xi (I.sub prec mi (I.div prec yi yi'))
+    end
+  end.
+
+Theorem root_correct_ext :
+  forall prec prog bounds vars,
+  contains_all bounds vars ->
+  forall xi x,
+  contains (I.convert xi) x ->
+  nth 0 (eval_ext prog (x :: map Xreal vars)) Xnan = Xreal 0 ->
+  contains (I.convert (root prec prog bounds xi)) x.
+Proof.
+intros prec prog bounds vars Hv xi x Hx Zx.
+unfold root.
+pose (f := fun x => nth 0 (eval_ext prog (x :: map Xreal vars)) Xnan).
+fold (f x) in Zx.
+pose (ff' := fun x => nth 0 (eval_generic (Xnan, Xnan) (diff_operations _ ext_operations) prog
+     ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) vars)) (Xnan, Xnan)).
+set (fi := fun xi => nth 0 (BndValuator.eval prec prog (xi :: bounds)) I.nai).
+pose (ffi' := fun xi => nth 0 (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) prog
+     ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai)).
+fold (ffi' xi).
+rewrite (surjective_pairing (ffi' xi)).
+assert (H0 := eval_diff_bnd_correct prec prog bounds vars Hv 0 xi).
+pose (fi' := fun xi => snd (ffi' xi)).
+pose (f' x := snd (ff' x)).
+fold (fi (J.midpoint xi)) (fi' xi).
+fold ff' ffi' (fi xi) (fi' xi) in H0.
+cut (contains (I.convert (I.meet xi (I.sub prec (J.midpoint xi) (I.div prec (fi (J.midpoint xi)) (fi' xi))))) x).
+{ intros H.
+  generalize (I.sign_strict_correct (fst (ffi' xi))).
+  destruct I.sign_strict ; try easy.
+  - intros H'.
+    elim (Rlt_irrefl 0).
+    specialize (H' (f x)).
+    rewrite Zx in H'.
+    apply H'.
+    rewrite <- (proj1 H0), <- Zx.
+    now apply BndValuator.eval_correct_ext.
+  - intros H'.
+    elim (Rlt_irrefl 0).
+    specialize (H' (f x)).
+    rewrite Zx in H'.
+    apply H'.
+    rewrite <- (proj1 H0), <- Zx.
+    now apply BndValuator.eval_correct_ext. }
+apply I.meet_correct with (1 := Hx).
+destruct H0 as [_ H1].
+assert (H2 := eval_diff_correct prog vars 0).
+fold (ff' x) f in H2.
+case_eq (I.convert (fi' xi)).
+{ intros H.
+  apply contains_Inan.
+  apply I.sub_propagate_r.
+  now apply I.div_propagate_r. }
+intros fi'l fi'u Hfi'.
+destruct x as [|x].
+{ generalize (H1 Xnan Hx) (proj2 (H2 Xnan)).
+  fold (ff' Xnan) (f' Xnan).
+  rewrite Hfi'.
+  now destruct (f' Xnan). }
+assert (Nx := not_empty_contains _ _ Hx).
+destruct (I.midpoint_correct xi Nx) as [Hm1 Hm2].
+set (m := proj_val (I.F.convert (I.midpoint xi))).
+fold m in Hm1.
+rewrite Hm1 in Hm2.
+assert (Hm3: contains (I.convert (J.midpoint xi)) (I.F.convert (I.midpoint xi))).
+{ rewrite Hm1.
+  now apply J.contains_midpoint. }
+replace x with (m - (m - x))%R by ring.
+change (Xreal (m - (m - x))) with (Xsub (Xreal m) (Xreal (m - x))).
+apply I.sub_correct.
+now rewrite <- Hm1.
+refine (_ (Xderive_MVT f f' _ _ (contains_connected (I.convert xi)) _ _ Hm2 x Hx)) ; cycle 1.
+{ intros x'.
+  apply H2. }
+{ intros x' Hx'.
+  generalize (H1 _ Hx').
+  fold (f' (Xreal x')).
+  rewrite Hfi'.
+  now destruct (f' (Xreal x')). }
+intros [c [Hc1 Hc2]].
+generalize (H1 _ Hc1).
+fold (f' (Xreal c)).
+intros Hf'c.
+destruct (f' (Xreal c)) as [|f'c] eqn:Ef'c.
+now rewrite Hfi' in Hf'c.
+destruct (Req_dec f'c 0) as [Zf'c|Zf'c].
+{ apply contains_Inan.
+  apply contains_Xnan.
+  rewrite <- (Xdiv_0_r (f (I.F.convert (I.midpoint xi)))).
+  apply I.div_correct.
+  now apply BndValuator.eval_correct_ext with (2 := Hm3).
+  now rewrite <- Zf'c. }
+replace (Xreal (m - x)) with (f (I.F.convert (I.midpoint xi)) / f' (Xreal c))%XR.
+{ apply I.div_correct.
+  now apply BndValuator.eval_correct_ext with (2 := Hm3).
+  now apply H1. }
+rewrite Zx in Hc2.
+rewrite Hm1 Ef'c.
+rewrite Xdiv_split.
+unfold Xinv, Xinv'.
+rewrite -> is_zero_false by easy.
+clearbody f'.
+clear -Hc2 Zf'c.
+destruct f as [|y].
+easy.
+apply (f_equal Xreal).
+injection Hc2 as H.
+apply eq_sym in H.
+rewrite <- (Ropp_involutive y), <- (Rplus_opp_r_uniq _ _ H).
+now field.
+Qed.
+
+Theorem root_correct :
+  forall prec prog bounds vars,
+  contains_all bounds vars ->
+  forall xi x,
+  contains (I.convert xi) (Xreal x) ->
+  nth 0 (eval_real prog (x :: vars)) 0%R = 0%R ->
+  contains (I.convert (root prec prog bounds xi)) (Xreal x).
+Proof.
+intros prec prog bounds vars Hv xi x Hx Zx.
+generalize (root_correct_ext prec prog bounds vars Hv _ _ Hx).
+destruct (nth 0 (eval_ext _ _) Xnan) as [|y] eqn:Hy.
+- intros _.
+  unfold root.
+  assert (H1 := eval_diff_bnd_correct prec prog bounds vars Hv 0 xi).
+  simpl in H1.
+  destruct (nth 0 (eval_generic _ _ _ _) _) as [yi zi].
+  generalize (BndValuator.eval_correct_ext prec prog bounds vars Hv 0 _ _ Hx).
+  rewrite (proj1 H1) Hy.
+  intros H2.
+  generalize (I.sign_strict_correct yi).
+  destruct I.sign_strict ; try now intros H3 ; specialize (H3 _ H2).
+  intros _.
+  apply I.meet_correct with (1 := Hx).
+  apply contains_Inan.
+  apply I.sub_propagate_r.
+  apply I.div_propagate_r.
+  destruct H1 as [_ H1].
+  specialize (H1 _ Hx).
+  assert (H3 := eval_diff_correct prog vars 0 (Xreal x)).
+  destruct (nth 0 (eval_generic (Xnan, Xnan) _ _ _) _) as [y y'].
+  apply contains_Xnan.
+  destruct H3 as [_ H3].
+  unfold Xderive_pt in H3.
+  destruct y' as [|y'].
+  easy.
+  now rewrite Hy in H3.
+- apply.
+  apply f_equal, sym_eq.
+  rewrite <- Zx.
+  apply (xreal_to_real (fun z => z = Xreal y)).
+  easy.
+  intros r H.
+  now injection H.
+  easy.
+Qed.
+
 End DiffValuator.
 
 Module TaylorValuator.
