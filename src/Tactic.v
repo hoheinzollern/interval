@@ -25,6 +25,7 @@ Require Import Sig.
 Require Import Interval_helper.
 Require Import Integral_helper.
 Require Import Plot_helper.
+Require Import Root_helper.
 Require Import Float_full.
 
 Inductive interval_tac_parameters : Set :=
@@ -50,9 +51,11 @@ Module Private.
 Module I1 := FloatIntervalFull F.
 Module IT1 := IntegralTacticAux F I1.
 Module PT1 := PlotTacticAux F I1.
+Module RT1 := RootTacticAux F I1.
 Module I2 := FloatIntervalFull Tactic_float.Float.
 Module IT2 := IntegralTacticAux Tactic_float.Float I2.
 Module PT2 := PlotTacticAux Tactic_float.Float I2.
+Module RT2 := RootTacticAux Tactic_float.Float I2.
 
 Ltac do_interval_parse params depth :=
   let rec aux fvar bvars prec degree depth native nocheck itm params :=
@@ -174,6 +177,42 @@ Ltac do_plot_y t x1 x2 y1 y2 params :=
       PT2.do_plot_y t x1 x2 y1 y2 prec degree width height native
     end
   end.
+
+Ltac do_root_parse params :=
+  let rec aux prec depth native nocheck params :=
+    lazymatch params with
+    | nil => constr:((prec, depth, native, nocheck))
+    | cons (i_prec ?p) ?t => aux (Some p) depth native nocheck t
+    | cons (i_depth ?d) ?t => aux prec d native nocheck t
+    | cons i_native_compute ?t => aux prec depth true nocheck t
+    | cons i_delay ?t => aux prec depth native true t
+    | cons ?h _ => fail 100 "Unknown tactic parameter" h
+    end in
+  aux (@None positive) 15%nat false false params.
+
+Ltac do_root x Zy params :=
+  match do_root_parse params with
+  | (?prec, ?depth, ?native, ?nocheck) =>
+    lazymatch prec with
+    | Some ?p =>
+      let prec := eval vm_compute in (F.PtoP p) in
+      RT1.do_root x Zy prec depth native nocheck
+    | None =>
+      let prec := eval vm_compute in (Tactic_float.Float.PtoP 53) in
+      RT2.do_root x Zy prec depth native nocheck
+    end
+  end.
+
+Ltac do_root1 Zy params :=
+  let x :=
+    match type of Zy with
+    | ?y = 0%R =>
+      match Tree.get_vars y (@nil R) with
+      | ?x :: _ => x
+      end
+    | _ => fail "No variable found"
+    end in
+  do_root x Zy params.
 
 End Private.
 
@@ -310,6 +349,18 @@ Tactic Notation "plot" constr(t) constr(x1) constr(x2) constr(y1) constr(y2) :=
 
 Tactic Notation "plot" constr(t) constr(x1) constr(x2) constr(y1) constr(y2) "with" constr(params) :=
   do_plot_y t x1 x2 y1 y2 ltac:(tuple_to_list params (@nil interval_tac_parameters)).
+
+Tactic Notation "root" constr(Zy) constr(x) :=
+  do_root x Zy (@nil interval_tac_parameters).
+
+Tactic Notation "root" constr(Zy) constr(x) "with" constr(params) :=
+  do_root x Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)).
+
+Tactic Notation "root" constr(Zy) :=
+  do_root1 Zy (@nil interval_tac_parameters).
+
+Tactic Notation "root" constr(Zy) "with" constr(params) :=
+  do_root1 Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)).
 
 End IntervalTactic.
 
