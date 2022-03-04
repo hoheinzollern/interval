@@ -42,7 +42,6 @@ Proof. exact 0%R. Qed.
 Ltac get_RInt_vars y i f :=
   let fapp := eval cbv beta in (f reify_var) in
   let vars := constr:(reify_var :: @nil R) in
-  let vars := get_vars fapp vars in
   let vars := match get_vars fapp vars with reify_var :: ?vars => vars end in
   let vars := constr:(i :: vars) in
   let vars := match get_vars y vars with i :: ?vars => vars end in
