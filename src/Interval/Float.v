@@ -151,6 +151,16 @@ Lemma real_correct :
   forall xi, real xi = match convert xi with Interval.Inan => false | _ => true end.
 Proof. now intros [|xl xu]; [|simpl; case (_ && _)]. Qed.
 
+Definition is_empty xi :=
+  match xi with
+  | Ibnd xl xu =>
+    match F.cmp xl xu with
+    | Xgt => true
+    | _ => false
+    end
+  | _ => false
+  end.
+
 Definition bounded xi :=
   match xi with
   | Ibnd xl xu => F.real xl && F.real xu
@@ -631,6 +641,34 @@ Ltac bound_tac :=
   | |- (?w <= round ?r_UP ?p ?v)%R =>
     apply Rle_trans with (2 := proj1 (proj2 (Generic_fmt.round_UP_pt F.radix (FLX.FLX_exp (Zpos p)) v)))
   end.
+
+Lemma is_empty_correct :
+  forall xi x,
+  contains (convert xi) x ->
+  is_empty xi = true ->
+  False.
+Proof.
+intros [|xl xu]. easy.
+intros x.
+simpl.
+rewrite F.cmp_correct.
+rewrite F.valid_lb_correct, F.valid_ub_correct.
+destruct x as [|x].
+{ now destruct F.classify ; destruct F.classify. }
+assert (H: (1 <= x <= 0)%R -> true = true -> False).
+{ intros H _.
+  apply (Rlt_not_le 1 0 Rlt_0_1).
+  now apply Rle_trans with x. }
+destruct F.classify ; destruct F.classify ; try easy.
+destruct F.toX as [|xlr]. easy.
+destruct F.toX as [|xur]. easy.
+simpl.
+intros H'.
+case Rcompare_spec ; try easy.
+intros K _.
+apply Rlt_not_le with (1 := K).
+now apply Rle_trans with x.
+Qed.
 
 Lemma lower_correct :
   forall xi : type,

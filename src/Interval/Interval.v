@@ -262,6 +262,7 @@ Parameter empty : type.
 Parameter bnd : F.type -> F.type -> type.
 Parameter singleton : F.type -> type.
 Parameter real : type -> bool.
+Parameter is_empty : type -> bool.
 
 Parameter valid_lb_real :
   forall b, F.convert b = Xreal (proj_val (F.convert b)) -> valid_lb b.
@@ -292,6 +293,10 @@ Parameter empty_correct :
 
 Parameter real_correct :
   forall xi, real xi = match convert xi with Inan => false | _ => true end.
+
+Parameter is_empty_correct :
+  forall xi x, contains (convert xi) x ->
+  is_empty xi = true -> False.
 
 Local Notation subset_ := subset.
 
