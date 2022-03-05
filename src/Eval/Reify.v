@@ -302,6 +302,7 @@ now apply H.
 Qed.
 
 Definition eval_goal_bnd (prec : I.precision) (g : gol) : I.type -> bool :=
+  let check :=
   match g with
   | Gle _ v =>
     let j := I.lower_complement (E.eval_bnd prec v) in
@@ -327,7 +328,9 @@ Definition eval_goal_bnd (prec : I.precision) (g : gol) : I.type -> bool :=
   | Gne _ v =>
     let j := E.eval_bnd prec v in
     fun i => match I.sign_strict (I.sub prec i j) with Xlt => true | Xgt => true | _ => false end
-  end.
+  end in
+  fun xi =>
+  if I.is_empty xi then true else check xi.
 
 Theorem eval_goal_bnd_correct :
   forall prec g xi x,
@@ -336,6 +339,10 @@ Theorem eval_goal_bnd_correct :
   eval_goal g x.
 Proof.
 intros prec g xi x Ix.
+unfold eval_goal_bnd.
+destruct (I.is_empty xi) eqn:Ex.
+{ now elim I.is_empty_correct with (1 := Ix). }
+clear Ex.
 destruct g as [b v|b u|u v|b v|v|u|b u] ; simpl ; intros H.
 - cut (x <= eval v nil)%R.
     now destruct b ; [|apply Rle_ge].
