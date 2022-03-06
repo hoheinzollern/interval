@@ -3,7 +3,7 @@ From Interval Require Import Tactic.
 
 Open Scope R_scope.
 
-Goal forall x, x^3 + x - 1 = 0 -> Rabs (x - 67/100) <= 1/10.
+Goal forall x, x^3 + 1 = 0 -> Rabs (x + 1) <= 1/10000000000.
 Proof.
 intros x H.
 root H.

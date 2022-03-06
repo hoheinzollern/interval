@@ -48,7 +48,13 @@ Fixpoint refine_root_aux depth prec prog bounds xi (check : I.type -> bool) :=
   | S depth =>
     let xi' := A.DiffValuator.root prec prog bounds xi in
     if check xi' then true
-    else refine_root_aux depth prec prog bounds xi' check
+    else
+      let (xi1,xi2) := I.bisect xi in
+      if I.wider prec xi1 xi' then
+        refine_root_aux depth prec prog bounds xi' check
+      else if refine_root_aux depth prec prog bounds xi1 check then
+        refine_root_aux depth prec prog bounds xi2 check
+      else false
   | O => false
   end.
 
@@ -76,7 +82,7 @@ assert (Hx: contains (I.convert xi) (Xreal x)).
   now apply app_merge_hyps_eval_bnd. }
 clearbody xi.
 revert xi Hx.
-induction depth.
+induction depth as [|depth IH].
 easy.
 intros xi Hx.
 simpl.
@@ -86,14 +92,21 @@ refine (_ (A.DiffValuator.root_correct prec pf (compute_inputs prec hyps cf) _ _
 set (xi' := A.DiffValuator.root _ _ _ _).
 intros Hx' H.
 destruct check_goal eqn:Hg.
-2: now apply (IHdepth xi').
-clear H IHdepth.
-apply (R.eval_goal_bnd_correct prec) with (2 := Hg).
-unfold eval_real'.
-fold (compute_inputs prec hyps cg).
-simpl.
-apply A.BndValuator.eval_correct_ext' with (2 := Hx').
-now apply app_merge_hyps_eval_bnd.
+- clear H IH.
+  apply (R.eval_goal_bnd_correct prec) with (2 := Hg).
+  unfold eval_real'.
+  fold (compute_inputs prec hyps cg).
+  simpl.
+  apply A.BndValuator.eval_correct_ext' with (2 := Hx').
+  now apply app_merge_hyps_eval_bnd.
+- generalize (I.bisect_correct _ _ Hx).
+  destruct (I.bisect xi) as [xi1 xi2].
+  destruct I.wider.
+  + intros _.
+    now apply (IH _ Hx').
+  + destruct refine_root_aux eqn:Hb.
+    now intros [K|K] ; apply (IH _ K).
+    easy.
 Qed.
 
 Ltac do_root x Zy prec depth native nocheck :=
