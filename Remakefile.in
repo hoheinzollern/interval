@@ -162,7 +162,7 @@ html/index.html: $(VOFILES)
 	rm -rf html
 	mkdir -p html
 	@COQDOC@ -toc -interpolate -utf8 -html -g -R src Interval -d html \
-	  --coqlib http://coq.inria.fr/distrib/current/stdlib \
+	  --coqlib_url http://coq.inria.fr/distrib/current/stdlib \
 	  --external https://math-comp.github.io/htmldoc mathcomp \
 	  --external http://flocq.gforge.inria.fr/html Flocq \
 	  --external http://coquelicot.saclay.inria.fr/html Coquelicot \
