@@ -1,6 +1,6 @@
 (**
 This file is part of the Coq.Interval library for proving bounds of
-real-valued expressions in Coq: http://coq-interval.gforge.inria.fr/
+real-valued expressions in Coq: https://coqinterval.gitlabpages.inria.fr/
 
 Copyright (C) 2007-2021, Inria
 

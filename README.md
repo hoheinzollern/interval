@@ -15,7 +15,7 @@ See the file [INSTALL.md](INSTALL.md) for installation instructions.
 Project Home
 ------------
 
-Homepage: http://coq-interval.gforge.inria.fr/
+Homepage: https://coqinterval.gitlabpages.inria.fr/
 
 Repository: https://gitlab.inria.fr/coqinterval/interval
 
