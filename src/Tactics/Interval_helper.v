@@ -191,8 +191,7 @@ apply (R.eval_hyps_bnd_correct prec).
 intros H'.
 apply A.bisect_correct with (P := fun x => contains (I.convert b) (Xreal (nth 0 (eval_real prog x) 0%R))) (2 := H).
 - intros x xi Ix H''.
-  eapply subset_contains.
-  apply I.subset_correct, H''.
+  apply I.subset_correct with (2 := H'').
   now apply Hfi.
 - now apply app_merge_hyps_eval_bnd.
 Qed.

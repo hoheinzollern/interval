@@ -346,29 +346,27 @@ clear Ex.
 destruct g as [b v|b u|u v|b v|v|u|b u] ; simpl ; intros H.
 - cut (x <= eval v nil)%R.
     now destruct b ; [|apply Rle_ge].
-  apply I.subset_correct, subset_contains in H.
-  apply I.lower_complement_correct with (2 := H _ Ix).
+  assert (H' := I.subset_correct _ _ _ Ix H).
+  apply I.lower_complement_correct with (2 := H').
   apply E.eval_bnd_correct.
 - cut (eval u nil <= x)%R.
     now destruct b ; [|apply Rle_ge].
-  apply I.subset_correct, subset_contains in H.
-  apply I.upper_complement_correct with (2 := H _ Ix).
+  assert (H' := I.subset_correct _ _ _ Ix H).
+  apply I.upper_complement_correct with (2 := H').
   apply E.eval_bnd_correct.
-- apply I.subset_correct, subset_contains in H.
-  specialize (H _ Ix).
-  apply I.meet_correct' in H.
+- assert (H' := I.subset_correct _ _ _ Ix H).
+  apply I.meet_correct' in H'.
   split.
-  apply I.upper_complement_correct with (2 := proj1 H).
+  apply I.upper_complement_correct with (2 := proj1 H').
   apply E.eval_bnd_correct.
-  apply I.lower_complement_correct with (2 := proj2 H).
+  apply I.lower_complement_correct with (2 := proj2 H').
   apply E.eval_bnd_correct.
 - cut (Rabs x <= eval v nil)%R.
     now destruct b ; [|apply Rle_ge].
-  apply I.subset_correct, subset_contains in H.
-  specialize (H _ Ix).
-  apply I.meet_correct' in H.
+  assert (H' := I.subset_correct _ _ _ Ix H).
+  apply I.meet_correct' in H'.
   apply Rabs_le.
-  destruct H as [H1 H2].
+  destruct H' as [H1 H2].
   split.
   rewrite <- (Ropp_involutive x) in H1 |- *.
   apply Ropp_le_contravar.

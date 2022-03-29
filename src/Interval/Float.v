@@ -714,38 +714,41 @@ now case F.valid_ub; rewrite andb_comm; [|simpl; lra].
 Qed.
 
 Theorem subset_correct :
-  forall xi yi : type,
-  subset xi yi = true -> Interval.subset (convert xi) (convert yi).
+  forall xi yi v,
+  contains (convert xi) v ->
+  subset xi yi = true ->
+  contains (convert yi) v.
 Proof.
 intros xi yi.
 case xi ; case yi ; try (simpl ; intros ; try exact I ; discriminate).
-{ now intros l u _; simpl; case (_ && _). }
-simpl; intros yl yu xl xu.
+simpl; intros yl yu xl xu v.
 rewrite !F.cmp_correct, !F.valid_lb_correct, !F.valid_ub_correct.
-rewrite andb_true_iff.
-intros [H H']; revert H H'.
-generalize (F.classify_correct xl); rewrite F.real_correct ;
-case (F.classify xl) ;
-  [xreal_tac xl; [easy|] | xreal_tac xl; [|easy]..] ; intros _ ;
-  ( generalize (F.classify_correct yl); rewrite F.real_correct ;
-    case (F.classify yl) ;
-      [xreal_tac yl; [easy|] | xreal_tac yl; [|easy]..] ; intros _ ) ;
-  ( generalize (F.classify_correct xu); rewrite F.real_correct ;
-    case (F.classify xu) ;
-      [xreal_tac xu; [easy|] | xreal_tac xu; [|easy]..] ; intros _ ) ;
-  ( generalize (F.classify_correct yu); rewrite F.real_correct ;
-    case (F.classify yu) ;
-      [xreal_tac yu; [easy|] | xreal_tac yu; [|easy]..] ; intros _ ) ;
-  simpl ;
-  try easy ;
-  try match goal with
-      | |- _ -> _ -> _ \/ le_lower Xnan _ /\ True => intros _ _; now right
-      | |- _ -> _ -> (0 < 1)%R \/ _ => intros _ _; left; exact Rlt_0_1
-      end ;
-  case Rcompare_spec; intros H1 ; try easy ; intros _ ;
-  try ( case Rcompare_spec; intros H2 ; try easy ) ; intros _ ;
-  unfold le_lower; simpl ;
-  right ; lra.
+generalize (F.classify_correct xl); rewrite F.real_correct.
+generalize (F.classify_correct xu); rewrite F.real_correct.
+generalize (F.classify_correct yl); rewrite F.real_correct.
+generalize (F.classify_correct yu); rewrite F.real_correct.
+intros Hyu Hyl Hxu Hxl Hv.
+assert (Hc :
+  match F.classify xl with Fpinfty => false | _ => true end &&
+  match F.classify xu with Fminfty => false | _ => true end = true).
+{ clear -Hv.
+  destruct andb. easy.
+  destruct v as [|v]. easy.
+  elim (Rlt_irrefl v).
+  apply Rle_lt_trans with (1 := proj2 Hv).
+  apply Rlt_le_trans with (2 := proj1 Hv).
+  exact Rlt_0_1. }
+rewrite Hc in Hv.
+destruct v as [|v]. easy.
+revert Hxl Hyl Hxu Hyu Hc.
+case (F.classify xl) ; destruct (F.toX xl) as [|xlr] ; try easy ; intros _ ;
+case (F.classify yl) ; destruct (F.toX yl) as [|ylr] ; try easy ; intros _ ;
+case (F.classify xu) ; destruct (F.toX xu) as [|xur] ; try easy ; intros _ ;
+case (F.classify yu) ; destruct (F.toX yu) as [|yur] ; try easy ; intros _ ;
+intros _ ; simpl ; (try now rewrite andb_false_r) ;
+simpl in Hv ;
+case Rcompare_spec ; try easy ; try lra ;
+case Rcompare_spec ; try easy ; try lra.
 Qed.
 
 Lemma join_correct :

@@ -145,8 +145,7 @@ assert (Hg: forall ti xi x, contains (I.convert xi) (Xreal x) -> contains (I.con
   apply I.meet_correct.
   apply A.BndValuator.eval_correct_ext'.
   now apply app_merge_hyps_eval_bnd.
-  apply subset_contains with (2 := Hx).
-  now apply I.subset_correct.
+  now apply I.subset_correct with (2 := Hs).
   apply A.TaylorValuator.eval_correct with (2 := Hx).
   now apply app_merge_hyps_eval_bnd.
   apply A.TaylorValuator.eval_correct with (2 := Hx).

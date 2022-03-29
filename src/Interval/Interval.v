@@ -298,13 +298,13 @@ Parameter is_empty_correct :
   forall xi x, contains (convert xi) x ->
   is_empty xi = true -> False.
 
-Local Notation subset_ := subset.
-
 Parameter subset : type -> type -> bool.
 
 Parameter subset_correct :
-  forall xi yi : type,
-  subset xi yi = true -> subset_ (convert xi) (convert yi).
+  forall xi yi v,
+  contains (convert xi) v ->
+  subset xi yi = true ->
+  contains (convert yi) v.
 
 Parameter join : type -> type -> type.
 Parameter meet : type -> type -> type.

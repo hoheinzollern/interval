@@ -196,7 +196,7 @@ move=> Hf X x Hx.
 rewrite /eval.
 case HXY: I.subset; last by rewrite I.nai_correct.
 move/I.subset_correct: (HXY) => Hsubset.
-apply subset_contains in Hsubset.
+specialize (Hsubset _ Hx).
 have HneY: not_empty (I.convert Y).
 { apply (not_empty_contains _ x).
   exact: Hsubset. }
@@ -207,16 +207,14 @@ case.
 { move=> Hne.
   now rewrite I.mask_propagate_l. }
 { move=> H.
-  case: x Hx =>[|x] Hx /=.
+  destruct x as [|x].
   now apply contains_Xnan, I.mask_propagate_r, contains_Xnan.
   apply I.mask_correct'.
   rewrite /is_const in H.
   case: H => y H1 H2.
-  rewrite (H2 x) //.
-  exact: Hsubset. }
+  now rewrite /= (H2 x). }
 (* Var *)
-case: x Hx => [|x] Hx //= -> //.
-exact: Hsubset.
+by case: x Hx Hsubset => [|x] Hx Hsubset //= ->.
 (* Tm *)
 move=> Hf.
 have /= {Hf} := get_tm_correct u Hf=> Htm.
@@ -224,11 +222,11 @@ move/(_ HneY): Htm.
 case => [Hdef Hnai Hzero _ Hmain].
 set c0 := proj_val (I.F.convert (I.midpoint Y)).
 have [qx Hcont Hdelta] := Hmain.
-move: x Hx => [|x Hx] /=.
-  move/contains_Xnan => H0.
-  rewrite I.add_propagate_l //. (* does not depend on Hzero anymore *)
+destruct x as [|x] ; simpl.
+{ rewrite I.add_propagate_l //.
   apply: Bnd.ComputeBound_propagate.
-  by rewrite I.sub_propagate_l.
+  rewrite I.sub_propagate_l //.
+  now apply contains_Xnan. }
 move/(_ x) in Hdelta.
 have->: f x = Xadd (Xreal (PolR.horner tt qx (Rminus x c0)))
   (Xsub (f x) (Xreal (PolR.horner tt qx (Rminus x c0)))).
@@ -597,23 +595,19 @@ Proof.
 rewrite /Iconst.
 case E1 : I.bounded => // .
 have [/(I.lower_bounded_correct _) /= [F1 F2]
-      /(I.upper_bounded_correct _) /= [F3 F4]] :=
+      /(I.upper_bounded_correct _) /= [F3 _]] :=
      I.bounded_correct _ E1.
-move/I.subset_correct => /=.
-rewrite I.bnd_correct /subset.
-case E2 : I.convert => [|x1 y1] //= .
+intros H1 H2.
+have {H1} := I.subset_correct _ _ _ H2 H1.
+specialize (F2 (not_empty_contains _ _ H2)).
+rewrite F2 /=.
+rewrite I.bnd_correct.
 case E3 : x => [|r] //.
 elim.
-{ revert E2.
-  case x1; [now simpl|]; intro rx1.
-  case y1; [now simpl|]; intro ry1.
-  intros _ H H'; exfalso; apply (Rlt_irrefl rx1); revert H; apply Rle_lt_trans.
-  revert H'; elim; apply Rle_trans. }
-case E4 : x1 => [|r1]; first by rewrite F1 /le_lower => [[]].
-rewrite /le_lower F1 /=.
-case E5 : y1 => [|r2]; first by rewrite F1 /le_upper => [[]].
-move=> [H1 H2 H3].
-by rewrite (_ : r1 = r) //; lra.
+rewrite F1.
+intros H3 H4.
+apply f_equal.
+now apply Rle_antisym.
 exact: I.valid_lb_real.
 exact: I.valid_ub_real.
 Qed.

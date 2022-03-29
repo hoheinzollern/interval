@@ -285,9 +285,7 @@ Proof.
 intros prec deg limit vars hyps pf pu pv cf cu cv b Hp H.
 apply (R.eval_hyps_bnd_correct prec).
 intros H'.
-eapply subset_contains.
-apply I.subset_correct.
-apply H.
+apply I.subset_correct with (2 := H).
 now apply contains_RInt.
 Qed.
 
@@ -650,9 +648,7 @@ Proof.
 intros prec deg limit vars hyps alpha beta pf pu cf cu b Halpha Hp H.
 apply (R.eval_hyps_bnd_correct prec).
 intros H'.
-eapply subset_contains.
-apply I.subset_correct.
-apply H.
+apply I.subset_correct with (2 := H).
 now apply contains_RInt_gen_infty_bertrand.
 Qed.
 
@@ -740,9 +736,7 @@ Proof.
 intros prec deg limit vars hyps beta pf pu cf cu b Hp H.
 apply (R.eval_hyps_bnd_correct prec).
 intros H'.
-eapply subset_contains.
-apply I.subset_correct.
-apply H.
+apply I.subset_correct with (2 := H).
 now apply contains_RInt_gen_infty_invxln.
 Qed.
 
@@ -1048,9 +1042,7 @@ Proof.
 intros prec deg limit vars hyps alpha beta pf pv cf cv b Halpha Hp H.
 apply (R.eval_hyps_bnd_correct prec).
 intros H'.
-eapply subset_contains.
-apply I.subset_correct.
-apply H.
+apply I.subset_correct with (2 := H).
 now apply contains_RInt_gen_zero_bertrand.
 Qed.
 
