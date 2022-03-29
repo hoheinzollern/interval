@@ -180,6 +180,7 @@ Definition upper_bounded xi :=
   end.
 
 Definition subset xi yi :=
+  if is_empty xi then true else
   match xi, yi with
   | Ibnd xl xu, Ibnd yl yu =>
     match F.cmp xl yl with
@@ -219,6 +220,8 @@ Definition wider prec xi yi :=
   end.
 
 Definition join xi yi :=
+  if is_empty xi then yi else
+  if is_empty yi then xi else
   match xi, yi with
   | Ibnd xl xu, Ibnd yl yu =>
     Ibnd (F.min xl yl) (F.max xu yu)
@@ -226,6 +229,8 @@ Definition join xi yi :=
   end.
 
 Definition meet xi yi :=
+  if is_empty xi then xi else
+  if is_empty yi then yi else
   match xi, yi with
   | Ibnd xl xu, Ibnd yl yu =>
     let l :=
@@ -721,7 +726,14 @@ Theorem subset_correct :
 Proof.
 intros xi yi.
 case xi ; case yi ; try (simpl ; intros ; try exact I ; discriminate).
-simpl; intros yl yu xl xu v.
+unfold subset.
+intros yl yu xl xu v Hv.
+generalize (is_empty_correct (Ibnd xl xu) v Hv).
+destruct is_empty.
+{ intros H H'. now elim H. }
+intros _.
+revert Hv.
+simpl.
 rewrite !F.cmp_correct, !F.valid_lb_correct, !F.valid_ub_correct.
 generalize (F.classify_correct xl); rewrite F.real_correct.
 generalize (F.classify_correct xu); rewrite F.real_correct.
@@ -756,10 +768,29 @@ Lemma join_correct :
   contains (convert xi) v \/ contains (convert yi) v ->
   contains (convert (join xi yi)) v.
 Proof.
+intros xi yi v H.
+unfold join.
+generalize (is_empty_correct xi v).
+intros Ex.
+destruct is_empty.
+{ destruct H as [H|H].
+  now elim Ex.
+  exact H. }
+clear Ex.
+generalize (is_empty_correct yi v).
+intros Ey.
+destruct is_empty.
+{ destruct H as [H|H].
+  exact H.
+  now elim Ey. }
+clear Ey.
+revert H.
 assert (H1v0 : forall v, ~(1 <= v <= 0)%R).
-{ intros v Hf.
+{ intros v' Hf.
   apply (Rlt_irrefl 0), (Rlt_le_trans _ 1); [apply Rlt_0_1|].
   elim Hf; apply Rle_trans. }
+revert xi yi v.
+simpl.
 intros [|xl xu] [|yl yu] [|v]; simpl;
   try rewrite Hxl, Hxu; try rewrite Hyl, Hyu; simpl; try tauto; [|].
 { now case (_ && _); case (_ && _); intros [H|H]. }
@@ -870,6 +901,11 @@ Theorem meet_correct :
   contains (convert xi) v -> contains (convert yi) v ->
   contains (convert (meet xi yi)) v.
 Proof.
+intros xi yi v Hx Hy.
+unfold meet.
+destruct is_empty. easy.
+destruct is_empty. easy.
+revert xi yi v Hx Hy.
 intros [|xl xu] [|yl yu] [|v] ; simpl ; trivial; [now case (_ && _)|].
 case_eq (F.valid_lb xl); [|intros _ [H0 H1]; exfalso; lra].
 case_eq (F.valid_ub xu); [|intros _ _ [H0 H1]; exfalso; lra].
@@ -943,6 +979,19 @@ Theorem meet_correct' :
   contains (convert (meet xi yi)) v ->
   contains (convert xi) v /\ contains (convert yi) v.
 Proof.
+intros xi yi v.
+unfold meet.
+generalize (is_empty_correct xi v).
+destruct is_empty.
+{ intros H Hv.
+  now elim H. }
+intros _.
+generalize (is_empty_correct yi v).
+destruct is_empty.
+{ intros H Hv.
+  now elim H. }
+intros _.
+revert xi yi v.
 intros [|xl xu] [|yl yu] v H ; try easy.
 destruct v as [|v]; revert H; simpl; [now case (_ && _)|].
 assert (HRmin: forall p q, (v <= Rmin p q)%R -> (v <= p /\ v <= q)%R).
