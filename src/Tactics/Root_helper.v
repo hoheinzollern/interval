@@ -31,6 +31,36 @@ Require Import Prog.
 Require Import Reify.
 Require Import Interval_helper.
 
+Lemma cut_root :
+  forall (x y : R) (G P : Prop),
+  ((P -> G) -> x = y -> G) -> ((x = y -> P) -> G) -> G.
+Proof.
+intros x y G P K L.
+destruct (Req_dec x y) as [H|H].
+apply K with (2 := H).
+intros N.
+now apply L.
+apply L.
+intros N.
+now elim H.
+Qed.
+
+Ltac get_root_var Zy :=
+  let y :=
+    lazymatch type of Zy with
+    | ?y = _ => y
+    | R => Zy
+    | Prop =>
+      match Zy with
+      | ?y = _ => y
+      end
+    | _ => fail "No variable found"
+    end in
+  lazymatch Tree.get_vars y (@nil R) with
+  | ?x :: _ => x
+  | _ => fail "No variable found"
+  end.
+
 Module RootTacticAux (F : FloatOps with Definition radix := Zaux.radix2 with Definition sensible_format := true) (I : IntervalOps with Module F := F).
 
 Module F' := FloatExt F.
@@ -222,5 +252,33 @@ Ltac do_root x Zy prec depth native nocheck :=
     apply (refine_root_correct prec depth)
   end ;
   do_reduction nocheck native.
+
+Ltac do_root_intro x Zy prec depth native nocheck :=
+  let y :=
+    match type of Zy with
+    | ?y = 0%R => y
+    | _ => fail "Not an equality to zero"
+    end in
+  let i := fresh "__i" in
+  evar (i : I.type) ;
+  cut (contains (I.convert i) (Xreal x))%R ; cycle 1 ; [
+    let vars := get_vars x (@nil R) in
+    let vars := get_vars y vars in
+    let vars' := constr:(x :: vars) in
+    revert Zy ;
+    reify_partial y vars' ;
+    intros <- ;
+    let v := fresh "__vars" in
+    set (v := vars) ;
+    reify_partial x vars ;
+    intros <- ;
+    find_hyps vars ;
+    apply (root_contains_correct prec depth) ;
+    match goal with
+    | |- _ ?hyps ?px ?cx ?pf ?cf _ = true =>
+      do_instantiate i (fun xi : I.type => xi) native (root_plain prec depth hyps px cx pf cf)
+    end ;
+    do_reduction nocheck native
+  | do_interval_generalize I.convert ; clear i ].
 
 End RootTacticAux.
