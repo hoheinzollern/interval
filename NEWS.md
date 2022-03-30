@@ -1,3 +1,9 @@
+Version 4.5.0
+-------------
+
+* added tactics `root` and `root_intro` for refining enclosures using Newton's method
+* improved behavior of `exp` in case of overflow
+
 Version 4.4.0
 -------------
 
