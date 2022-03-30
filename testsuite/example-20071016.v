@@ -102,10 +102,10 @@ Qed.
 
 (* Degenerate forms *)
 
-Definition bounded_by_1 x `(0 <= x <= PI/2) :=
+Definition equal_1 x `(0 <= x <= PI/2) :=
   ltac:(interval ((cos x)² + (sin x)²) with (i_taylor x)).
 
-Definition bounded_by_PI_4 :=
+Definition equal_PI_over_4 :=
   ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
 
 Definition equal_0_442854401002 x :=

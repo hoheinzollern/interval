@@ -52,14 +52,14 @@ The complete list of recognized hypotheses is as follows:
   - `Rabs t <= c1` and `Rabs t < c1`, handled as `-c1 <= e <= c1`.
 
 The tactic recognizes the following operators: `PI`, `Ropp`, `Rabs`, `Rinv`,
-`Rsqr`, `sqrt`, `cos`, `sin`, `tan`, `atan`, `exp`, `ln`, `pow`,
-`powerRZ`, `Rplus`, `Rminus`, `Rmult`, `Rdiv`. Operators `Zfloor`,
+`Rsqr`, `sqrt`, `cos`, `sin`, `tan`, `atan`, `exp`, `ln`, `pow`, `Rpower`,
+`powerRZ`, `Rplus`, `Rminus`, `Rmult`, `Rdiv`. Flocq's operators `Zfloor`,
 `Zceil`, `Ztrunc`, `ZnearestE` (composed with `IZR`) are also recognized.
 There are some restrictions on the domain of a few functions: `pow` and
 `powerRZ` should be written with a numeric exponent; the input of `cos`
 and `sin` should be between `-2*PI` and `2*PI`; the input of `tan` should
 be between `-PI/2` and `PI/2`. Outside of these domains, the
-trigonometric functions return meaningful results only for singleton
+trigonometric functions return tight results only for singleton
 input intervals.
 
 A helper tactic `interval_intro e` is also available. Instead of proving
@@ -351,10 +351,10 @@ Qed.
 
 (* Degenerate forms *)
 
-Definition bounded_by_1 x `(0 <= x <= PI/2) :=
+Definition equal_1 x `(0 <= x <= PI/2) :=
   ltac:(interval ((cos x)² + (sin x)²) with (i_taylor x)).
 
-Definition bounded_by_PI_4 :=
+Definition equal_PI_over_4 :=
   ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
 
 Definition equal_0_442854401002 x :=
