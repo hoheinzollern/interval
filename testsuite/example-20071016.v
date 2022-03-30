@@ -1,7 +1,11 @@
-From Coq Require Import Reals.
+From Coq Require Import Reals Lra.
 From Interval Require Import Tactic.
 
 Open Scope R_scope.
+Notation "x = y ± z" := (Rle (Rabs (x - y)) z)
+  (at level 70, y at next level).
+
+(* Tactic interval *)
 
 Goal
   forall x, -1 <= x <= 1 ->
@@ -26,13 +30,13 @@ Proof.
   intros.
   interval_intro (sqrt (1 - x)) upper as H'.
   apply Rle_trans with (1 := H').
-  interval.
+  lra.
 Qed.
 
 Goal
   forall x, 3/2 <= x <= 2 ->
   forall y, 1 <= y <= 33/32 ->
-  Rabs (sqrt(1 + x/sqrt(x+y)) - 144/1000*x - 118/100) <= 71/32768.
+  sqrt(1 + x/sqrt(x+y)) = 144/1000*x + 118/100 ± 71/32768.
 Proof.
   intros.
   interval with (i_prec 19, i_bisect x).
@@ -40,10 +44,9 @@ Qed.
 
 Goal
   forall x, 1/2 <= x <= 2 ->
-  Rabs (sqrt x - (((((122 / 7397 * x + (-1733) / 13547) * x
-                   + 529 / 1274) * x + (-767) / 999) * x
-                   + 407 / 334) * x + 227 / 925))
-    <= 5/65536.
+  sqrt x = ((((122 / 7397 * x + (-1733) / 13547) * x
+             + 529 / 1274) * x + (-767) / 999) * x
+             + 407 / 334) * x + 227 / 925 ± 5/65536.
 Proof.
   intros.
   interval with (i_bisect x, i_taylor x, i_degree 3).
@@ -58,11 +61,13 @@ Proof.
   interval with (i_bisect x, i_autodiff x).
 Qed.
 
+(* Tactic integral *)
+
 From Coquelicot Require Import Coquelicot.
 
 Goal
-  Rabs (RInt (fun x => atan (sqrt (x*x + 2)) / (sqrt (x*x + 2) * (x*x + 1))) 0 1
-        - 5/96*PI*PI) <= 1/1000.
+  RInt (fun x => atan (sqrt (x*x + 2)) / (sqrt (x*x + 2) * (x*x + 1))) 0 1
+    = 5/96*PI*PI ± 1/1000.
 Proof.
   integral with (i_fuel 2, i_degree 5).
 Qed.
@@ -85,10 +90,28 @@ Proof.
 Qed.
 *)
 
+(* Tactic root *)
+
+Goal
+  forall x:R, 999 <= x <= 1000 ->
+  sin x = 0 -> x = 318 * PI ± 1/1000.
+Proof.
+  intros x Hx Hs.
+  root Hs.
+Qed.
+
+(* Degenerate forms *)
+
 Definition bounded_by_1 x `(0 <= x <= PI/2) :=
   ltac:(interval ((cos x)² + (sin x)²) with (i_taylor x)).
 
-Definition bounded_by_PI_4 := ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
+Definition bounded_by_PI_4 :=
+  ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
+
+Definition equal_0_442854401002 x :=
+  ltac:(root (exp x = 2 - x)).
+
+(* Tactic plot and command Plot *)
 
 Definition p1 := ltac:(plot (fun x => x^2 * sin (x^2)) (-4) 4).
 
