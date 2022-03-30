@@ -179,20 +179,26 @@ Ltac do_plot_y t x1 x2 y1 y2 params :=
   end.
 
 Ltac do_root_parse params :=
-  let rec aux prec depth native nocheck params :=
+  let rec aux fvar prec depth native nocheck params :=
     lazymatch params with
-    | nil => constr:((prec, depth, native, nocheck))
-    | cons (i_prec ?p) ?t => aux (Some p) depth native nocheck t
-    | cons (i_depth ?d) ?t => aux prec d native nocheck t
-    | cons i_native_compute ?t => aux prec depth true nocheck t
-    | cons i_delay ?t => aux prec depth native true t
+    | nil => constr:((fvar, prec, depth, native, nocheck))
+    | cons (i_autodiff ?v) ?t => aux (Some v) prec depth native nocheck t
+    | cons (i_prec ?p) ?t => aux fvar (Some p) depth native nocheck t
+    | cons (i_depth ?d) ?t => aux fvar prec d native nocheck t
+    | cons i_native_compute ?t => aux fvar prec depth true nocheck t
+    | cons i_delay ?t => aux fvar prec depth native true t
     | cons ?h _ => fail 100 "Unknown tactic parameter" h
     end in
-  aux (@None positive) 15%nat false false params.
+  aux (@None R) (@None positive) 15%nat false false params.
 
-Ltac do_root' x Zy params :=
+Ltac do_root' Zy params :=
   match do_root_parse params with
-  | (?prec, ?depth, ?native, ?nocheck) =>
+  | (?fvar, ?prec, ?depth, ?native, ?nocheck) =>
+    let x :=
+      lazymatch fvar with
+      | Some ?v => v
+      | None => get_root_var Zy
+      end in
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
@@ -203,9 +209,14 @@ Ltac do_root' x Zy params :=
     end
   end.
 
-Ltac do_root_intro' x Zy params :=
+Ltac do_root_intro' Zy params :=
   match do_root_parse params with
-  | (?prec, ?depth, ?native, ?nocheck) =>
+  | (?fvar, ?prec, ?depth, ?native, ?nocheck) =>
+    let x :=
+      lazymatch fvar with
+      | Some ?v => v
+      | None => get_root_var Zy
+      end in
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
@@ -216,7 +227,7 @@ Ltac do_root_intro' x Zy params :=
     end
   end.
 
-Ltac do_root_intro_prop x y1 y2 params :=
+Ltac do_root_intro_prop y1 y2 params :=
   eapply (cut_root y1 y2) ; [
     let H := fresh "H" in
     let K := fresh "K" in
@@ -225,32 +236,28 @@ Ltac do_root_intro_prop x y1 y2 params :=
     | 0%R => idtac
     | _ => apply (Rminus_diag_eq y1 y2) in H
     end ;
-    do_root_intro' x H params ;
+    do_root_intro' H params ;
     eexact K
   | ].
 
-Ltac do_root_intro x Zy params :=
+Ltac do_root_intro Zy params :=
   lazymatch type of Zy with
   | R =>
-    do_root_intro_prop x Zy 0%R params
+    do_root_intro_prop Zy 0%R params
   | Prop =>
     lazymatch Zy with
-    | ?y1 = ?y2 => do_root_intro_prop x y1 y2 params
+    | ?y1 = ?y2 => do_root_intro_prop y1 y2 params
     end
   | _ = 0%R =>
-    do_root_intro' x Zy params
+    do_root_intro' Zy params
   | ?y1 = ?y2 =>
     let H := fresh "H" in
     assert (H := Rminus_diag_eq y1 y2 Zy) ;
-    do_root_intro' x H params ;
+    do_root_intro' H params ;
     clear H
   end.
 
-Ltac do_root1_intro Zy params :=
-  let x := get_root_var Zy in
-  do_root_intro x Zy params.
-
-Ltac do_root x Zy params :=
+Ltac do_root Zy params :=
   match goal with
   | |- ?G =>
     is_evar G ;
@@ -259,14 +266,14 @@ Ltac do_root x Zy params :=
       refine (_ : Zy = 0%R -> _) ;
       let H := fresh "H" in
       intros H ;
-      do_root_intro' x H params
+      do_root_intro' H params
     | Prop =>
       refine (_ : Zy -> _) ;
       let H := fresh "H" in
       intros H ;
-      do_root_intro x H params
+      do_root_intro H params
     | _ = _ =>
-      do_root_intro x Zy params
+      do_root_intro Zy params
     end ;
     exact (fun K => K)
   | _ =>
@@ -275,26 +282,22 @@ Ltac do_root x Zy params :=
       cut (Zy = 0%R) ; [
         let H := fresh "H" in
         intros H ;
-        do_root' x H params
+        do_root' H params
       | ]
     | Prop =>
       cut Zy ; [
         let H := fresh "H" in
         intros H ;
-        do_root x H params
+        do_root H params
       | ]
     | _ = 0%R =>
-      do_root' x Zy params
+      do_root' Zy params
     | ?y1 = ?y2 =>
       let H := fresh "H" in
       assert (H := Rminus_diag_eq y1 y2 Zy) ;
-      do_root' x H params
+      do_root' H params
     end
   end.
-
-Ltac do_root1 Zy params :=
-  let x := get_root_var Zy in
-  do_root x Zy params.
 
 End Private.
 
@@ -432,41 +435,26 @@ Tactic Notation "plot" constr(t) constr(x1) constr(x2) constr(y1) constr(y2) :=
 Tactic Notation "plot" constr(t) constr(x1) constr(x2) constr(y1) constr(y2) "with" constr(params) :=
   do_plot_y t x1 x2 y1 y2 ltac:(tuple_to_list params (@nil interval_tac_parameters)).
 
-Tactic Notation "root" constr(Zy) constr(x) :=
-  do_root x Zy (@nil interval_tac_parameters).
-
-Tactic Notation "root" constr(Zy) constr(x) "with" constr(params) :=
-  do_root x Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)).
-
 Tactic Notation "root" constr(Zy) :=
-  do_root1 Zy (@nil interval_tac_parameters).
+  do_root Zy (@nil interval_tac_parameters).
 
 Tactic Notation "root" constr(Zy) "with" constr(params) :=
-  do_root1 Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)).
+  do_root Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)).
 
 Tactic Notation "root_intro" constr(Zy) constr(x) :=
   do_root_intro x Zy (@nil interval_tac_parameters) ; intro.
 
-Tactic Notation "root_intro" constr(Zy) constr(x) "with" constr(params) :=
-  do_root_intro x Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; intro.
-
-Tactic Notation "root_intro" constr(Zy) constr(x) "as" simple_intropattern(H) :=
-  do_root_intro x Zy (@nil interval_tac_parameters) ; intros H.
-
-Tactic Notation "root_intro" constr(Zy) constr(x) "with" constr(params) "as" simple_intropattern(H) :=
-  do_root_intro x Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; intros H.
-
 Tactic Notation "root_intro" constr(Zy) :=
-  do_root1_intro Zy (@nil interval_tac_parameters) ; intro.
+  do_root_intro Zy (@nil interval_tac_parameters) ; intro.
 
 Tactic Notation "root_intro" constr(Zy) "with" constr(params) :=
-  do_root1_intro Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; intro.
+  do_root_intro Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; intro.
 
 Tactic Notation "root_intro" constr(Zy) "as" simple_intropattern(H) :=
-  do_root1_intro Zy (@nil interval_tac_parameters) ; intros H.
+  do_root_intro Zy (@nil interval_tac_parameters) ; intros H.
 
 Tactic Notation "root_intro" constr(Zy) "with" constr(params) "as" simple_intropattern(H) :=
-  do_root1_intro Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; intros H.
+  do_root_intro Zy ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; intros H.
 
 End IntervalTactic.
 
