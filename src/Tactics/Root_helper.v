@@ -69,9 +69,8 @@ Import IH.
 
 Definition check_goal prec hyps pg cg g :=
   let bounds := hyps ++ map (T.eval_bnd prec) cg in
-  fun b =>
-    let yi := nth 0 (A.BndValuator.eval prec pg (b :: bounds)) I.nai in
-    R.eval_goal_bnd prec g yi.
+  let check := R.eval_goal_bnd prec g in
+  fun b => check (nth 0 (A.BndValuator.eval prec pg (b :: bounds)) I.nai).
 
 Definition fast_enough prec xi xi' :=
   if I.bounded xi then

@@ -201,7 +201,8 @@ Definition eval_bisect_fun prec prog xi :=
 
 Definition eval_bisect prec depth idx hyps prog consts g :=
   let bounds := compute_inputs prec hyps consts in
-  A.bisect bounds idx (fun xi => R.eval_goal_bnd prec g (eval_bisect_fun prec prog xi)) depth.
+  let check := R.eval_goal_bnd prec g in
+  A.bisect bounds idx (fun xi => check (eval_bisect_fun prec prog xi)) depth.
 
 Theorem eval_bisect_correct :
   forall prec depth idx vars hyps prog consts g,
@@ -241,7 +242,8 @@ Definition eval_bisect_diff_fun prec prog xi :=
 
 Definition eval_bisect_diff prec depth idx hyps prog consts g :=
   let bounds := compute_inputs prec hyps consts in
-  A.bisect bounds idx (fun xi => R.eval_goal_bnd prec g (eval_bisect_diff_fun prec prog xi)) depth.
+  let check := R.eval_goal_bnd prec g in
+  A.bisect bounds idx (fun xi => check (eval_bisect_diff_fun prec prog xi)) depth.
 
 Theorem eval_bisect_diff_correct :
   forall prec depth idx vars hyps prog consts g,
@@ -304,7 +306,8 @@ Definition eval_bisect_taylor_fun prec deg prog xi :=
 
 Definition eval_bisect_taylor prec deg depth idx hyps prog consts g :=
   let bounds := compute_inputs prec hyps consts in
-  A.bisect bounds idx (fun xi => R.eval_goal_bnd prec g (eval_bisect_taylor_fun prec deg prog xi)) depth.
+  let check := R.eval_goal_bnd prec g in
+  A.bisect bounds idx (fun xi => check (eval_bisect_taylor_fun prec deg prog xi)) depth.
 
 Theorem eval_bisect_taylor_correct :
   forall prec deg depth idx vars hyps prog consts g,
