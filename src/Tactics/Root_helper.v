@@ -73,16 +73,22 @@ Definition check_goal prec hyps pg cg g :=
     let yi := nth 0 (A.BndValuator.eval prec pg (b :: bounds)) I.nai in
     R.eval_goal_bnd prec g yi.
 
+Definition fast_enough prec xi xi' :=
+  if I.bounded xi then
+    let (xi1, _) := I.bisect xi in
+    I.wider prec xi1 xi'
+  else I.bounded xi'.
+
 Fixpoint refine_root_aux depth prec prog bounds xi (check : I.type -> bool) :=
   match depth with
   | S depth =>
     let xi' := A.DiffValuator.root prec prog bounds xi in
     if check xi' then true
+    else if fast_enough prec xi xi' then
+      refine_root_aux depth prec prog bounds xi' check
     else
-      let (xi1,xi2) := I.bisect xi in
-      if I.wider prec xi1 xi' then
-        refine_root_aux depth prec prog bounds xi' check
-      else if refine_root_aux depth prec prog bounds xi1 check then
+      let (xi1,xi2) := I.bisect xi' in
+      if refine_root_aux depth prec prog bounds xi1 check then
         refine_root_aux depth prec prog bounds xi2 check
       else false
   | O => false
@@ -121,7 +127,7 @@ refine (_ (A.DiffValuator.root_correct prec pf (compute_inputs prec hyps cf) _ _
 2: now apply app_merge_hyps_eval_bnd.
 set (xi' := A.DiffValuator.root _ _ _ _).
 intros Hx' H.
-destruct check_goal eqn:Hg.
+destruct check_goal eqn:Hg ; [|destruct fast_enough].
 - clear H IH.
   apply (R.eval_goal_bnd_correct prec) with (2 := Hg).
   unfold eval_real'.
@@ -129,14 +135,12 @@ destruct check_goal eqn:Hg.
   simpl.
   apply A.BndValuator.eval_correct_ext' with (2 := Hx').
   now apply app_merge_hyps_eval_bnd.
-- generalize (I.bisect_correct _ _ Hx).
-  destruct (I.bisect xi) as [xi1 xi2].
-  destruct I.wider.
-  + intros _.
-    now apply (IH _ Hx').
-  + destruct refine_root_aux eqn:Hb.
-    now intros [K|K] ; apply (IH _ K).
-    easy.
+- now apply (IH _ Hx').
+- generalize (I.bisect_correct _ _ Hx').
+  destruct (I.bisect xi') as [xi1 xi2].
+  destruct refine_root_aux eqn:Hb.
+  now intros [K|K] ; apply (IH _ K).
+  easy.
 Qed.
 
 Definition root_contains prec depth hyps px cx pf cf b :=
@@ -171,17 +175,15 @@ refine (_ (A.DiffValuator.root_correct prec pf (compute_inputs prec hyps cf) _ _
 2: now apply app_merge_hyps_eval_bnd.
 set (xi' := A.DiffValuator.root _ _ _ _).
 intros Hx' H.
-destruct I.subset eqn:Hg.
+destruct I.subset eqn:Hg ; [|destruct fast_enough].
 - clear H IH.
   now apply I.subset_correct with (2 := Hg).
-- generalize (I.bisect_correct _ _ Hx).
-  destruct (I.bisect xi) as [xi1 xi2].
-  destruct I.wider.
-  + intros _.
-    now apply (IH _ Hx').
-  + destruct refine_root_aux eqn:Hb.
-    now intros [K|K] ; apply (IH _ K).
-    easy.
+- now apply (IH _ Hx').
+- generalize (I.bisect_correct _ _ Hx').
+  destruct (I.bisect xi') as [xi1 xi2].
+  destruct refine_root_aux eqn:Hb.
+  now intros [K|K] ; apply (IH _ K).
+  easy.
 Qed.
 
 (* loc = Lt gives the leftmost root, Gt the rightmost one, Eq all of them *)
@@ -190,11 +192,10 @@ Fixpoint root_plain_aux depth prec prog bounds xi loc :=
   | S depth =>
     let xi' := A.DiffValuator.root prec prog bounds xi in
     if I.is_empty xi' then xi'
+    else if fast_enough prec xi xi' then
+      root_plain_aux depth prec prog bounds xi' loc
     else
-      let (xi1,xi2) := I.bisect xi in
-      if I.wider prec xi1 xi' then
-        root_plain_aux depth prec prog bounds xi' loc
-      else
+      let (xi1,xi2) := I.bisect xi' in
         match loc with
         | Eq =>
           let xi1' := root_plain_aux depth prec prog bounds xi1 Lt in
