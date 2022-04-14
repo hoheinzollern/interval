@@ -1,3 +1,8 @@
+Version 4.5.1
+-------------
+
+* fixed behavior of `root` on unbounded intervals
+
 Version 4.5.0
 -------------
 
