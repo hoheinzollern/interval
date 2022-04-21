@@ -978,7 +978,7 @@ Qed.
 
 Lemma Fadd_slow_aux1_correct :
   forall beta sx sy mx my e,
-  UtoX (Fadd_slow_aux1 beta sx sy mx my e) =
+  UtoX (Fadd_slow_aux1 beta sx sy mx my e pos_Eq) =
   Xadd (FtoX (@Float beta sx mx e)) (FtoX (@Float beta sy my e)).
 Proof.
 intros.
@@ -1026,7 +1026,7 @@ Qed.
 
 Lemma Fadd_slow_aux2_correct :
   forall beta sx sy mx my ex ey,
-  UtoX (Fadd_slow_aux2 beta sx sy mx my ex ey) =
+  UtoX (Fadd_slow_aux2 beta sx sy mx my ex ey pos_Eq) =
   Xadd (FtoX (@Float beta sx mx ex)) (FtoX (@Float beta sy my ey)).
 Proof.
 intros.

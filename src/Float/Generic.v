@@ -374,21 +374,21 @@ Definition Fmul {beta} mode prec (x y : float beta) :=
  * Complexity is fine as long as px <= p and py <= p and exponents are close.
  *)
 
-Definition Fadd_slow_aux1 beta sx sy mx my e : ufloat beta :=
+Definition Fadd_slow_aux1 beta sx sy mx my e pos : ufloat beta :=
   if eqb sx sy then
-    Ufloat sx (Pplus mx my) e pos_Eq
+    Ufloat sx (Pplus mx my) e pos
   else
     match (Zpos mx + Zneg my)%Z with
     | Z0 => Uzero
-    | Zpos p => Ufloat sx p e pos_Eq
-    | Zneg p => Ufloat sy p e pos_Eq
+    | Zpos p => Ufloat sx p e pos
+    | Zneg p => Ufloat sy p e pos
     end.
 
-Definition Fadd_slow_aux2 beta sx sy mx my ex ey :=
+Definition Fadd_slow_aux2 beta sx sy mx my ex ey pos :=
   match Zminus ex ey with
-  | Zpos nb => Fadd_slow_aux1 beta sx sy (shift beta mx nb) my ey
-  | Zneg nb => Fadd_slow_aux1 beta sx sy mx (shift beta my nb) ex
-  | Z0 => Fadd_slow_aux1 beta sx sy mx my ex
+  | Zpos nb => Fadd_slow_aux1 beta sx sy (shift beta mx nb) my ey pos
+  | Zneg nb => Fadd_slow_aux1 beta sx sy mx (shift beta my nb) ex pos
+  | Z0 => Fadd_slow_aux1 beta sx sy mx my ex pos
   end.
 
 Definition Fadd_slow_aux {beta} (x y : float beta) :=
@@ -401,7 +401,7 @@ Definition Fadd_slow_aux {beta} (x y : float beta) :=
   | Float sx mx ex, Fzero =>
     Ufloat sx mx ex pos_Eq
   | Float sx mx ex, Float sy my ey =>
-    Fadd_slow_aux2 beta sx sy mx my ex ey
+    Fadd_slow_aux2 beta sx sy mx my ex ey pos_Eq
   end.
 
 Definition Fadd_slow {beta} mode prec (x y : float beta) :=
@@ -415,152 +415,54 @@ Definition Fadd_exact {beta} (x y : float beta) :=
  *
  * 1. Guess a lower bound on the exponent of the result.
  * 2. Truncate the mantissa (at most one) that extends farther.
- * 3. Adjust the mantissa so that the propagated truncation error is inward.
- * 4. Shift the (usually other) mantissa to match it.
- * 5. Perform the addition/subtraction.
- * 6. Round to p digits wrt the position given by the truncation.
+ * 3. Shift the (usually other) mantissa to match it.
+ * 4. Perform the addition/subtraction.
+ * 5. Round to p digits wrt the position given by the truncation.
  *
  * Complexity is fine as long as, either
  *  . px <= p and py <= p, or
  *  . pv <= p and v has same magnitude than the result.
- *
- * Details:
- *
- *  . Same sign:
- *    Exponent of the result is at least max(u1, u2) - p.
- *    Target exponent e is min(max(e1, e2), max(u1, u2) - p).
- *    1. if either e1 < e or e2 < e (assume e2 < e), then e1 >= e
- *       if u2 <= e, then f2 < b^u2 <= b^e
- *         return rounded f1 at p digits with pos(f2)
- *       otherwise e2 < e < u2
- *       truncate m2 at e, shift m1 at e
- *    2. if e1 >= e and e2 >= e
- *       shift m1 or m2 at min(e1, e2)
- *    Perform addition.
- *
- *  . Opposite signs: (assume u1 > u2 + 1, otherwise full subtraction)
- *    Exponent of the result is at least u1 - p - 1.
- *    Target exponent e is min(max(e1, e2), u1 - p - 1).
- *    1. if u2 < e, then f2 < b^u2 <= b^e / b
- *       return f1 - b^(e - 2)
- *    2. if u2 = e, then change e to e - 1 and continue
- *    3. if e2 < e < u2, then e1 >= e
- *       truncate m2 outward at e, shift m1 at e
- *    4. if e1 < e < u2, then e2 >= e and e < u2 < u1
- *       truncate m1 at e, shift m2 at e
- *    5. if e1 >= e and e2 >= e
- *       shift m1 or m2 at min(e1, e2)
- *    Perform subtraction.
  *)
 
-Definition truncate beta m1 nb :=
-  let d := iter_pos (fun x => Pmult (match radix_val beta with Zpos r => r | _ => xH end) x) nb xH in
-  match Z.div_eucl (Zpos m1) (Zpos d) with
-  | (Zpos m2, r) => (m2, adjust_pos r d pos_Eq)
-  | _ => (xH, pos_Lo) (* dummy *)
-  end.
-
-Definition Fadd_fast_aux1 beta s m1 m2 e d2 u2 e1 e2 : ufloat beta :=
-  match Z.compare u2 e with
-  | Lt => (* negligible value *)
-    Ufloat s m1 e1 pos_Lo
-  | Eq => (* almost negligible *)
-    Ufloat s m1 e1 (adjust_pos (Zpos m2) (shift beta xH d2) pos_Eq)
-  | Gt =>
-    match (e - e2)%Z with
-    | Zpos p =>
-      let (n2, pos) := truncate beta m2 p in
-      let n1 :=
-        match (e1 - e)%Z with
-        | Zpos q => (shift beta m1 q)
-        | Z0 => m1
-        | _ => xH (* dummy *)
-        end in
-      Ufloat s (Pplus n1 n2) e pos
-    | _ => Unan (* dummy *)
-    end
-  end.
-
-Definition Fsub_fast_aux1 beta s m1 m2 e e1 e2 : ufloat beta :=
+Definition Fadd_fast_aux1 beta s1 s2 m1 m2 e1 e2 e : ufloat beta :=
+  let m1' :=
+    match (e1 - e)%Z with
+    | Zpos d => shift beta m1 d
+    | _ => m1
+    end in
   match (e - e2)%Z with
-  | Zpos p =>
-    let (n2, pos) :=
-      match truncate beta m2 p with
-      | (n, pos_Eq) => (n, pos_Eq)
-      | (n, pos_Lo) => (Pos.succ n, pos_Up)
-      | (n, pos_Mi) => (Pos.succ n, pos_Mi)
-      | (n, pos_Up) => (Pos.succ n, pos_Lo)
-      end in
-    let n1 :=
-      match (e1 - e)%Z with
-      | Zpos q => (shift beta m1 q)
-      | Z0 => m1
-      | _ => xH (* dummy *)
-      end in
-    Ufloat s (Pminus n1 n2) e pos
-  | _ => Unan (* dummy *)
+  | Zpos nb =>
+    let d := shift beta xH nb in
+    match Z.div_eucl (Zpos m2) (Zpos d) with
+    | (Zpos m2', r) =>
+      let pos := adjust_pos r d pos_Eq in
+      Fadd_slow_aux1 beta s1 s2 m1' m2' e pos
+    | (Z0, r) =>
+      let pos := adjust_pos r d pos_Eq in
+      Ufloat s1 m1' e pos
+    | _ =>
+      Unan (* dummy *)
+    end
+  | Z0 =>
+    Fadd_slow_aux1 beta s1 s2 m1' m2 e pos_Eq
+  | _ =>
+    Unan (* dummy *)
   end.
-
-Definition Fsub_fast_aux2 beta prec s m1 m2 u1 u2 e1 e2 :=
-  let e := Z.min (Z.max e1 e2) (u1 + Zneg (prec + 1)) in
-  if Zlt_bool e2 e then
-    match Z.compare u2 e with
-    | Lt => (* negligible value *)
-      Fadd_slow_aux2 beta s (negb s) m1 xH e1 (e - 2)
-    | Eq => (* almost negligible *)
-      let ee := (e - 1)%Z in
-      if Zeq_bool e2 ee then
-        let n1 :=
-          match (e1 - ee)%Z with
-          | Zpos q => (shift beta m1 q)
-          | Z0 => m1
-          | _ => xH (* dummy *)
-          end in
-        Ufloat s (Pminus n1 m2) ee pos_Eq
-      else
-        Fsub_fast_aux1 beta s m1 m2 ee e1 e2
-    | Gt =>
-      Fsub_fast_aux1 beta s m1 m2 e e1 e2
-    end
-  else if Zlt_bool e1 e then
-    match (e - e1)%Z with
-    | Zpos p =>
-      let (n1, pos) := truncate beta m1 p in
-      let n2 :=
-        match (e2 - e)%Z with
-        | Zpos q => (shift beta m2 q)
-        | Z0 => m2
-        | _ => xH (* dummy *)
-        end in
-      Ufloat s (Pminus n1 n2) e pos
-    | _ => Unan (* dummy *)
-    end
-  else
-    Fadd_slow_aux2 beta s (negb s) m1 m2 e1 e2.
 
 Definition Fadd_fast_aux2 beta prec s1 s2 m1 m2 e1 e2 :=
   let d1 := count_digits beta m1 in
   let d2 := count_digits beta m2 in
-  let u1 := (e1 + Zpos d1)%Z in
-  let u2 := (e2 + Zpos d2)%Z in
-  if eqb s1 s2 then
-    (* same sign *)
-    let e := Z.min (Z.max e1 e2) ((Z.max u1 u2) + Zneg prec) in
+  let p1 := (Zpos d1 + e1)%Z in
+  let p2 := (Zpos d2 + e2)%Z in
+  if Zle_bool 2 (Z.abs (p1 - p2)) then
+    let e := Z.min (Z.max e1 e2) (Z.max p1 p2 + Z.neg prec) in
     if Zlt_bool e1 e then
-      Fadd_fast_aux1 beta s1 m2 m1 e d1 u1 e2 e1
-    else if Zlt_bool e2 e then
-      Fadd_fast_aux1 beta s1 m1 m2 e d2 u2 e1 e2
+      Fadd_fast_aux1 beta s2 s1 m2 m1 e2 e1 e
     else
-      Fadd_slow_aux2 beta s1 s2 m1 m2 e1 e2
+      Fadd_fast_aux1 beta s1 s2 m1 m2 e1 e2 e
   else
-    (* opposite sign *)
-    if Zlt_bool (u1 + 1)%Z u2 then
-      Fsub_fast_aux2 beta prec s2 m2 m1 u2 u1 e2 e1
-    else if Zlt_bool (u2 + 1)%Z u1 then
-      Fsub_fast_aux2 beta prec s1 m1 m2 u1 u2 e1 e2
-    else
-      (* massive cancellation possible *)
-      Fadd_slow_aux2 beta s1 s2 m1 m2 e1 e2.
+    (* massive cancellation possible *)
+    Fadd_slow_aux2 beta s1 s2 m1 m2 e1 e2 pos_Eq.
 
 Definition Fadd_fast_aux {beta} prec (x y : float beta) :=
   match x, y with
@@ -592,11 +494,27 @@ Definition Fsub_slow_aux {beta} (x y : float beta) :=
   | Fzero, Float sy my ey => Ufloat (negb sy) my ey pos_Eq
   | Float sx mx ex, Fzero => Ufloat sx mx ex pos_Eq
   | Float sx mx ex, Float sy my ey =>
-    Fadd_slow_aux2 beta sx (negb sy) mx my ex ey
+    Fadd_slow_aux2 beta sx (negb sy) mx my ex ey pos_Eq
   end.
 
 Definition Fsub_slow {beta} mode prec (x y : float beta) :=
   Fround_at_prec mode prec (Fsub_slow_aux x y).
+
+Definition Fsub_fast_aux {beta} prec (x y : float beta) :=
+  match x, y with
+  | Fnan, _ => Unan
+  | _, Fnan => Unan
+  | Fzero, Fzero => Uzero
+  | Fzero, Float sy my ey =>
+    Ufloat (negb sy) my ey pos_Eq
+  | Float sx mx ex, Fzero =>
+    Ufloat sx mx ex pos_Eq
+  | Float sx mx ex, Float sy my ey =>
+    Fadd_fast_aux2 beta prec sx (negb sy) mx my ex ey
+  end.
+
+Definition Fsub_fast {beta} mode prec (x y : float beta) :=
+  Fround_at_prec mode prec (Fsub_fast_aux prec x y).
 
 Definition Fsub {beta} := @Fsub_slow beta.
 

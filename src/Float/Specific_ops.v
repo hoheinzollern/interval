@@ -970,11 +970,12 @@ Lemma add_exact_aux_correct :
   forall sx mx ex sy my ey,
   valid_mantissa mx -> valid_mantissa my ->
   FtoX (toF (add_exact_aux2 sx sy mx my ex ey)) =
-  FtoX (Fround_none (Fadd_slow_aux2 radix sx sy (MtoP mx) (MtoP my) (EtoZ ex) (EtoZ ey))).
+  FtoX (Fround_none (Fadd_slow_aux2 radix sx sy (MtoP mx) (MtoP my) (EtoZ ex) (EtoZ ey) pos_Eq)).
 Proof.
 assert (Aux: forall sx mx sy my e,
   valid_mantissa mx -> valid_mantissa my ->
-  FtoX (toF (add_exact_aux1 sx sy mx my e)) = FtoX (Fround_none (Fadd_slow_aux1 radix sx sy (MtoP mx) (MtoP my) (EtoZ e)))).
+  FtoX (toF (add_exact_aux1 sx sy mx my e)) =
+  FtoX (Fround_none (Fadd_slow_aux1 radix sx sy (MtoP mx) (MtoP my) (EtoZ e) pos_Eq))).
 intros sx mx sy my e Mx My.
 unfold add_exact_aux1, Fadd_slow_aux1.
 case eqb.
@@ -1063,7 +1064,8 @@ Lemma add_slow_aux1_correct :
   forall mode p sx sy mx my e,
   valid_mantissa mx ->
   valid_mantissa my ->
-  FtoX (toF (add_slow_aux1 mode p sx sy mx my e)) = FtoX (Fround_at_prec mode (prec p) (Fadd_slow_aux1 radix sx sy (MtoP mx) (MtoP my) (EtoZ e))).
+  FtoX (toF (add_slow_aux1 mode p sx sy mx my e)) =
+  FtoX (Fround_at_prec mode (prec p) (Fadd_slow_aux1 radix sx sy (MtoP mx) (MtoP my) (EtoZ e) pos_Eq)).
 Proof.
 intros mode p sx sy mx my e Vx Vy.
 unfold add_slow_aux1, Fadd_slow_aux1.
@@ -1116,7 +1118,8 @@ Lemma add_slow_aux2_correct :
   forall mode p sx sy mx my ex ey,
   valid_mantissa mx ->
   valid_mantissa my ->
-  FtoX (toF (add_slow_aux2 mode p sx sy mx my ex ey)) = FtoX (Fround_at_prec mode (prec p) (Fadd_slow_aux2 radix sx sy (MtoP mx) (MtoP my) (EtoZ ex) (EtoZ ey))).
+  FtoX (toF (add_slow_aux2 mode p sx sy mx my ex ey)) =
+  FtoX (Fround_at_prec mode (prec p) (Fadd_slow_aux2 radix sx sy (MtoP mx) (MtoP my) (EtoZ ex) (EtoZ ey) pos_Eq)).
 Proof.
 intros mode p sx sy mx my ex ey Vx Vy.
 unfold add_slow_aux2, Fadd_slow_aux2.
