@@ -660,11 +660,7 @@ Definition round_aux mode prec sign m1 e1 pos :=
     let (m2, pos2) := mantissa_shr m1 nb pos in
     float_aux sign (adjust_mantissa mode m2 pos2 sign) e2
   | Eq => float_aux sign (adjust_mantissa mode m1 pos sign) e1
-  | Lt =>
-    if need_change_radix sensible_format mode (mantissa_even m1) pos sign then
-      let m2 := mantissa_add (mantissa_shl m1 (exponent_neg nb)) mantissa_one in
-      float_aux sign m2 e2
-    else float_aux sign m1 e1
+  | Lt => float_aux sign m1 e1
   end.
 
 Lemma round_aux_correct :
@@ -720,24 +716,7 @@ rewrite <- digits_conversion.
 clear ; lia.
 (* *)
 intros dp Hd.
-rewrite mantissa_even_correct with (1 := Hm1).
-unfold need_change_radix2, sensible_format, radix, Z.even.
-case need_change_radix.
-2: now apply toF_float.
-generalize (mantissa_shl_correct dp m1 (exponent_neg (exponent_sub (mantissa_digits m1) p)) Hm1).
-rewrite exponent_neg_correct, exponent_sub_correct, mantissa_digits_correct with (1 := Hm1).
-rewrite Hd.
-intros H1.
-specialize (H1 (refl_equal _)).
-assert (H2 := mantissa_add_correct (mantissa_shl m1 (exponent_neg (exponent_sub (mantissa_digits m1) p)))
-  mantissa_one (proj2 H1) (proj2 mantissa_one_correct)).
-rewrite toF_float. 2: easy.
-rewrite (proj1 H2).
-rewrite (proj1 H1).
-rewrite (proj1 (mantissa_one_correct)).
-rewrite Pplus_one_succ_r.
-rewrite exponent_add_correct, exponent_sub_correct, mantissa_digits_correct with (1 := Hm1).
-now rewrite Hd.
+now rewrite toF_float.
 Qed.
 
 Definition round_at_exp_aux mode e2 sign m1 e1 pos :=
@@ -761,10 +740,7 @@ Definition round_at_exp_aux mode e2 sign m1 e1 pos :=
     end
   | Eq => float_aux sign (adjust_mantissa mode m1 pos sign) e1
   | Lt =>
-      if need_change_radix sensible_format mode (mantissa_even m1) pos sign then
-        let m2 := mantissa_add (mantissa_shl m1 (exponent_neg nb)) mantissa_one in
-        float_aux sign m2 e2
-      else float_aux sign m1 e1
+    float_aux sign m1 e1
   end.
 
 Lemma toF_zero : toF zero = Fzero.
@@ -834,22 +810,7 @@ case Pos.compare_spec.
   now rewrite Ha, <- Hl.
 (* *)
 intros dp Hd.
-rewrite mantissa_even_correct with (1 := Hm1).
-unfold need_change_radix2, sensible_format, radix, Z.even.
-case need_change_radix.
-2: now apply toF_float.
-generalize (mantissa_shl_correct dp m1 (exponent_neg (exponent_sub p' e1)) Hm1).
-rewrite exponent_neg_correct, exponent_sub_correct.
-rewrite Hd.
-intros H1.
-specialize (H1 (refl_equal _)).
-assert (H2 := mantissa_add_correct (mantissa_shl m1 (exponent_neg (exponent_sub p' e1)))
-  mantissa_one (proj2 H1) (proj2 mantissa_one_correct)).
-rewrite toF_float. 2: easy.
-rewrite (proj1 H2).
-rewrite (proj1 H1).
-rewrite (proj1 (mantissa_one_correct)).
-now rewrite Pplus_one_succ_r.
+now rewrite toF_float.
 Qed.
 
 (*

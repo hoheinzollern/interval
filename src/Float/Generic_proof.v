@@ -497,27 +497,6 @@ Ltac refl_exists :=
   end ;
   repeat split.
 
-Definition normalize beta prec m e :=
-  match (Zpos (count_digits beta m) - Zpos prec)%Z with
-  | Zneg nb => ((shift beta m nb), (e + Zneg nb)%Z)
-  | _ => (m, e)
-  end.
-
-Lemma normalize_identity :
-  forall beta prec m e,
-  (Zpos prec <= Zpos (count_digits beta m))%Z ->
-  normalize beta prec m e = (m, e).
-Proof.
-intros beta prec m e.
-unfold Z.le, normalize.
-rewrite <- (Zcompare_plus_compat _ _ (- Zpos prec)).
-rewrite Zplus_opp_l, Zplus_comm.
-unfold Zminus.
-case Zplus ; [easy|easy|].
-intros p H.
-now elim H.
-Qed.
-
 Definition convert_location_inv l :=
   match l with
   | pos_Eq => loc_Exact
@@ -585,38 +564,30 @@ Qed.
 Lemma Fround_at_prec_correct :
   forall beta mode prec s m1 e1 pos x,
   (0 < x)%R ->
-  ( let (m2, e2) := normalize beta prec m1 e1 in
-    inbetween_float beta (Zpos m2) e2 x (convert_location_inv pos) ) ->
+  inbetween_float beta (Zpos m1) e1 x (convert_location_inv pos) ->
+  ( (Zpos (count_digits beta m1) < Zpos prec)%Z -> pos = pos_Eq ) ->
   FtoX (Fround_at_prec mode prec (@Ufloat beta s m1 e1 pos)) =
     Xreal (round beta mode prec (if s then Ropp x else x)).
 Proof with auto with typeclass_instances.
-intros beta mode prec s m1 e1 pos x Hx.
-case_eq (normalize beta prec m1 e1).
-intros m2 e2 Hn Hl.
+intros beta mode prec s m1 e1 pos x Hx Hl Hp.
 unfold round.
-rewrite round_trunc_sign_any_correct with (choice := mode_choice mode) (m := Zpos m2) (e := e2) (l := convert_location_inv pos)...
+rewrite round_trunc_sign_any_correct with (choice := mode_choice mode) (m := Zpos m1) (e := e1) (l := convert_location_inv pos)...
 (* *)
 unfold Round.truncate, Round.truncate_aux, FLX_exp.
-replace (Zdigits beta (Zpos m2) + e2 - Zpos prec - e2)%Z with (Zdigits beta (Zpos m2) - Zpos prec)%Z by ring.
+replace (Zdigits beta (Zpos m1) + e1 - Zpos prec - e1)%Z with (Zdigits beta (Zpos m1) - Zpos prec)%Z by ring.
 replace (Rlt_bool (if s then (-x)%R else x) 0) with s.
-revert Hn.
-unfold Fround_at_prec, normalize.
+unfold Fround_at_prec.
 case_eq (Zpos (count_digits beta m1) - Zpos prec)%Z.
 (* . *)
-intros Hd Heq.
-injection Heq.
-intros He Hm. clear Heq.
+intros Hd.
 apply (f_equal Xreal).
 rewrite FtoR_split.
 rewrite adjust_mantissa_correct.
-rewrite <- Hm, digits_conversion, Hd.
-simpl.
-now rewrite He.
+rewrite digits_conversion, Hd.
+easy.
 (* . *)
-intros d Hd Heq.
-injection Heq.
-intros He Hm. clear Heq.
-rewrite <- Hm, digits_conversion, Hd.
+intros d Hd.
+rewrite digits_conversion, Hd.
 rewrite shift_correct, Zmult_1_l.
 fold (Zpower beta (Zpos d)).
 unfold Z.div, Zmod.
@@ -626,7 +597,6 @@ now apply Zpower_gt_0.
 generalize (Z_div_mod (Zpos m1) (Zpower beta (Zpos d)) H).
 clear H.
 case Z.div_eucl. intros q r (Hq, Hr).
-rewrite He.
 cut (0 < q)%Z.
 (* .. *)
 clear -Hr.
@@ -636,7 +606,7 @@ apply (f_equal Xreal).
 rewrite FtoR_split.
 rewrite adjust_mantissa_correct.
 simpl.
-apply (f_equal (fun v => F2R (Defs.Float beta (cond_Zopp s (mode_choice mode s (Zpos q) v)) (e2 + Zpos d)))).
+apply (f_equal (fun v => F2R (Defs.Float beta (cond_Zopp s (mode_choice mode s (Zpos q) v)) (e1 + Zpos d)))).
 rewrite <- (Zmult_1_l (Zpower_pos beta d)).
 rewrite <- shift_correct.
 apply adjust_pos_correct ; rewrite shift_correct, Zmult_1_l.
@@ -656,46 +626,15 @@ rewrite <- Hd.
 rewrite <- digits_conversion.
 now apply Zlt_minus_simpl_swap.
 (* . *)
-intros d Hd Heq.
-injection Heq.
-intros He Hm. clear Heq.
-rewrite <- Hm.
-rewrite shift_correct.
-fold (Zpower beta (Zpos d)).
-rewrite Zdigits_mult_Zpower ; try easy.
-replace (Zdigits beta (Zpos m1) + Zpos d - Zpos prec)%Z with Z0.
+intros d Hd.
+rewrite digits_conversion, Hd.
+rewrite Hp.
 simpl.
-change (match Zpower_pos beta d with 0 => 0 | Zpos y1 => Zpos (m1 * y1) | Zneg y2 => Zneg (m1 * y2) end)%Z
-  with (Zpos m1 * Zpower beta (Zpos d))%Z.
-assert (forall A B : Type, forall f : A -> B, forall b : bool, forall v1 v2 : A, f (if b then v1 else v2) = if b then f v1 else f v2).
-clear. now intros A B f [|].
-rewrite (H (float beta) ExtendedR).
-simpl FtoX.
-rewrite 2!FtoR_split.
-rewrite Zpos_succ_morphism, shift_correct.
-rewrite (F2R_change_exp beta (e1 + Zneg d)%Z (cond_Zopp s (Zpos m1)) e1).
-ring_simplify (e1 - (e1 + Zneg d))%Z.
-replace (cond_Zopp s (Zpos m1) * beta ^ (- Zneg d))%Z with (cond_Zopp s (Zpos m1 * Zpower_pos beta d)).
-rewrite <- (H Z ExtendedR (fun v => Xreal (F2R (Defs.Float beta (cond_Zopp s v) (e1 + Zneg d))))).
-rewrite <- He.
-apply (f_equal (fun v => Xreal (F2R (Defs.Float beta (cond_Zopp s v) (e1 + Zneg d))))).
-clear.
-unfold mode_choice, need_change_radix.
-case mode ; case pos ; try easy.
-rewrite Z.even_mul, Z.even_pow by easy.
-unfold need_change_radix2.
-rewrite even_radix_correct.
-now case m1.
-unfold cond_Zopp.
-rewrite <- Zopp_mult_distr_l_reverse.
-now case s.
-pattern e1 at 2 ; rewrite <- Zplus_0_r.
-now apply Zplus_le_compat_l.
-change (Zpos d) with (Z.opp (Zneg d)).
-rewrite <- Hd.
-rewrite digits_conversion.
-ring.
-(* .*)
+rewrite FtoR_split.
+now destruct mode.
+apply Z.lt_sub_0.
+now rewrite Hd.
+(* . *)
 clear -Hx.
 apply sym_eq.
 case s.
@@ -721,45 +660,13 @@ rewrite Rabs_pos_eq.
 exact Hl.
 now apply Rlt_le.
 (* *)
-left.
+rewrite digits_conversion.
 unfold FLX_exp.
-cut (0 <= Zdigits beta (Zpos m2) - Zpos prec)%Z. clear. lia.
-change m2 with (fst (m2, e2)).
-rewrite <- (f_equal (@fst _ _) Hn).
-clear.
-unfold normalize.
-rewrite <- digits_conversion.
-case_eq (Zdigits beta (Zpos m1) - Zpos prec)%Z ; unfold fst.
-intros H.
-now rewrite H.
-intros p H.
-now rewrite H.
-intros p H.
-rewrite shift_correct.
-fold (Zpower beta (Zpos p)).
-rewrite Zdigits_mult_Zpower ; try easy.
-fold (Z.opp (Zneg p)).
-rewrite <- H.
-now ring_simplify.
-Qed.
-
-Lemma normalize_correct :
-  forall beta prec m e,
-  F2R (Defs.Float beta (Zpos m) e) =
-    let (m', e') := normalize beta prec m e in F2R (Defs.Float beta (Zpos m') e').
-Proof.
-intros beta prec m e.
-unfold normalize.
-case (Zpos (count_digits beta m) - Zpos prec)%Z ; intros ; try apply refl_equal.
-rewrite shift_correct.
-unfold F2R, Fnum, Fexp.
-rewrite mult_IZR, Rmult_assoc.
-apply f_equal.
-rewrite IZR_Zpower_pos, <- bpow_powerRZ.
-rewrite <- bpow_plus.
-apply f_equal.
-change (Zneg p) with (Z.opp (Zpos p)).
-ring.
+destruct (Zle_or_lt (Zpos prec) (Zpos (count_digits beta m1))) as [H|H].
+left.
+clear -H ; lia.
+right.
+now rewrite Hp.
 Qed.
 
 Definition ufloat_pos_Eq beta (x : ufloat beta) :=
@@ -788,10 +695,8 @@ replace (F2R (Defs.Float beta (cond_Zopp s (Zpos m)) e)) with
   (if s then Ropp (F2R (Defs.Float beta (Zpos m) e)) else F2R (Defs.Float beta (Zpos m) e)).
 apply Fround_at_prec_correct.
 now apply F2R_gt_0.
-unfold inbetween_float.
-rewrite (normalize_correct beta prec m e).
-destruct (normalize beta prec m e) as (m', e').
 now constructor.
+easy.
 rewrite <- F2R_opp.
 now case s.
 Qed.
@@ -845,10 +750,6 @@ Qed.
 
 Lemma adjust_mantissa_Eq mode b p : adjust_mantissa mode p pos_Eq b = p.
 Proof. now destruct mode. Qed.
-
-Lemma need_change_radix2_Eq beta mode p b :
-  need_change_radix2 beta mode p pos_Eq b = false.
-Proof. now destruct mode; simpl. Qed.
 
 Lemma radix_to_pos (r : radix) : Z.pos (Z.to_pos r) = r.
 Proof.  now destruct r as [[]]. Qed.
@@ -918,7 +819,7 @@ destruct x as [| |b p z]; simpl float_to_ufloat; lazy iota beta; try easy.
   now generalize (Rnearbyint_IZR mode 0); simpl; intro H; rewrite H.
 destruct z as [| p1 | n1]; simpl Zminus; lazy iota beta.
 - now rewrite adjust_mantissa_Eq; simpl; rewrite Rnearbyint_IZR.
-- now simpl; rewrite need_change_radix2_Eq, Rnearbyint_IZR.
+- now simpl; rewrite Rnearbyint_IZR.
 rewrite <-digits_conversion, shift1_correct.
 case Z.compare_spec; intro H.
 (* *)
@@ -1345,10 +1246,11 @@ apply Rmult_lt_0_compat.
 apply FtoR_Rpos.
 apply Rinv_0_lt_compat.
 apply FtoR_Rpos.
-rewrite normalize_identity.
 rewrite convert_location_bij.
 now rewrite 2!FtoR_split.
-now rewrite <- digits_conversion.
+rewrite <- digits_conversion.
+intros H3.
+elim (Z.lt_irrefl _ (Z.le_lt_trans _ _ _ H2 H3)).
 rewrite 4!FtoR_split.
 assert (F2R (Defs.Float beta (Zpos my) ey) <> 0%R).
 apply Rgt_not_eq.
@@ -1474,10 +1376,11 @@ now elim H1.
 apply (Fround_at_prec_correct beta mode prec false p e').
 apply sqrt_lt_R0.
 apply FtoR_Rpos.
-rewrite normalize_identity.
 rewrite convert_location_bij.
 now rewrite FtoR_split.
-now rewrite <- digits_conversion.
+rewrite <- digits_conversion.
+intros H3.
+elim (Z.lt_irrefl _ (Z.le_lt_trans _ _ _ H2 H3)).
 destruct (Bracket.inbetween_float_bounds _ _ _ _ _ H1) as (_, H5).
 elim (Rlt_not_le _ _ H5).
 apply Rle_trans with R0.
