@@ -193,5 +193,5 @@ dist: $(EXTRA_DIST)
 	PACK=@PACKAGE_TARNAME@-@PACKAGE_VERSION@
 	rm -f $PACK.tar.gz
 	git archive --format=tar --prefix=$PACK/ -o $PACK.tar HEAD
-	tar rf $PACK.tar --transform="s,^,$PACK/," --mtime="`git show -s --format=%ci`" $(EXTRA_DIST)
+	tar rf $PACK.tar --transform="s,^,$PACK/," --mtime="`git show -s --format=%ci`" --owner=0 --group=0 $(EXTRA_DIST)
 	gzip -n -f --best $PACK.tar
