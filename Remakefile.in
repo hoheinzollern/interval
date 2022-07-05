@@ -54,8 +54,10 @@ all: $(VOFILES)
 
 clean: src/clean testsuite/clean
 
-Remakefile: Remakefile.in config.status
-	./config.status Remakefile
+CONFIGURED_FILES = Remakefile src/Plot.v
+
+$(CONFIGURED_FILES): %: %.in config.status
+	./config.status $@
 
 configure config.status: configure.in
 	autoconf
@@ -64,15 +66,15 @@ configure config.status: configure.in
 src/Tactic_float.v: src/Tactic_bignum.v src/Tactic_primfloat.v Remakefile
 	cp @PRIM_FLOAT_TAC@ src/Tactic_float.v
 
-%.vo: %.v | src/Tactic_float.v
+%.vo: %.v | src/Tactic_float.v src/Plot.v
 	@COQDEP@ -R src Interval $< | @REMAKE@ -r $@
 	@COQC@ @COQEXTRAFLAGS@ -R src Interval $<
 
 COQPKGS = clib engine kernel interp lib library parsing pretyping printing proofs tactics toplevel vernac plugins.ltac
 PACKAGES = $(addprefix -package @COQROOT@., $(COQPKGS)) -package @BIGINTPKG@
 
-src/Plot/interval_plot.ml: src/Plot/plot.c
-	@CPP@ -DCOQVERSION=@COQVERSION@ $< -o $@
+src/Plot/interval_plot.ml: src/Plot/plot.c Remakefile
+	@CPP@ -DCOQVERSION=@COQVERSION@ -DPLOTPLUGIN=\"@PLOTPLUGIN@\" $< -o $@
 
 src/Plot/interval_plot.cmo: src/Plot/interval_plot.ml
 	@OCAMLFIND@ ocamlc -rectypes -thread $(PACKAGES) -c $< -o $@
@@ -92,7 +94,7 @@ src/clean:
 	for d in */; do \
 	  rm -f $d/.coq-native/*.o $d/.coq-native/*.cm*; done
 	find . -type d -name ".coq-native" -empty -prune -exec rmdir "{}" \;
-	rm -f Plot/interval_plot.ml Plot/interval_plot.cm* Plot/interval_plot.o
+	rm -f Plot/interval_plot.ml Plot/interval_plot.cm* Plot/interval_plot.o Plot.v
 
 check: src/Tactic.vo
 	set +e
@@ -183,8 +185,11 @@ install:
 	mkdir -p $dir
 	for d in Eval Float Integral Interval Missing Poly Real Tactics; do mkdir -p $dir/$d; done
 	for f in $(FILES); do cp src/$f.vo $dir/$f.vo; done
-	test -n "$(MLTARGETS)" && cp $(MLTARGETS) $dir/
 	( cd src && find . -type d -name ".coq-native" -exec cp -RT "{}" "$dir/{}" \; )
+	dir="${DESTDIR}@COQINTERVALLIB@/"
+	mkdir -p $dir
+	test -n "$(MLTARGETS)" && cp $(MLTARGETS) $dir/
+	cat src/Plot/META.coq-interval | grep -v 'directory *=' > $dir/META
 
 EXTRA_DIST = \
 	configure

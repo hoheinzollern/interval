@@ -1,0 +1,10 @@
+package "plot" (
+  directory = "."
+  description = "Coq Interval Plot"
+  requires = "coq-core.plugins.ltac"
+  archive(byte) = "interval_plot.cma"
+  archive(native) = "interval_plot.cmxa"
+  plugin(byte) = "interval_plot.cma"
+  plugin(native) = "interval_plot.cmxs"
+)
+directory = "."

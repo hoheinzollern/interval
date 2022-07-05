@@ -205,6 +205,16 @@ if test -z "$COQUSERCONTRIB"; then
   COQUSERCONTRIB="`$COQC -where | tr -d '\r' | tr '\\\\' '/'`/user-contrib"
 fi
 
+if test "$COQVERSION" -ge 81600; then
+   COQINTERVALLIB=`$OCAMLFIND printconf destdir`/coq-interval
+   PLOTPLUGIN="coq-interval.plot"
+else
+   COQINTERVALLIB=$COQUSERCONTRIB/Interval
+   PLOTPLUGIN="interval_plot"
+fi
+AC_SUBST(COQINTERVALLIB)
+AC_SUBST(PLOTPLUGIN)
+
 if test "$prim_float" = "yes"; then
    PRIM_FLOAT=Float/Primitive_ops
    PRIM_FLOAT_TAC=src/Tactic_primfloat.v
@@ -237,9 +247,10 @@ fi
 
 echo
 echo "=== Summary ==="
-echo "Installation directory   $COQUSERCONTRIB"
-echo "Plot tactic             $tactic_mode"
+echo "Vernacular directory    $COQUSERCONTRIB"
+echo "Plugin directory        $COQINTERVALLIB"
+echo "Plot tactic            $tactic_mode"
 echo
 
-AC_CONFIG_FILES(Remakefile)
+AC_CONFIG_FILES([Remakefile src/Plot.v])
 AC_OUTPUT
