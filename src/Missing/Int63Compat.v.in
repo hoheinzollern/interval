@@ -1,0 +1,22 @@
+(* Generated from Int63Compat.v.in, *do not edit*. *)
+
+(* This is a compatibility module for Coq < 8.14 which does not provide
+   Uint63. It is bound to disappear once Interval requires Coq >= 8.14. *)
+
+@INT63_EXPORT@
+
+Module Int63.
+Notation of_pos := of_pos (only parsing).
+Notation of_Z := of_Z (only parsing).
+Notation of_Z_spec := of_Z_spec (only parsing).
+Notation to_Z := to_Z (only parsing).
+Notation to_Z_bounded := to_Z_bounded (only parsing).
+Notation to_Z_inj := to_Z_inj (only parsing).
+Notation to_Z_1 := to_Z_1 (only parsing).
+Notation leb := leb (only parsing).
+Notation eqb := eqb (only parsing).
+Notation eqbP := eqbP (only parsing).
+Notation add_spec := add_spec (only parsing).
+Notation sub_spec := sub_spec (only parsing).
+Notation land_spec' := land_spec' (only parsing).
+End Int63.
