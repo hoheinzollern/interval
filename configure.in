@@ -251,7 +251,7 @@ fi
 
 echo
 echo "=== Summary ==="
-echo "Vernacular directory    $COQUSERCONTRIB"
+echo "Vernacular directory    $COQUSERCONTRIB/Interval"
 echo "Plugin directory        $COQINTERVALLIB"
 echo "Plot tactic            $tactic_mode"
 echo
