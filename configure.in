@@ -1,4 +1,4 @@
-AC_INIT([Interval], [4.5.1],
+AC_INIT([Interval], [4.5.2],
         [Guillaume Melquiond <guillaume.melquiond@inria.fr>],
         [interval])
 
@@ -38,11 +38,15 @@ AC_MSG_RESULT($COQVERSION)
 
 if test "$COQVERSION" -lt 81400; then
    COQROOT=coq
+   INT63_EXPORT="From Coq Require Export Int63."
+   INT63_FILE=""
 else
    COQROOT=coq-core
+   INT63_EXPORT="Require Export Int63Copy."
+   INT63_FILE="Missing/Int63Copy"
 fi
 AC_SUBST(COQROOT)
-
+AC_SUBST(INT63_EXPORT)
 
 AC_ARG_VAR(COQDEP, [Coq dependency analyzer command [coqdep]])
 AC_MSG_CHECKING([for coqdep])
@@ -205,8 +209,18 @@ if test -z "$COQUSERCONTRIB"; then
   COQUSERCONTRIB="`$COQC -where | tr -d '\r' | tr '\\\\' '/'`/user-contrib"
 fi
 
+if test "$COQVERSION" -ge 81600; then
+   COQINTERVALLIB=`$OCAMLFIND printconf destdir`/coq-interval
+   PLOTPLUGIN="coq-interval.plot"
+else
+   COQINTERVALLIB=$COQUSERCONTRIB/Interval
+   PLOTPLUGIN="interval_plot"
+fi
+AC_SUBST(COQINTERVALLIB)
+AC_SUBST(PLOTPLUGIN)
+
 if test "$prim_float" = "yes"; then
-   PRIM_FLOAT=Float/Primitive_ops
+   PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops"
    PRIM_FLOAT_TAC=src/Tactic_primfloat.v
 else
    PRIM_FLOAT=
@@ -237,9 +251,10 @@ fi
 
 echo
 echo "=== Summary ==="
-echo "Installation directory   $COQUSERCONTRIB"
-echo "Plot tactic             $tactic_mode"
+echo "Vernacular directory    $COQUSERCONTRIB/Interval"
+echo "Plugin directory        $COQINTERVALLIB"
+echo "Plot tactic            $tactic_mode"
 echo
 
-AC_CONFIG_FILES(Remakefile)
+AC_CONFIG_FILES([Remakefile src/Plot.v src/Missing/Int63Compat.v])
 AC_OUTPUT

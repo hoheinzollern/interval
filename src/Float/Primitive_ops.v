@@ -1,4 +1,6 @@
-From Coq Require Import ZArith Reals Int63 Floats Psatz.
+From Coq Require Import ZArith Reals.
+Require Import Int63Compat.
+From Coq Require Import Floats Psatz.
 From Flocq Require Import Zaux Raux BinarySingleNaN PrimFloat Sterbenz Mult_error.
 
 Require Import Xreal.

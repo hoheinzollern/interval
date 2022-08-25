@@ -160,7 +160,7 @@ let display_plot p f ~pstate =
   let p = Retyping.get_type_of env evd p in
   display_plot env evd p f
 
-let __coq_plugin_name = "interval_plot"
+let __coq_plugin_name = PLOTPLUGIN
 let _ = Mltop.add_known_module __coq_plugin_name
 
 #if COQVERSION >= 81500

@@ -10,7 +10,9 @@
 /remake.exe
 /Remakefile
 
+/src/Plot.v
 /src/Tactic_float.v
+/src/Missing/Int63Compat.v
 /src/Plot/interval_plot.ml
 
 /html/
