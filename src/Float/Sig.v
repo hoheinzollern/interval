@@ -74,6 +74,7 @@ Parameter sub_UP : precision -> type -> type -> type.
 Parameter sub_DN : precision -> type -> type -> type.
 Parameter mul_UP : precision -> type -> type -> type.
 Parameter mul_DN : precision -> type -> type -> type.
+Parameter pow2_UP : precision -> sfactor -> type.
 Parameter div_UP : precision -> type -> type -> type.
 Parameter div_DN : precision -> type -> type -> type.
 Parameter sqrt_UP : precision -> type -> type.
@@ -84,6 +85,10 @@ Parameter midpoint : type -> type -> type.
 
 Parameter zero_correct : toX zero = Xreal 0.
 Parameter nan_correct : classify nan = Fnan.
+
+Parameter ZtoS_correct:
+  forall prec z,
+  (z <= StoZ (ZtoS z))%Z \/ toX (pow2_UP prec (ZtoS z)) = Xnan.
 
 Parameter fromZ_correct :
   forall n,
@@ -229,6 +234,10 @@ Parameter mul_DN_correct :
      \/ (is_non_pos x /\ is_non_neg y))
     -> (valid_lb (mul_DN p x y) = true
         /\ le_lower (toX (mul_DN p x y)) (Xmul (toX x) (toX y))).
+
+Parameter pow2_UP_correct :
+  forall p s, (valid_ub (pow2_UP p s) = true /\
+              le_upper (Xscale radix2 (Xreal 1) (StoZ s)) (toX (pow2_UP p s))).
 
 Parameter div_UP_correct :
   forall p x y,

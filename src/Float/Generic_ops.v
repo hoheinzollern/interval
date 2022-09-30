@@ -77,6 +77,7 @@ Module GenericFloat (Rad : Radix) <: FloatOps.
   Definition sqrt_DN := @Fsqrt radix rnd_DN.
   Definition nearbyint_UP := @Fnearbyint_exact radix.
   Definition nearbyint_DN := @Fnearbyint_exact radix.
+  Definition pow2_UP (_ : positive) := @Fpow2 radix.
   Definition zero_correct := refl_equal (Xreal R0).
   Definition nan_correct := refl_equal Fnan.
 
@@ -88,6 +89,10 @@ Module GenericFloat (Rad : Radix) <: FloatOps.
 
   Definition is_nan (f : float radix) :=
     match f with Basic.Fnan => true | _ => false end.
+
+  Lemma ZtoS_correct : forall prec z,
+  (z <= StoZ (ZtoS z))%Z \/ toX (pow2_UP prec (ZtoS z)) = Xnan.
+  Proof. now left. Qed.
 
   Lemma classify_correct :
     forall f, real f = match classify f with Freal => true | _ => false end.
@@ -325,6 +330,28 @@ Module GenericFloat (Rad : Radix) <: FloatOps.
   Proof.
   intros p x y _; split; [easy|].
   now apply (rnd_binop_DN_correct _ _ (@Fmul_correct _)).
+  Qed.
+
+  Lemma pow2_UP_correct :
+    forall p s, (valid_ub (pow2_UP p s) = true /\
+      le_upper (Xscale radix2 (Xreal 1) (StoZ s)) (toX (pow2_UP p s))).
+  Proof.
+  intros p s. split; [easy |]. simpl. rewrite Rmult_1_l.
+  unfold pow2_UP, Fpow2, toX.
+  generalize (radix_prop radix).
+  destruct (radix_val radix) as [|[r|r|]|r] eqn:H ; try easy ; intros _.
+  - unfold Fscale2; rewrite H.
+    destruct s as [|s|s]; [apply Rle_refl| |easy].
+    rewrite iter_pos_nat. simpl.
+    apply IZR_le.
+    rewrite Zpower_pos_nat.
+    apply Zeq_le.
+    induction (Pos.to_nat s). easy.
+    rewrite iter_nat_S.
+    now rewrite Zpower_nat_S, IHn.
+  - rewrite Fscale2_correct by now rewrite H.
+    simpl. unfold StoZ.
+    rewrite Rmult_1_l. apply Rle_refl.
   Qed.
 
   Lemma div_UP_correct :

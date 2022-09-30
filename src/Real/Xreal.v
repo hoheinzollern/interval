@@ -183,6 +183,8 @@ Notation Xdiv := (Xbind2 Xdiv').
 Notation Xmin := (Xlift2 Rmin).
 Notation Xmax := (Xlift2 Rmax).
 
+Definition Xscale beta x e := Xmul x (Xreal (bpow beta e)).
+
 Delimit Scope XR_scope with XR.
 
 Notation "x + y" := (Xadd x y) : XR_scope.

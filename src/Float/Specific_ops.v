@@ -347,7 +347,7 @@ Definition scale2 (f : type) d :=
 
 Lemma scale2_correct :
   forall x d, sensible_format = true ->
-  toX (scale2 x (ZtoS d)) = Xmul (toX x) (Xreal (bpow radix2 d)).
+  toX (scale2 x d) = Xmul (toX x) (Xreal (bpow radix2 (StoZ d))).
 Proof.
 intros [|m e] d H.
 easy.
@@ -361,10 +361,9 @@ rewrite Hs.
 now rewrite Rmult_0_l.
 intros s m' _ (Em,Vm).
 simpl.
-generalize (mantissa_scale2_correct m' (ZtoS d) Vm).
+generalize (mantissa_scale2_correct m' d Vm).
 case mantissa_scale2.
 intros p e' (Ep, Vp).
-rewrite ZtoE_correct in Ep.
 rewrite toF_float with (1 := Vp).
 rewrite exponent_add_correct.
 simpl.
@@ -375,8 +374,33 @@ rewrite Rmult_assoc, (Rmult_comm (bpow radix (EtoZ e))).
 rewrite 2!IZR_cond_Zopp, <- 2!cond_Ropp_mult_l.
 apply (f_equal (fun v => Xreal (cond_Ropp s v))).
 rewrite Zplus_comm, bpow_plus, <- 2!Rmult_assoc.
-now rewrite <- Ep.
+unfold radix. now rewrite Ep.
 Qed.
+
+Definition pow2_UP (p : precision) e :=
+  if sensible_format then scale2 (Float (mantissa_pos mantissa_one) exponent_zero) e else Fnan.
+
+Lemma pow2_UP_correct :
+  forall p s, (valid_ub (pow2_UP p s) = true /\
+              le_upper (Xscale radix2 (Xreal 1) (StoZ s)) (toX (pow2_UP p s))).
+Proof.
+intros. split.
+- easy.
+- unfold pow2_UP. unfold Xscale. destruct sensible_format eqn:H1.
+  + rewrite scale2_correct by easy. unfold toX, toF, FtoX.
+    generalize (mantissa_sign_correct (mantissa_pos mantissa_one)).
+    rewrite mantissa_pos_correct by apply mantissa_one_correct.
+    rewrite (proj1 mantissa_one_correct). destruct mantissa_sign.
+    * easy.
+    * destruct s0; [easy |]. unfold FtoR. rewrite exponent_zero_correct.
+      intros [<- _]. apply le_upper_refl.
+  + easy.
+Qed.
+
+Lemma ZtoS_correct:
+  forall p z,
+  (z <= StoZ (ZtoS z))%Z \/ toX (pow2_UP p (ZtoS z)) = Xnan.
+Proof. left. now rewrite ZtoE_correct. Qed.
 
 (*
  * div2
@@ -394,7 +418,7 @@ unfold div2, sm1.
 rewrite scale2_correct; [|easy].
 simpl; unfold Z.pow_pos; simpl.
 rewrite Xdiv_split.
-unfold Xinv, Xinv'.
+unfold Xinv, Xinv'. unfold StoZ. rewrite ZtoE_correct.
 now rewrite is_zero_false.
 Qed.
 
@@ -1766,6 +1790,7 @@ rewrite !real_correct.
 rewrite (scale2_correct _ _ He).
 rewrite add_exact_correct.
 do 2 (case toX; [easy|]).
+unfold StoZ. rewrite ZtoE_correct.
 change (bpow radix2 (-1)) with (/2)%R.
 clear x y; simpl; intros x y _ _ Hxy.
 now split; [|lra].

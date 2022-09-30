@@ -23,7 +23,7 @@ Definition toF x : float radix2 :=
   end.
 
 Definition precision := Z.
-Definition sfactor := Z.
+Definition sfactor := Z. (* TODO: change to Int63? *)
 Definition prec p := match p with Zpos q => q | _ => xH end.
 Definition PtoP p := Zpos p.
 Definition ZtoS (x : Z) := x.
@@ -171,6 +171,9 @@ Definition abs x := abs x.
 Definition scale x e :=
   ldshiftexp x (Int63.of_Z e + Int63.of_Z FloatOps.shift)%int63.
 
+Definition pow2_UP (_ : precision) e :=
+  if Zle_bool emax e then infinity else scale (fromZ 1) (Z.max e (-1074)).
+
 Definition div2 x := (x / 2)%float.
 
 Definition add_UP (_ : precision) x y := next_up (x + y).
@@ -238,6 +241,11 @@ Definition midpoint (x y : type) :=
 Definition toX x := FtoX (toF x).
 Definition toR x := proj_val (toX x).
 Definition convert x := FtoX (toF x).
+
+Lemma ZtoS_correct:
+  forall prec z,
+  (z <= StoZ (ZtoS z))%Z \/ toX (pow2_UP prec (ZtoS z)) = Xnan.
+Proof. now left. Qed.
 
 Lemma zero_correct : toX zero = Xreal 0.
 Proof. reflexivity. Qed.
@@ -2040,6 +2048,75 @@ rewrite Rplus_0_r, Rmult_1_r.
 unfold b_x, b_y; rewrite Hx, Hy.
 
 generalize (Rabs_le_inv _ _ Heta); compute; lra.
+Qed.
+
+Lemma pow2_UP_correct :
+  forall p s, (valid_ub (pow2_UP p s) = true /\
+              le_upper (Xscale radix2 (Xreal 1) (StoZ s)) (toX (pow2_UP p s))).
+Proof.
+intros p s. unfold pow2_UP, emax. case Zle_bool_spec; [easy |]; intro Hs1.
+destruct (Z.le_ge_cases s (- 1074)) as [Hs2 | Hs2].
+{ rewrite (Z.max_r _ _ Hs2). cbn -[FtoR]. split; [easy |]. rewrite FtoR_split.
+  simpl. rewrite Float_prop.F2R_bpow. rewrite Rmult_1_l. apply bpow_le. easy. }
+rewrite (Z.max_l _ _ Hs2). unfold scale, valid_ub, toX, toF.
+rewrite <-(B2Prim_Prim2B (ldshiftexp (fromZ 1) (Uint63.add (Uint63.of_Z s) (Uint63.of_Z shift)))) at 1.
+rewrite <-B2SF_Prim2B. rewrite ldshiftexp_equiv.
+set (e := (Uint63.to_Z (Uint63.add (Uint63.of_Z s) (Uint63.of_Z shift))%int63 - shift)%Z).
+generalize (Bldexp_correct _ _ _ _ mode_NE (Prim2B (fromZ 1)) e).
+unfold e. rewrite Uint63.add_spec. rewrite 2Uint63.of_Z_spec.
+rewrite <-Z.add_mod by easy. rewrite Z.mod_small.
+2: { unfold Uint63.wB. simpl. unfold Z.pow_pos. simpl. unfold shift. lia. }
+ring_simplify (s + shift - shift)%Z. rewrite Rlt_bool_true.
+2: { replace (B2R (Prim2B (fromZ 1))) with 1%R;
+    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+  rewrite Rmult_1_l. rewrite Generic_fmt.round_generic;
+    [rewrite Rabs_pos_eq; [now apply bpow_lt | apply bpow_ge_0]
+    | apply valid_rnd_round_mode
+    |].
+  apply Generic_fmt.generic_format_bpow.
+  unfold fexp, FloatOps.prec, SpecFloat.emin, emax.
+  lia. }
+simpl fromZ. set (t := Bldexp mode_NE (Prim2B 1) s).
+intros [H1 [H2 H3]]. destruct t as [sg | | | sg mt ex] eqn:Ht.
+- simpl B2R in H1. symmetry in H1.
+  replace (B2R (Prim2B 1)) with 1%R in H1;
+    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+  rewrite Rmult_1_l in H1.
+  replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
+  2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
+    apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
+    lia. }
+  generalize (bpow_gt_0 radix2 s). lra.
+- simpl B2R in H1. symmetry in H1.
+  replace (B2R (Prim2B 1)) with 1%R in H1;
+    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+  rewrite Rmult_1_l in H1.
+  replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
+  2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
+    apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
+    lia. }
+  generalize (bpow_gt_0 radix2 s). lra.
+- simpl B2R in H1. symmetry in H1.
+  replace (B2R (Prim2B 1)) with 1%R in H1;
+    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+  rewrite Rmult_1_l in H1.
+  replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
+  2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
+    apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
+    lia. }
+  generalize (bpow_gt_0 radix2 s). lra.
+- split.
+  + rewrite neg_infinity_equiv. rewrite eqb_equiv. now rewrite 2Prim2B_B2Prim.
+  + simpl B2R in H1. unfold Defs.F2R in H1. simpl Defs.Fnum in H1. simpl Defs.Fexp in H1.
+    replace (B2R (Prim2B 1)) with 1%R in H1;
+      [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+    simpl. rewrite Rmult_1_l in *. unfold StoZ.
+    replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
+    2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
+      apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
+      lia. }
+    rewrite <-H1. Search FtoR bpow. rewrite FtoR_split. unfold Defs.F2R.
+    simpl. apply Rle_refl.
 Qed.
 
 Lemma div_UP_correct :

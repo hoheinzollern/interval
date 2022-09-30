@@ -85,6 +85,12 @@ Definition Fscale2 {beta} (f : float beta) d :=
   end.
 
 (*
+ * Fpow2
+ *)
+
+Definition Fpow2 {beta} d := Fscale2 (@Float beta false xH 0) d.
+
+(*
  * Fdiv2
  *)
 

@@ -147,6 +147,16 @@ Definition rnd_of_mode mode :=
   | rnd_NE => rndNE
   end.
 
+Definition error_flt mode emin prec x :=
+  (round radix2 (FLT_exp emin (Zpos prec)) (rnd_of_mode mode) x - x)%R.
+
+Definition Xerror_flt mode emin prec := Xlift (error_flt mode emin prec).
+
+Definition round_flt mode emin prec :=
+  round radix2 (FLT_exp emin (Zpos prec)) (rnd_of_mode mode).
+
+Definition Xround_flt mode emin prec := Xlift (round_flt mode emin prec).
+
 Definition round beta mode prec :=
   round beta (FLX_exp (Zpos prec)) (rnd_of_mode mode).
 
@@ -215,6 +225,12 @@ Definition le_upper x y :=
 
 Definition le_lower x y :=
   le_upper (Xneg y) (Xneg x).
+
+Lemma le_upper_refl : forall x, le_upper x x.
+Proof. destruct x; [easy|apply Rle_refl]. Qed.
+
+Lemma le_lower_refl : forall x, le_upper x x.
+Proof. destruct x; [easy|apply Rle_refl]. Qed.
 
 Lemma le_upper_trans :
   forall x y z,

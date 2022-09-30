@@ -29,7 +29,8 @@ Inductive nullary_op : Set :=
 Inductive unary_op : Set :=
   | Neg | Abs | Inv | Sqr | Sqrt
   | Cos | Sin | Tan | Atan | Exp | Ln
-  | PowerInt (n : Z) | Nearbyint (m : rounding_mode).
+  | PowerInt (n : Z) | Nearbyint (m : rounding_mode)
+  | Round (m : rounding_mode) (emin : Z) (prec : positive).
 
 Inductive binary_op : Set :=
   | Add | Sub | Mul | Div.
@@ -69,6 +70,7 @@ Definition unary_real (o : unary_op) : R -> R :=
   | Ln => ln
   | PowerInt n => fun x => powerRZ x n
   | Nearbyint m => Rnearbyint m
+  | Round m emin prec => round_flt m emin prec
   end.
 
 Definition binary_real (o : binary_op) : R -> R -> R :=
@@ -182,6 +184,14 @@ Ltac get_vars t l :=
     | Rdiv ?a ?b => aux_b a b
     | Rpower ?a ?b => aux_b a b
     | Rnearbyint ?a ?b => aux_u b
+    | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) Round_NE.ZnearestE ?a =>
+      let prec := eval lazy in prec in
+      let emin := eval lazy in emin in
+      lazymatch is_Z_const prec with true =>
+      lazymatch is_Z_const emin with true =>
+      lazymatch prec with Z.pos ?p =>
+        aux_u a
+      end end end
     | IZR (Raux.Ztrunc ?a) => aux_u a
     | IZR (Raux.Zfloor ?a) => aux_u a
     | IZR (Raux.Zceil ?a) => aux_u a
@@ -268,6 +278,14 @@ Ltac reify t l :=
     | Rdiv ?a ?b => aux_b Div a b
     | Rpower ?a ?b => aux (exp (b * ln a))
     | Rnearbyint ?a ?b => aux_u (Nearbyint a) b
+    | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) Round_NE.ZnearestE ?a =>
+      let prec := eval lazy in prec in
+      let emin := eval lazy in emin in
+      lazymatch is_Z_const prec with true =>
+      lazymatch is_Z_const emin with true =>
+      lazymatch prec with Z.pos ?p =>
+        aux_u (Round rnd_NE emin p) a
+      end end end
     | IZR (Raux.Ztrunc ?a) => aux_u (Nearbyint rnd_ZR) a
     | IZR (Raux.Zfloor ?a) => aux_u (Nearbyint rnd_DN) a
     | IZR (Raux.Zceil ?a) => aux_u (Nearbyint rnd_UP) a
@@ -335,6 +353,7 @@ Definition unary_bnd prec (o : unary_op) : I.type -> I.type :=
   | Ln => I.ln prec
   | PowerInt n => fun x => I.power_int prec x n
   | Nearbyint m => I.nearbyint m
+  | Round m emin p => J.round_flt prec emin p
   end.
 
 Lemma unary_bnd_correct :
@@ -357,6 +376,7 @@ apply I.exp_correct.
 apply J.ln_correct.
 apply J.power_int_correct.
 apply I.nearbyint_correct.
+apply (J.round_flt_correct m).
 Qed.
 
 Definition binary_bnd prec (o : binary_op) : I.type -> I.type -> I.type :=
