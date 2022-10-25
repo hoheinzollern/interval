@@ -22,7 +22,7 @@ From Flocq Require Import Core.
 
 Require Import Xreal.
 
-Inductive rounding_mode : Set :=
+Variant rounding_mode : Set :=
   rnd_UP | rnd_DN | rnd_ZR | rnd_NE.
 
 Definition Rnearbyint mode r :=

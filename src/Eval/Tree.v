@@ -73,6 +73,8 @@ Definition unary_real (o : unary_op) : R -> R :=
   | Round m emin prec => round_flt m emin prec
   end.
 
+Strategy 1000 [Generic_fmt.round].
+
 Definition binary_real (o : binary_op) : R -> R -> R :=
   match o with
   | Add => Rplus
@@ -149,6 +151,14 @@ Ltac hyp_on_var x :=
   | H : (?v > Rabs x)%R |- _ => true
   end.
 
+Ltac reify_round m :=
+  lazymatch m with
+  | Round_NE.ZnearestE => rnd_NE
+  | Raux.Ztrunc => rnd_ZR
+  | Raux.Zfloor => rnd_DN
+  | Raux.Zceil => rnd_UP
+  end.
+
 Ltac get_vars t l :=
   let rec aux t l top :=
     let aux_u a := aux a l top in
@@ -184,7 +194,8 @@ Ltac get_vars t l :=
     | Rdiv ?a ?b => aux_b a b
     | Rpower ?a ?b => aux_b a b
     | Rnearbyint ?a ?b => aux_u b
-    | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) Round_NE.ZnearestE ?a =>
+    | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) ?mode ?a =>
+      let mode := reify_round mode in
       let prec := eval lazy in prec in
       let emin := eval lazy in emin in
       lazymatch is_Z_const prec with true =>
@@ -233,7 +244,7 @@ Module Compatibility. Definition Q2R := False. End Compatibility.
 Import Compatibility Rdefinitions.
 (* Q2R doesn't exist in Coq < 8.13 but is referenced in the next tactic,
    so this just gives a fake definition for compatibility purpose.
-   This could be removed once we require Coq >= 8.13. *)
+   TODO: remove once we require Coq >= 8.13. *)
 
 Ltac reify t l :=
   let rec aux t :=
@@ -278,13 +289,14 @@ Ltac reify t l :=
     | Rdiv ?a ?b => aux_b Div a b
     | Rpower ?a ?b => aux (exp (b * ln a))
     | Rnearbyint ?a ?b => aux_u (Nearbyint a) b
-    | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) Round_NE.ZnearestE ?a =>
+    | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) ?mode ?a =>
+      let mode := reify_round mode in
       let prec := eval lazy in prec in
       let emin := eval lazy in emin in
       lazymatch is_Z_const prec with true =>
       lazymatch is_Z_const emin with true =>
       lazymatch prec with Z.pos ?p =>
-        aux_u (Round rnd_NE emin p) a
+        aux_u (Round mode emin p) a
       end end end
     | IZR (Raux.Ztrunc ?a) => aux_u (Nearbyint rnd_ZR) a
     | IZR (Raux.Zfloor ?a) => aux_u (Nearbyint rnd_DN) a
