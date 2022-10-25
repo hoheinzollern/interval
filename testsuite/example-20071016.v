@@ -4,6 +4,7 @@ From Interval Require Import Tactic.
 Open Scope R_scope.
 Notation "x = y ± z" := (Rle (Rabs (x - y)) z)
   (at level 70, y at next level).
+Notation round := (Generic_fmt.round Zaux.radix2 (FLT.FLT_exp (-1074) 53) Round_NE.ZnearestE).
 
 (* Tactic interval *)
 
@@ -59,6 +60,15 @@ Proof.
   intros.
   apply Rminus_lt.
   interval with (i_bisect x, i_autodiff x).
+Qed.
+
+Goal
+  forall x, -1 <= x <= 1 ->
+  round (1 + round (x * round (1 + round (x * (922446257493983/2251799813685248)))))
+    = exp x ± 31/100.
+Proof.
+  intros.
+  interval with (i_taylor x).
 Qed.
 
 (* Tactic integral *)

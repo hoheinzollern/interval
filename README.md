@@ -55,6 +55,7 @@ The tactic recognizes the following operators: `PI`, `Ropp`, `Rabs`, `Rinv`,
 `Rsqr`, `sqrt`, `cos`, `sin`, `tan`, `atan`, `exp`, `ln`, `pow`, `Rpower`,
 `powerRZ`, `Rplus`, `Rminus`, `Rmult`, `Rdiv`. Flocq's operators `Zfloor`,
 `Zceil`, `Ztrunc`, `ZnearestE` (composed with `IZR`) are also recognized.
+Flocq's operator `Generic_fmt.round` with format `FLT_exp` is also supported.
 There are some restrictions on the domain of a few functions: `pow` and
 `powerRZ` should be written with a numeric exponent; the input of `cos`
 and `sin` should be between `-2*PI` and `2*PI`; the input of `tan` should
@@ -263,6 +264,7 @@ From Interval Require Import Tactic.
 Open Scope R_scope.
 Notation "x = y ± z" := (Rle (Rabs (x - y)) z)
   (at level 70, y at next level).
+Notation round := (Generic_fmt.round Zaux.radix2 (FLT.FLT_exp (-1074) 53) Round_NE.ZnearestE).
 
 (* Tactic interval *)
 
@@ -318,6 +320,15 @@ Proof.
   intros.
   apply Rminus_lt.
   interval with (i_bisect x, i_autodiff x).
+Qed.
+
+Goal
+  forall x, -1 <= x <= 1 ->
+  round (1 + round (x * round (1 + round (x * (922446257493983/2251799813685248)))))
+    = exp x ± 31/100.
+Proof.
+  intros.
+  interval with (i_taylor x).
 Qed.
 
 (* Tactic integral *)
