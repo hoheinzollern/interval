@@ -240,11 +240,7 @@ Ltac get_vars t l :=
     end in
   aux t l true.
 
-Module Compatibility. Definition Q2R := False. End Compatibility.
-Import Compatibility Rdefinitions.
-(* Q2R doesn't exist in Coq < 8.13 but is referenced in the next tactic,
-   so this just gives a fake definition for compatibility purpose.
-   TODO: remove once we require Coq >= 8.13. *)
+Import Stdlib.Compatibility Rdefinitions.
 
 Ltac reify t l :=
   let rec aux t :=
