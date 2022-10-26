@@ -179,6 +179,8 @@ Definition upper_bounded xi :=
   | _ => false
   end.
 
+Import Stdlib.Compatibility Rdefinitions.
+
 Definition output_bnd (fmt upp : bool) (s : bool) m e :=
   let m := if s then Zneg m else Zpos m in
   match e with
@@ -187,10 +189,11 @@ Definition output_bnd (fmt upp : bool) (s : bool) m e :=
   | Zneg p =>
     if andb fmt (Zeq_bool (Zaux.radix_val F.radix) 2) then
       let e' := Z.div (Zpos p) 3 in
-      let m' := Z.mul m (Z.pow 5 e') in
-      let m'' := Z.div_eucl m' (Z.pow 2 (Zpos p - e')) in
+      let e' := match e' with Zpos e' => e' | _ => xH end in
+      let m' := Z.mul m (Z.pow 5 (Zpos e')) in
+      let m'' := Z.div_eucl m' (Z.pow 2 (Zpos p - Zpos e')) in
       let u := if upp then if Zeq_bool (snd m'') 0 then 0%Z else 1%Z else 0%Z in
-      (IZR (fst m'' + u) / IZR (Z.pow 10 e'))%R
+      Q2R (QArith_base.Qmake (fst m'' + u) (Pos.pow 10 e'))
     else
       (IZR m / IZR (Z.pow_pos (Zaux.radix_val F.radix) p))%R
   end.
@@ -803,39 +806,40 @@ assert (H : forall s m e,
   destruct e as [|e|e] ; try easy.
   unfold FtoR.
   set (sm := if s then Z.neg m else Z.pos m).
-  set (e' := Z.div (Zpos e) 3).
+  set (e'' := Z.div (Zpos e) 3).
+  set (e' := match e'' with Zpos p => p | _ => xH end).
   apply Zeq_is_eq_bool in Hr.
-  assert (He1: (e' < Zpos e)%Z).
-  { now apply Z.div_lt. }
-  assert (He2: (2 ^ (Z.pos e - e') > 0)%Z).
+  assert (He1: (0 <= Zpos e - Zpos e')%Z).
+  { apply Zle_minus_le_0.
+    destruct e'' as [|p|p] eqn:He ; try now apply (Zlt_le_succ 0).
+    unfold e'.
+    rewrite <- He.
+    now apply Zlt_le_weak, Z.div_lt. }
+  assert (He2: (2 ^ (Z.pos e - Zpos e') > 0)%Z).
   { apply Z.lt_gt.
-    apply (Zaux.Zpower_gt_0 Zaux.radix2).
-    lia. }
-  assert (He3: (0 <= e')%Z).
-  { now apply Z.div_pos. }
-  generalize (Zdiv.Z_div_mod (sm * 5 ^ e') (2 ^ (Z.pos e - e')) He2).
-  set (qr := Z.div_eucl (sm * 5 ^ e') (2 ^ (Z.pos e - e'))).
+    now apply (Zaux.Zpower_gt_0 Zaux.radix2). }
+  assert (He3: (0 <= Zpos e')%Z) by easy.
+  generalize (Zdiv.Z_div_mod (sm * 5 ^ Zpos e') (2 ^ (Zpos e - Zpos e')) He2).
+  set (qr := Z.div_eucl (sm * 5 ^ Zpos e') (2 ^ (Zpos e - Zpos e'))).
   rewrite Hr.
   set (d := IZR (Z.pow_pos 2 e)).
   destruct qr as [q r].
   intros [H1 H2].
   simpl.
-  assert (H3: (sm * 10 ^ e' = 2 ^ (Zpos e) * q + r * 2 ^ e')%Z).
+  assert (H3: (sm * 10 ^ Zpos e' = 2 ^ (Zpos e) * q + r * 2 ^ Zpos e')%Z).
   { change 10%Z with (2 * 5)%Z.
     rewrite Z.pow_mul_l.
-    rewrite <- (Zmult_comm (5 ^ e')), Zmult_assoc.
+    rewrite <- (Zmult_comm (5 ^ Zpos e')), Zmult_assoc.
     rewrite H1.
-    pattern (Zpos e) at 2 ; replace (Zpos e) with (Zpos e - e' + e')%Z by ring.
-    rewrite Z.pow_add_r.
-    ring.
-    clear -He1 ; lia.
-    easy. }
+    pattern (Zpos e) at 2 ; replace (Zpos e) with (Zpos e - Zpos e' + Zpos e')%Z by ring.
+    rewrite Z.pow_add_r ; try easy.
+    ring. }
   split ; intros H ; [ apply Rle_trans with (2:= H) | apply Rle_trans with (1 := H) ].
   - apply Hd.
-    apply (Zaux.Zpower_gt_0 (Zaux.Build_radix 10 eq_refl)).
-    now apply Z.div_pos.
-    apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
     easy.
+    now apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
+    unfold QArith_base.Qnum, QArith_base.Qden.
+    rewrite Pos2Z.inj_pow.
     rewrite <- (Zmult_comm sm), H3.
     rewrite Zplus_0_r, Zmult_comm.
     rewrite <- (Zplus_0_r (Z.pow_pos 2 e * q)).
@@ -844,10 +848,10 @@ assert (H : forall s m e,
     easy.
     apply (Zaux.Zpower_ge_0 radix2).
   - apply Hd.
-    apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
+    now apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
     easy.
-    apply (Zaux.Zpower_gt_0 (Zaux.Build_radix 10 eq_refl)).
-    now apply Z.div_pos.
+    unfold QArith_base.Qnum, QArith_base.Qden.
+    rewrite Pos2Z.inj_pow.
     rewrite H3.
     rewrite Z.mul_add_distr_l.
     apply Zplus_le_compat_l.
@@ -858,13 +862,11 @@ assert (H : forall s m e,
     intros _.
     rewrite Zmult_1_r.
     change (Z.pow_pos 2 e) with (Z.pow 2 (Zpos e)).
-    replace (Zpos e) with (Zpos e - e' + e')%Z by ring.
-    rewrite Z.pow_add_r.
+    replace (Zpos e) with (Zpos e - Zpos e' + Zpos e')%Z by ring.
+    rewrite Z.pow_add_r by easy.
     apply Zmult_le_compat_r.
     now apply Zlt_le_weak.
-    apply (Zaux.Zpower_ge_0 radix2).
-    clear -He1 ; lia.
-    easy. }
+    apply (Zaux.Zpower_ge_0 radix2). }
 simpl.
 unfold F.toX.
 intros [H1 H2].
