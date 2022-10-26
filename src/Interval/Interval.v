@@ -298,6 +298,11 @@ Parameter is_empty_correct :
   forall xi x, contains (convert xi) x ->
   is_empty xi = true -> False.
 
+Parameter output : bool -> type -> R -> Prop.
+
+Parameter output_correct :
+  forall fmt xi x, contains (convert xi) (Xreal x) -> output fmt xi x.
+
 Parameter subset : type -> type -> bool.
 
 Parameter subset_correct :

@@ -179,6 +179,44 @@ Definition upper_bounded xi :=
   | _ => false
   end.
 
+Definition output_bnd (fmt upp : bool) (s : bool) m e :=
+  let m := if s then Zneg m else Zpos m in
+  match e with
+  | 0%Z => IZR m
+  | Zpos p => IZR (m * Z.pow_pos (Zaux.radix_val F.radix) p)
+  | Zneg p =>
+    if andb fmt (Zeq_bool (Zaux.radix_val F.radix) 2) then
+      let e' := Z.div (Zpos p) 3 in
+      let m' := Z.mul m (Z.pow 5 e') in
+      let m'' := Z.div_eucl m' (Z.pow 2 (Zpos p - e')) in
+      let u := if upp then if Zeq_bool (snd m'') 0 then 0%Z else 1%Z else 0%Z in
+      (IZR (fst m'' + u) / IZR (Z.pow 10 e'))%R
+    else
+      (IZR m / IZR (Z.pow_pos (Zaux.radix_val F.radix) p))%R
+  end.
+
+Definition output (fmt : bool) xi x :=
+  match xi with
+  | Ibnd xl xu =>
+    match F.toF xl, F.toF xu with
+    | Float sl ml el, Float su mu eu =>
+      (output_bnd fmt false sl ml el <= x <= output_bnd fmt true su mu eu)%R
+    | Fzero, Float su mu eu =>
+      (0 <= x <= output_bnd fmt true su mu eu)%R
+    | Float sl ml el, Fzero =>
+      (output_bnd fmt false sl ml el <= x <= 0)%R
+    | Fzero, Fzero => (0 <= x <= 0)%R
+    | Fzero, Basic.Fnan => (0 <= x)%R
+    | Basic.Fnan, Fzero => (x <= 0)%R
+    | Basic.Fnan, Float su mu eu =>
+      (x <= output_bnd fmt true su mu eu)%R
+    | Float sl ml el, Basic.Fnan =>
+      (output_bnd fmt false sl ml el <= x)%R
+    | Basic.Fnan, Basic.Fnan => True
+    end
+  | _ => True
+  end.
+
 Definition subset xi yi :=
   if is_empty xi then true else
   match xi, yi with
@@ -728,6 +766,111 @@ Proof.
 intros [|l u] [x Hx]; unfold valid_ub; simpl; [now rewrite F'.valid_ub_nan|].
 revert Hx; unfold convert.
 now case F.valid_ub; rewrite andb_comm; [|simpl; lra].
+Qed.
+
+Theorem output_correct :
+  forall fmt xi x, contains (convert xi) (Xreal x) -> output fmt xi x.
+Proof.
+intros fmt xi x.
+unfold output, convert.
+destruct xi as [|xl xu] ; try easy.
+assert (H: forall P : Prop, (1 <= x <= 0)%R -> P).
+{ intros P [H1 H2].
+  elim (Rlt_irrefl 0).
+  apply Rlt_le_trans with (1 := Rlt_0_1).
+  apply Rle_trans with (1 := H1) (2 := H2). }
+destruct (F.valid_lb xl). 2: apply H.
+destruct (F.valid_ub xu). 2: apply H.
+clear H.
+assert (H : forall s m e,
+   ((FtoR F.radix s m e <= x)%R -> (output_bnd fmt false s m e <= x)%R) /\
+   ((x <= FtoR F.radix s m e)%R -> (x <= output_bnd fmt true s m e)%R)).
+{ intros s m e.
+  assert (Hd: forall a b c d, (0 < b)%Z -> (0 < d)%Z -> (a * d <= b * c)%Z -> (IZR a / IZR b <= IZR c/ IZR d)%R).
+  { intros a b c d Hb Hd H.
+    apply Rcomplements.Rle_div_l.
+    now apply IZR_lt.
+    unfold Rdiv.
+    rewrite Rmult_assoc, <- (Rmult_comm (IZR b)), <- Rmult_assoc.
+    apply Rcomplements.Rle_div_r.
+    now apply IZR_lt.
+    rewrite <- 2!mult_IZR.
+    apply IZR_le.
+    now rewrite <- (Zmult_comm b). }
+  unfold output_bnd.
+  destruct fmt ; try easy.
+  destruct (Zeq_bool (Zaux.radix_val F.radix) 2) eqn:Hr ; try easy.
+  destruct e as [|e|e] ; try easy.
+  unfold FtoR.
+  set (sm := if s then Z.neg m else Z.pos m).
+  set (e' := Z.div (Zpos e) 3).
+  apply Zeq_is_eq_bool in Hr.
+  assert (He1: (e' < Zpos e)%Z).
+  { now apply Z.div_lt. }
+  assert (He2: (2 ^ (Z.pos e - e') > 0)%Z).
+  { apply Z.lt_gt.
+    apply (Zaux.Zpower_gt_0 Zaux.radix2).
+    lia. }
+  assert (He3: (0 <= e')%Z).
+  { now apply Z.div_pos. }
+  generalize (Zdiv.Z_div_mod (sm * 5 ^ e') (2 ^ (Z.pos e - e')) He2).
+  set (qr := Z.div_eucl (sm * 5 ^ e') (2 ^ (Z.pos e - e'))).
+  rewrite Hr.
+  set (d := IZR (Z.pow_pos 2 e)).
+  destruct qr as [q r].
+  intros [H1 H2].
+  simpl.
+  assert (H3: (sm * 10 ^ e' = 2 ^ (Zpos e) * q + r * 2 ^ e')%Z).
+  { change 10%Z with (2 * 5)%Z.
+    rewrite Z.pow_mul_l.
+    rewrite <- (Zmult_comm (5 ^ e')), Zmult_assoc.
+    rewrite H1.
+    pattern (Zpos e) at 2 ; replace (Zpos e) with (Zpos e - e' + e')%Z by ring.
+    rewrite Z.pow_add_r.
+    ring.
+    clear -He1 ; lia.
+    easy. }
+  split ; intros H ; [ apply Rle_trans with (2:= H) | apply Rle_trans with (1 := H) ].
+  - apply Hd.
+    apply (Zaux.Zpower_gt_0 (Zaux.Build_radix 10 eq_refl)).
+    now apply Z.div_pos.
+    apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
+    easy.
+    rewrite <- (Zmult_comm sm), H3.
+    rewrite Zplus_0_r, Zmult_comm.
+    rewrite <- (Zplus_0_r (Z.pow_pos 2 e * q)).
+    apply Zplus_le_compat_l.
+    apply Z.mul_nonneg_nonneg.
+    easy.
+    apply (Zaux.Zpower_ge_0 radix2).
+  - apply Hd.
+    apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
+    easy.
+    apply (Zaux.Zpower_gt_0 (Zaux.Build_radix 10 eq_refl)).
+    now apply Z.div_pos.
+    rewrite H3.
+    rewrite Z.mul_add_distr_l.
+    apply Zplus_le_compat_l.
+    generalize (Zeq_bool_if r 0).
+    destruct Zeq_bool.
+    intros ->.
+    now rewrite Zmult_0_l, Zmult_0_r.
+    intros _.
+    rewrite Zmult_1_r.
+    change (Z.pow_pos 2 e) with (Z.pow 2 (Zpos e)).
+    replace (Zpos e) with (Zpos e - e' + e')%Z by ring.
+    rewrite Z.pow_add_r.
+    apply Zmult_le_compat_r.
+    now apply Zlt_le_weak.
+    apply (Zaux.Zpower_ge_0 radix2).
+    clear -He1 ; lia.
+    easy. }
+simpl.
+unfold F.toX.
+intros [H1 H2].
+destruct (F.toF xl) as [| |sl ml el] ;
+  destruct (F.toF xu) as [| |su mu eu] ;
+  try split ; try easy ; apply H ; easy.
 Qed.
 
 Theorem subset_correct :
