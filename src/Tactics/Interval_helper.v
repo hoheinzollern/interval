@@ -51,6 +51,7 @@ Ltac tuple_to_list params l :=
 Import Stdlib.Compatibility Rdefinitions.
 
 Ltac do_interval_generalize output :=
+  match goal with |- contains (_ ?b) _ -> _ => unfold b end ;
   let H := fresh "H" in
   intro H ;
   apply output in H ;
