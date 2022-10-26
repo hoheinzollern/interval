@@ -183,17 +183,17 @@ Definition output_bnd (fmt upp : bool) (s : bool) m e :=
   let m := if s then Zneg m else Zpos m in
   match e with
   | 0%Z => BInteger m
-  | Zpos p => BInteger (m * Z.pow_pos (Zaux.radix_val F.radix) p)
+  | Zpos p => BInteger (m * Zaux.Zfast_pow_pos (Zaux.radix_val F.radix) p)
   | Zneg p =>
     if andb fmt (Zeq_bool (Zaux.radix_val F.radix) 2) then
-      let e' := Z.div (Zpos p) 3 in
+      let e' := (Zpos p * 3 / 10)%Z in
       let e' := match e' with Zpos e' => e' | _ => xH end in
-      let m' := Z.mul m (Z.pow 5 (Zpos e')) in
+      let m' := Z.mul m (Zaux.Zfast_pow_pos 5 e') in
       let m'' := Z.div_eucl m' (Z.pow 2 (Zpos p - Zpos e')) in
       let u := if upp then if Zeq_bool (snd m'') 0 then 0%Z else 1%Z else 0%Z in
       BDecimal (QArith_base.Qmake (fst m'' + u) (Pos.pow 10 e'))
     else
-      BFraction m (Z.pow_pos (Zaux.radix_val F.radix) p)
+      BFraction m (Zaux.Zfast_pow_pos (Zaux.radix_val F.radix) p)
   end.
 
 Definition output (fmt : bool) xi :=
@@ -799,14 +799,15 @@ assert (H : forall s m e,
     apply IZR_le.
     now rewrite <- (Zmult_comm b). }
   unfold output_bnd.
-  destruct fmt.
-  2: now destruct e.
-  destruct (Zeq_bool (Zaux.radix_val F.radix) 2) eqn:Hr.
-  2: now destruct e.
-  destruct e as [|e|e] ; try easy.
+  destruct (andb fmt (Zeq_bool (Zaux.radix_val F.radix) 2)) eqn:Hr.
+  2: now destruct e ; try rewrite Zaux.Zfast_pow_pos_correct.
+  destruct fmt. 2: easy.
+  destruct e as [|e|e].
+  easy.
+  now rewrite Zaux.Zfast_pow_pos_correct.
   unfold FtoR.
   set (sm := if s then Z.neg m else Z.pos m).
-  set (e'' := Z.div (Zpos e) 3).
+  set (e'' := (Zpos e * 3 / 10)%Z).
   set (e' := match e'' with Zpos p => p | _ => xH end).
   apply Zeq_is_eq_bool in Hr.
   assert (He1: (0 <= Zpos e - Zpos e')%Z).
@@ -814,13 +815,17 @@ assert (H : forall s m e,
     destruct e'' as [|p|p] eqn:He ; try now apply (Zlt_le_succ 0).
     unfold e'.
     rewrite <- He.
-    now apply Zlt_le_weak, Z.div_lt. }
+    apply Z.div_le_upper_bound.
+    easy.
+    rewrite Zmult_comm.
+    now apply Zmult_le_compat_r. }
   assert (He2: (2 ^ (Z.pos e - Zpos e') > 0)%Z).
   { apply Z.lt_gt.
     now apply (Zaux.Zpower_gt_0 Zaux.radix2). }
   assert (He3: (0 <= Zpos e')%Z) by easy.
-  generalize (Zdiv.Z_div_mod (sm * 5 ^ Zpos e') (2 ^ (Zpos e - Zpos e')) He2).
-  set (qr := Z.div_eucl (sm * 5 ^ Zpos e') (2 ^ (Zpos e - Zpos e'))).
+  rewrite Zaux.Zfast_pow_pos_correct.
+  generalize (Zdiv.Z_div_mod (sm * Z.pow_pos 5 e') (2 ^ (Zpos e - Zpos e')) He2).
+  set (qr := Z.div_eucl (sm * Z.pow_pos 5 e') (2 ^ (Zpos e - Zpos e'))).
   rewrite Hr.
   set (d := IZR (Z.pow_pos 2 e)).
   destruct qr as [q r].
@@ -830,6 +835,7 @@ assert (H : forall s m e,
   { change 10%Z with (2 * 5)%Z.
     rewrite Z.pow_mul_l.
     rewrite <- (Zmult_comm (5 ^ Zpos e')), Zmult_assoc.
+    unfold Z.pow at 1.
     rewrite H1.
     pattern (Zpos e) at 2 ; replace (Zpos e) with (Zpos e - Zpos e' + Zpos e')%Z by ring.
     rewrite Z.pow_add_r ; try easy.
