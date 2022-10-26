@@ -253,7 +253,7 @@ Ltac do_root x Zy prec depth native nocheck :=
   end ;
   do_reduction nocheck native.
 
-Ltac do_root_intro x Zy prec depth native nocheck :=
+Ltac do_root_intro x Zy prec depth native nocheck output :=
   let y :=
     match type of Zy with
     | ?y = 0%R => y
@@ -279,6 +279,6 @@ Ltac do_root_intro x Zy prec depth native nocheck :=
       do_instantiate i (fun xi : I.type => xi) native (root_plain prec depth hyps px cx pf cf)
     end ;
     do_reduction nocheck native
-  | do_interval_generalize I.convert ; clear i ].
+  | do_interval_generalize (I.output_correct output) ; clear i ].
 
 End RootTacticAux.

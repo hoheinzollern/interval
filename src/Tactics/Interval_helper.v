@@ -48,28 +48,22 @@ Ltac tuple_to_list params l :=
   | ?b => fail 100 "Unknown tactic parameter" b
   end.
 
-Ltac do_interval_generalize convert :=
+Ltac do_interval_generalize output :=
+  let H := fresh "H" in
+  intro H ;
+  apply output in H ;
+  revert H ;
   match goal with
-  | |- contains (convert ?b) (Xreal ?t) -> _ =>
-    let H := fresh "H" in
+  | |- ?f ?b ?t -> _ =>
     intro H ;
-    lazymatch eval cbv -[IZR Rdiv] in (convert b) with
-    | Ibnd ?l ?u =>
-      lazymatch l with
-      | Xreal ?l =>
-        lazymatch u with
-        | Xnan => change (l <= t /\ True)%R in H ; destruct H as [H _]
-        | Xreal ?u => change (l <= t <= u)%R in H
-        end
-      | Xnan =>
-        lazymatch u with
-        | Xreal ?u => change (True /\ t <= u)%R in H ; destruct H as [_ H]
-        | Xnan => fail "Xnan: Nothing known about" t
-        end
-      end
-    | Inan => fail "Inan: Nothing known about" t
-    end ;
-    revert H
+    let o := eval cbv -[IZR Rdiv Rle] in (f b) in
+    let o := eval cbv beta in (o t) in
+    lazymatch o with
+    | True => fail "Nothing known about" t
+    | _ =>
+      change o in H ;
+      revert H
+    end
   end.
 
 Ltac do_reduction nocheck native :=
@@ -386,7 +380,7 @@ Ltac do_instantiate i extend native yi :=
     end in
   instantiate (i := yi).
 
-Ltac do_interval_intro y extend fvar bvars prec degree depth native nocheck eval_tac :=
+Ltac do_interval_intro y extend fvar bvars prec degree depth native nocheck eval_tac output :=
   let extend := constr:(extent extend) in
   let vars := merge_vars fvar bvars in
   let idx := get_var_indices vars bvars in
@@ -418,6 +412,6 @@ Ltac do_interval_intro y extend fvar bvars prec degree depth native nocheck eval
       end
     end ;
     do_reduction nocheck native
-  | do_interval_generalize I.convert ; clear i ].
+  | do_interval_generalize (I.output_correct output) ; clear i ].
 
 End IntervalTacticAux.

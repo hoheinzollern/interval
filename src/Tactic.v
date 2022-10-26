@@ -40,6 +40,7 @@ Inductive interval_tac_parameters : Set :=
   | i_relwidth (w : positive)
   | i_native_compute
   | i_size (w : positive) (h : positive)
+  | i_decimal
   | i_delay.
 
 Require Tactic_float.
@@ -58,24 +59,25 @@ Module PT2 := PlotTacticAux Tactic_float.Float I2.
 Module RT2 := RootTacticAux Tactic_float.Float I2.
 
 Ltac do_interval_parse params depth :=
-  let rec aux fvar bvars prec degree depth native nocheck itm params :=
+  let rec aux fvar bvars prec degree depth native nocheck itm output params :=
     lazymatch params with
-    | nil => constr:((fvar, bvars, prec, degree, depth, native, nocheck, itm))
-    | cons (i_prec ?p) ?t => aux fvar bvars (Some p) degree depth native nocheck itm t
-    | cons (i_degree ?d) ?t => aux fvar bvars prec d depth native nocheck itm t
-    | cons (i_bisect ?x) ?t => aux fvar (cons x bvars) prec degree depth native nocheck itm t
-    | cons (i_autodiff ?x) ?t => aux (Some x) bvars prec degree depth native nocheck itm_autodiff t
-    | cons (i_taylor ?x) ?t => aux (Some x) bvars prec degree depth native nocheck itm_taylor t
-    | cons (i_depth ?d) ?t => aux fvar bvars prec degree d native nocheck itm t
-    | cons i_native_compute ?t => aux fvar bvars prec degree depth true nocheck itm t
-    | cons i_delay ?t => aux fvar bvars prec degree depth native true itm t
+    | nil => constr:((fvar, bvars, prec, degree, depth, native, nocheck, itm, output))
+    | cons (i_prec ?p) ?t => aux fvar bvars (Some p) degree depth native nocheck itm output t
+    | cons (i_degree ?d) ?t => aux fvar bvars prec d depth native nocheck itm output t
+    | cons (i_bisect ?x) ?t => aux fvar (cons x bvars) prec degree depth native nocheck itm output t
+    | cons (i_autodiff ?x) ?t => aux (Some x) bvars prec degree depth native nocheck itm_autodiff output t
+    | cons (i_taylor ?x) ?t => aux (Some x) bvars prec degree depth native nocheck itm_taylor output t
+    | cons (i_depth ?d) ?t => aux fvar bvars prec degree d native nocheck itm output t
+    | cons i_native_compute ?t => aux fvar bvars prec degree depth true nocheck itm output t
+    | cons i_delay ?t => aux fvar bvars prec degree depth native true itm output t
+    | cons i_decimal ?t => aux fvar bvars prec degree depth native nocheck itm true t
     | cons ?h _ => fail 100 "Unknown tactic parameter" h
     end in
-  aux (@None R) (@nil R) (@None positive) 10%nat depth false false itm_naive params.
+  aux (@None R) (@nil R) (@None positive) 10%nat depth false false itm_naive false params.
 
 Ltac do_interval params :=
   match do_interval_parse params 15%nat with
-  | (?fvar, ?bvars, ?prec, ?degree, ?depth, ?native, ?nocheck, ?itm) =>
+  | (?fvar, ?bvars, ?prec, ?degree, ?depth, ?native, ?nocheck, ?itm, _) =>
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
@@ -88,35 +90,36 @@ Ltac do_interval params :=
 
 Ltac do_interval_intro t extend params :=
   match do_interval_parse params 5%nat with
-  | (?fvar, ?bvars, ?prec, ?degree, ?depth, ?native, ?nocheck, ?itm) =>
+  | (?fvar, ?bvars, ?prec, ?degree, ?depth, ?native, ?nocheck, ?itm, ?output) =>
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
-      IT1.IH.do_interval_intro t extend fvar bvars prec degree depth native nocheck itm
+      IT1.IH.do_interval_intro t extend fvar bvars prec degree depth native nocheck itm output
     | None =>
       let prec := eval vm_compute in (Tactic_float.Float.PtoP 53) in
-      IT2.IH.do_interval_intro t extend fvar bvars prec degree depth native nocheck itm
+      IT2.IH.do_interval_intro t extend fvar bvars prec degree depth native nocheck itm output
     end
   end.
 
 Ltac do_integral_parse params :=
-  let rec aux prec degree fuel width native nocheck params :=
+  let rec aux prec degree fuel width native nocheck output params :=
     lazymatch params with
-    | nil => constr:((prec, degree, fuel, width, native, nocheck))
-    | cons (i_prec ?p) ?t => aux (Some p) degree fuel width native nocheck t
-    | cons (i_degree ?d) ?t => aux prec d fuel width native nocheck t
-    | cons (i_fuel ?f) ?t => aux prec degree f width native nocheck t
-    | cons (i_width ?w) ?t => aux prec degree fuel (w, false) native nocheck t
-    | cons (i_relwidth ?w) ?t => aux prec degree fuel (Zneg w, true) native nocheck t
-    | cons i_native_compute ?t => aux prec degree fuel width true nocheck t
-    | cons i_delay ?t => aux prec degree fuel width native true t
+    | nil => constr:((prec, degree, fuel, width, native, nocheck, output))
+    | cons (i_prec ?p) ?t => aux (Some p) degree fuel width native nocheck output t
+    | cons (i_degree ?d) ?t => aux prec d fuel width native nocheck output t
+    | cons (i_fuel ?f) ?t => aux prec degree f width native nocheck output t
+    | cons (i_width ?w) ?t => aux prec degree fuel (w, false) native nocheck output t
+    | cons (i_relwidth ?w) ?t => aux prec degree fuel (Zneg w, true) native nocheck output t
+    | cons i_native_compute ?t => aux prec degree fuel width true nocheck output t
+    | cons i_delay ?t => aux prec degree fuel width native true output t
+    | cons i_decimal ?t => aux prec degree fuel width native nocheck true t
     | cons ?h _ => fail 100 "Unknown tactic parameter" h
     end in
-  aux (@None positive) 10%nat 100%positive (Zneg 10, true) false false params.
+  aux (@None positive) 10%nat 100%positive (Zneg 10, true) false false false params.
 
 Ltac do_integral params :=
   match do_integral_parse params with
-  | (?prec, ?degree, ?fuel, _, ?native, ?nocheck) =>
+  | (?prec, ?degree, ?fuel, _, ?native, ?nocheck, _) =>
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
@@ -129,14 +132,14 @@ Ltac do_integral params :=
 
 Ltac do_integral_intro y extend params :=
   match do_integral_parse params with
-  | (?prec, ?degree, ?fuel, ?width, ?native, ?nocheck) =>
+  | (?prec, ?degree, ?fuel, ?width, ?native, ?nocheck, ?output) =>
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
-      IT1.do_integral_intro y extend prec degree fuel width native nocheck
+      IT1.do_integral_intro y extend prec degree fuel width native nocheck output
     | None =>
       let prec := eval vm_compute in (Tactic_float.Float.PtoP 53) in
-      IT2.do_integral_intro y extend prec degree fuel width native nocheck
+      IT2.do_integral_intro y extend prec degree fuel width native nocheck output
     end
   end.
 
@@ -179,21 +182,22 @@ Ltac do_plot_y t x1 x2 y1 y2 params :=
   end.
 
 Ltac do_root_parse params :=
-  let rec aux fvar prec depth native nocheck params :=
+  let rec aux fvar prec depth native nocheck output params :=
     lazymatch params with
-    | nil => constr:((fvar, prec, depth, native, nocheck))
-    | cons (i_autodiff ?v) ?t => aux (Some v) prec depth native nocheck t
-    | cons (i_prec ?p) ?t => aux fvar (Some p) depth native nocheck t
-    | cons (i_depth ?d) ?t => aux fvar prec d native nocheck t
-    | cons i_native_compute ?t => aux fvar prec depth true nocheck t
-    | cons i_delay ?t => aux fvar prec depth native true t
+    | nil => constr:((fvar, prec, depth, native, nocheck, output))
+    | cons (i_autodiff ?v) ?t => aux (Some v) prec depth native nocheck output t
+    | cons (i_prec ?p) ?t => aux fvar (Some p) depth native nocheck output t
+    | cons (i_depth ?d) ?t => aux fvar prec d native nocheck output t
+    | cons i_native_compute ?t => aux fvar prec depth true nocheck output t
+    | cons i_delay ?t => aux fvar prec depth native true output t
+    | cons i_decimal ?t => aux fvar prec depth native nocheck true t
     | cons ?h _ => fail 100 "Unknown tactic parameter" h
     end in
-  aux (@None R) (@None positive) 15%nat false false params.
+  aux (@None R) (@None positive) 15%nat false false false params.
 
 Ltac do_root' Zy params :=
   match do_root_parse params with
-  | (?fvar, ?prec, ?depth, ?native, ?nocheck) =>
+  | (?fvar, ?prec, ?depth, ?native, ?nocheck, _) =>
     let x :=
       lazymatch fvar with
       | Some ?v => v
@@ -211,7 +215,7 @@ Ltac do_root' Zy params :=
 
 Ltac do_root_intro' Zy params :=
   match do_root_parse params with
-  | (?fvar, ?prec, ?depth, ?native, ?nocheck) =>
+  | (?fvar, ?prec, ?depth, ?native, ?nocheck, ?output) =>
     let x :=
       lazymatch fvar with
       | Some ?v => v
@@ -220,10 +224,10 @@ Ltac do_root_intro' Zy params :=
     lazymatch prec with
     | Some ?p =>
       let prec := eval vm_compute in (F.PtoP p) in
-      RT1.do_root_intro x Zy prec depth native nocheck
+      RT1.do_root_intro x Zy prec depth native nocheck output
     | None =>
       let prec := eval vm_compute in (Tactic_float.Float.PtoP 53) in
-      RT2.do_root_intro x Zy prec depth native nocheck
+      RT2.do_root_intro x Zy prec depth native nocheck output
     end
   end.
 

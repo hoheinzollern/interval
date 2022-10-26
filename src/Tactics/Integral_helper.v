@@ -1076,7 +1076,7 @@ Ltac do_integral prec degree fuel native nocheck :=
   end ;
   do_reduction nocheck native.
 
-Ltac do_integral_intro y extend prec degree fuel width native nocheck :=
+Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
   let extend := constr:(extent extend) in
   let width :=
     match width with
@@ -1123,6 +1123,6 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck :=
     | _ => fail "No integral recognized"
     end ;
     do_reduction nocheck native
-  | do_interval_generalize I.convert ; clear i ].
+  | do_interval_generalize (I.output_correct output) ; clear i ].
 
 End IntegralTacticAux.
