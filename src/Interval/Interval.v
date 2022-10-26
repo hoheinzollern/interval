@@ -56,6 +56,28 @@ Definition contains i v :=
   | _, Xnan => False
   end.
 
+Inductive output_bound : Set :=
+  | BInteger : Z -> output_bound
+  | BDecimal : QArith_base.Q -> output_bound
+  | BFraction : Z -> Z -> output_bound.
+
+Import Stdlib.Compatibility Rdefinitions.
+
+Definition convert_bound b :=
+  match b with
+  | BInteger n => IZR n
+  | BDecimal q => Q2R q
+  | BFraction n d => (IZR n / IZR d)%R
+  end.
+
+Definition contains_output xi x :=
+  match xi with
+  | (None, None) => True
+  | (None, Some xu) => (x <= convert_bound xu)%R
+  | (Some xl, None) => (convert_bound xl <= x)%R
+  | (Some xl, Some xu) => (convert_bound xl <= x <= convert_bound xu)%R
+  end.
+
 Lemma contains_connected :
   forall xi, connected (fun x => contains xi (Xreal x)).
 Proof.
@@ -298,10 +320,10 @@ Parameter is_empty_correct :
   forall xi x, contains (convert xi) x ->
   is_empty xi = true -> False.
 
-Parameter output : bool -> type -> R -> Prop.
+Parameter output : bool -> type -> option output_bound * option output_bound.
 
 Parameter output_correct :
-  forall fmt xi x, contains (convert xi) (Xreal x) -> output fmt xi x.
+  forall fmt xi x, contains (convert xi) (Xreal x) -> contains_output (output fmt xi) x.
 
 Parameter subset : type -> type -> bool.
 

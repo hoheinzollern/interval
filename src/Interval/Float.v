@@ -179,13 +179,11 @@ Definition upper_bounded xi :=
   | _ => false
   end.
 
-Import Stdlib.Compatibility Rdefinitions.
-
 Definition output_bnd (fmt upp : bool) (s : bool) m e :=
   let m := if s then Zneg m else Zpos m in
   match e with
-  | 0%Z => IZR m
-  | Zpos p => IZR (m * Z.pow_pos (Zaux.radix_val F.radix) p)
+  | 0%Z => BInteger m
+  | Zpos p => BInteger (m * Z.pow_pos (Zaux.radix_val F.radix) p)
   | Zneg p =>
     if andb fmt (Zeq_bool (Zaux.radix_val F.radix) 2) then
       let e' := Z.div (Zpos p) 3 in
@@ -193,31 +191,31 @@ Definition output_bnd (fmt upp : bool) (s : bool) m e :=
       let m' := Z.mul m (Z.pow 5 (Zpos e')) in
       let m'' := Z.div_eucl m' (Z.pow 2 (Zpos p - Zpos e')) in
       let u := if upp then if Zeq_bool (snd m'') 0 then 0%Z else 1%Z else 0%Z in
-      Q2R (QArith_base.Qmake (fst m'' + u) (Pos.pow 10 e'))
+      BDecimal (QArith_base.Qmake (fst m'' + u) (Pos.pow 10 e'))
     else
-      (IZR m / IZR (Z.pow_pos (Zaux.radix_val F.radix) p))%R
+      BFraction m (Z.pow_pos (Zaux.radix_val F.radix) p)
   end.
 
-Definition output (fmt : bool) xi x :=
+Definition output (fmt : bool) xi :=
   match xi with
   | Ibnd xl xu =>
     match F.toF xl, F.toF xu with
     | Float sl ml el, Float su mu eu =>
-      (output_bnd fmt false sl ml el <= x <= output_bnd fmt true su mu eu)%R
+      (Some (output_bnd fmt false sl ml el), Some (output_bnd fmt true su mu eu))
     | Fzero, Float su mu eu =>
-      (0 <= x <= output_bnd fmt true su mu eu)%R
+      (Some (BInteger 0), Some (output_bnd fmt true su mu eu))
     | Float sl ml el, Fzero =>
-      (output_bnd fmt false sl ml el <= x <= 0)%R
-    | Fzero, Fzero => (0 <= x <= 0)%R
-    | Fzero, Basic.Fnan => (0 <= x)%R
-    | Basic.Fnan, Fzero => (x <= 0)%R
+      (Some (output_bnd fmt false sl ml el), Some (BInteger 0))
+    | Fzero, Fzero => (Some (BInteger 0), Some (BInteger 0))
+    | Fzero, Basic.Fnan => (Some (BInteger 0), None)
+    | Basic.Fnan, Fzero => (None, Some (BInteger 0))
     | Basic.Fnan, Float su mu eu =>
-      (x <= output_bnd fmt true su mu eu)%R
+      (None, Some (output_bnd fmt true su mu eu))
     | Float sl ml el, Basic.Fnan =>
-      (output_bnd fmt false sl ml el <= x)%R
-    | Basic.Fnan, Basic.Fnan => True
+      (Some (output_bnd fmt false sl ml el), None)
+    | Basic.Fnan, Basic.Fnan => (None, None)
     end
-  | _ => True
+  | Inan => (None, None)
   end.
 
 Definition subset xi yi :=
@@ -772,7 +770,7 @@ now case F.valid_ub; rewrite andb_comm; [|simpl; lra].
 Qed.
 
 Theorem output_correct :
-  forall fmt xi x, contains (convert xi) (Xreal x) -> output fmt xi x.
+  forall fmt xi x, contains (convert xi) (Xreal x) -> contains_output (output fmt xi) x.
 Proof.
 intros fmt xi x.
 unfold output, convert.
@@ -786,8 +784,8 @@ destruct (F.valid_lb xl). 2: apply H.
 destruct (F.valid_ub xu). 2: apply H.
 clear H.
 assert (H : forall s m e,
-   ((FtoR F.radix s m e <= x)%R -> (output_bnd fmt false s m e <= x)%R) /\
-   ((x <= FtoR F.radix s m e)%R -> (x <= output_bnd fmt true s m e)%R)).
+   ((FtoR F.radix s m e <= x)%R -> (Interval.convert_bound (output_bnd fmt false s m e) <= x)%R) /\
+   ((x <= FtoR F.radix s m e)%R -> (x <= Interval.convert_bound (output_bnd fmt true s m e))%R)).
 { intros s m e.
   assert (Hd: forall a b c d, (0 < b)%Z -> (0 < d)%Z -> (a * d <= b * c)%Z -> (IZR a / IZR b <= IZR c/ IZR d)%R).
   { intros a b c d Hb Hd H.
@@ -801,8 +799,10 @@ assert (H : forall s m e,
     apply IZR_le.
     now rewrite <- (Zmult_comm b). }
   unfold output_bnd.
-  destruct fmt ; try easy.
-  destruct (Zeq_bool (Zaux.radix_val F.radix) 2) eqn:Hr ; try easy.
+  destruct fmt.
+  2: now destruct e.
+  destruct (Zeq_bool (Zaux.radix_val F.radix) 2) eqn:Hr.
+  2: now destruct e.
   destruct e as [|e|e] ; try easy.
   unfold FtoR.
   set (sm := if s then Z.neg m else Z.pos m).
@@ -834,7 +834,7 @@ assert (H : forall s m e,
     pattern (Zpos e) at 2 ; replace (Zpos e) with (Zpos e - Zpos e' + Zpos e')%Z by ring.
     rewrite Z.pow_add_r ; try easy.
     ring. }
-  split ; intros H ; [ apply Rle_trans with (2:= H) | apply Rle_trans with (1 := H) ].
+  split ; intros H ; [ apply Rle_trans with (2 := H) | apply Rle_trans with (1 := H) ].
   - apply Hd.
     easy.
     now apply (Zaux.Zpower_gt_0 radix2 (Zpos e)).
