@@ -119,7 +119,7 @@ Definition equal_PI_over_4 :=
   ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
 
 Definition equal_0_442854401002 x :=
-  ltac:(root (exp x = 2 - x)).
+  ltac:(root (exp x = 2 - x) with i_decimal).
 
 (* Tactic plot and command Plot *)
 

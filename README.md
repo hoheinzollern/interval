@@ -253,6 +253,13 @@ arguments, if any):
     especially useful when looking for optimal values for parameters such
     as `i_prec` and `i_degree`.
 
+  - `i_decimal`
+
+    Instruct the tactics to output interval bounds using a decimal
+    representation. This parameter is only meaningful for the tactics
+    `interval_intro`, `integral_intro`, and `root_intro`, as well as
+    the corresponding degenerate tactics.
+
 
 Examples
 --------
@@ -369,7 +376,7 @@ Definition equal_PI_over_4 :=
   ltac:(integral (RInt (fun x => 1 / (1+x*x)) 0 1)).
 
 Definition equal_0_442854401002 x :=
-  ltac:(root (exp x = 2 - x)).
+  ltac:(root (exp x = 2 - x) with i_decimal).
 
 (* Tactic plot and command Plot *)
 
