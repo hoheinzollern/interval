@@ -2046,7 +2046,6 @@ revert Hb.
 elim (Rmult_integral _ _ Hepseta); [ |lra]; intros ->.
 rewrite Rplus_0_r, Rmult_1_r.
 unfold b_x, b_y; rewrite Hx, Hy.
-
 generalize (Rabs_le_inv _ _ Heta); compute; lra.
 Qed.
 
@@ -2059,64 +2058,35 @@ destruct (Z.le_ge_cases s (- 1074)) as [Hs2 | Hs2].
 { rewrite (Z.max_r _ _ Hs2). cbn -[FtoR]. split; [easy |]. rewrite FtoR_split.
   simpl. rewrite Float_prop.F2R_bpow. rewrite Rmult_1_l. apply bpow_le. easy. }
 rewrite (Z.max_l _ _ Hs2). unfold scale, valid_ub, toX, toF.
-rewrite <-(B2Prim_Prim2B (ldshiftexp (fromZ 1) (Uint63.add (Uint63.of_Z s) (Uint63.of_Z shift)))) at 1.
+rewrite <- (B2Prim_Prim2B (ldshiftexp (fromZ 1) (of_Z s + of_Z FloatOps.shift))) at 1.
 rewrite <-B2SF_Prim2B. rewrite ldshiftexp_equiv.
-set (e := (Uint63.to_Z (Uint63.add (Uint63.of_Z s) (Uint63.of_Z shift))%int63 - shift)%Z).
+set (e := (to_Z (of_Z s + of_Z FloatOps.shift) - FloatOps.shift)%Z).
 generalize (Bldexp_correct _ _ _ _ mode_NE (Prim2B (fromZ 1)) e).
-unfold e. rewrite Uint63.add_spec. rewrite 2Uint63.of_Z_spec.
+unfold e. rewrite Int63.add_spec. rewrite 2!Int63.of_Z_spec.
 rewrite <-Z.add_mod by easy. rewrite Z.mod_small.
-2: { unfold Uint63.wB. simpl. unfold Z.pow_pos. simpl. unfold shift. lia. }
-ring_simplify (s + shift - shift)%Z. rewrite Rlt_bool_true.
-2: { replace (B2R (Prim2B (fromZ 1))) with 1%R;
-    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
-  rewrite Rmult_1_l. rewrite Generic_fmt.round_generic;
-    [rewrite Rabs_pos_eq; [now apply bpow_lt | apply bpow_ge_0]
-    | apply valid_rnd_round_mode
-    |].
+2: { change wB with 9223372036854775808%Z. unfold FloatOps.shift. lia. }
+ring_simplify (s + FloatOps.shift - FloatOps.shift)%Z.
+change (fromZ 1) with 1%float.
+replace (B2R (Prim2B 1)) with 1%R;
+  [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+rewrite Rmult_1_l. rewrite Generic_fmt.round_generic.
+2: apply valid_rnd_round_mode.
+2: {
   apply Generic_fmt.generic_format_bpow.
   unfold fexp, FloatOps.prec, SpecFloat.emin, emax.
   lia. }
-simpl fromZ. set (t := Bldexp mode_NE (Prim2B 1) s).
-intros [H1 [H2 H3]]. destruct t as [sg | | | sg mt ex] eqn:Ht.
-- simpl B2R in H1. symmetry in H1.
-  replace (B2R (Prim2B 1)) with 1%R in H1;
-    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
-  rewrite Rmult_1_l in H1.
-  replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
-  2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
-    apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
-    lia. }
-  generalize (bpow_gt_0 radix2 s). lra.
-- simpl B2R in H1. symmetry in H1.
-  replace (B2R (Prim2B 1)) with 1%R in H1;
-    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
-  rewrite Rmult_1_l in H1.
-  replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
-  2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
-    apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
-    lia. }
-  generalize (bpow_gt_0 radix2 s). lra.
-- simpl B2R in H1. symmetry in H1.
-  replace (B2R (Prim2B 1)) with 1%R in H1;
-    [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
-  rewrite Rmult_1_l in H1.
-  replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
-  2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
-    apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
-    lia. }
-  generalize (bpow_gt_0 radix2 s). lra.
-- split.
-  + rewrite neg_infinity_equiv. rewrite eqb_equiv. now rewrite 2Prim2B_B2Prim.
-  + simpl B2R in H1. unfold Defs.F2R in H1. simpl Defs.Fnum in H1. simpl Defs.Fexp in H1.
-    replace (B2R (Prim2B 1)) with 1%R in H1;
-      [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
-    simpl. rewrite Rmult_1_l in *. unfold StoZ.
-    replace (Generic_fmt.round _ _ _ _) with (bpow radix2 s) in H1.
-    2: { symmetry. apply Generic_fmt.round_generic; [apply valid_rnd_round_mode |].
-      apply Generic_fmt.generic_format_bpow. unfold fexp, emin, emax, FloatOps.prec.
-      lia. }
-    rewrite <-H1. Search FtoR bpow. rewrite FtoR_split. unfold Defs.F2R.
-    simpl. apply Rle_refl.
+rewrite Rlt_bool_true.
+2: rewrite Rabs_pos_eq; [now apply bpow_lt | apply bpow_ge_0].
+set (t := Bldexp mode_NE (Prim2B 1) s).
+intros [H1 [H2 H3]].
+destruct t as [sg | | | sg mt ex] eqn:Ht ; try easy.
+{ contradict H1.
+  apply Rlt_not_eq.
+  apply bpow_gt_0. }
+split.
+- rewrite neg_infinity_equiv. rewrite eqb_equiv. now rewrite 2Prim2B_B2Prim.
+- simpl. rewrite Rmult_1_l. unfold StoZ.
+  rewrite <- H1. rewrite FtoR_split. apply Rle_refl.
 Qed.
 
 Lemma div_UP_correct :
