@@ -1,4 +1,4 @@
-AC_INIT([Interval], [4.5.2],
+AC_INIT([Interval], [4.6.0],
         [Guillaume Melquiond <guillaume.melquiond@inria.fr>],
         [interval])
 
@@ -253,6 +253,7 @@ echo
 echo "=== Summary ==="
 echo "Vernacular directory    $COQUSERCONTRIB/Interval"
 echo "Plugin directory        $COQINTERVALLIB"
+echo "Primitive floats        $prim_float"
 echo "Plot tactic            $tactic_mode"
 echo
 

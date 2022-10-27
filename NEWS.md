@@ -1,3 +1,9 @@
+Version 4.6.0
+-------------
+
+* added option `i_decimal` for producing decimal enclosures
+* added support for rounding operators from Flocq
+
 Version 4.5.2
 -------------
 
