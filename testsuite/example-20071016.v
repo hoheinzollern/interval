@@ -2,9 +2,7 @@ From Coq Require Import Reals Lra.
 From Interval Require Import Tactic.
 
 Open Scope R_scope.
-Notation "x = y ± z" := (Rle (Rabs (x - y)) z)
-  (at level 70, y at next level).
-Notation round := (Generic_fmt.round Zaux.radix2 (FLT.FLT_exp (-1074) 53) Round_NE.ZnearestE).
+Notation "x = y ± z" := (Rle (Rabs (x - y)) z) (at level 70, y at next level).
 
 (* Tactic interval *)
 
@@ -62,9 +60,13 @@ Proof.
   interval with (i_bisect x, i_autodiff x).
 Qed.
 
+From Flocq Require Import Core.
+
+Notation rnd := (round radix2 (FLT_exp (-1074) 53) ZnearestE).
+
 Goal
   forall x, -1 <= x <= 1 ->
-  round (1 + round (x * round (1 + round (x * (922446257493983/2251799813685248)))))
+  rnd (1 + rnd (x * rnd (1 + rnd (x * (922446257493983/2251799813685248)))))
     = exp x ± 31/100.
 Proof.
   intros.
