@@ -279,6 +279,7 @@ Ltac do_root_intro x Zy prec depth native nocheck output :=
       do_instantiate i (fun xi : I.type => xi) native (root_plain prec depth hyps px cx pf cf)
     end ;
     do_reduction nocheck native
-  | do_interval_generalize (I.output_correct output) ; clear i ].
+  | unfold i ; clear i ;
+    do_interval_generalize (I.output_correct output) ].
 
 End RootTacticAux.

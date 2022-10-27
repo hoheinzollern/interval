@@ -51,7 +51,6 @@ Ltac tuple_to_list params l :=
 Import Stdlib.Compatibility Rdefinitions.
 
 Ltac do_interval_generalize output :=
-  match goal with |- contains (_ ?b) _ -> _ => unfold b end ;
   let H := fresh "H" in
   intro H ;
   apply output in H ;
@@ -419,6 +418,7 @@ Ltac do_interval_intro y extend fvar bvars prec degree depth native nocheck eval
       end
     end ;
     do_reduction nocheck native
-  | do_interval_generalize (I.output_correct output) ; clear i ].
+  | unfold i ; clear i ;
+    do_interval_generalize (I.output_correct output) ].
 
 End IntervalTacticAux.

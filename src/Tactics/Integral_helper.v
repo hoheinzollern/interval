@@ -1123,6 +1123,7 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
     | _ => fail "No integral recognized"
     end ;
     do_reduction nocheck native
-  | do_interval_generalize (I.output_correct output) ; clear i ].
+  | unfold i ; clear i ;
+    do_interval_generalize (I.output_correct output) ].
 
 End IntegralTacticAux.
