@@ -1,4 +1,4 @@
-From Coq Require Import Reals Lra.
+From Coq Require Import Reals.
 From Interval Require Import Tactic.
 Open Scope R_scope.
 
