@@ -2053,9 +2053,9 @@ Lemma pow2_UP_correct :
   forall p s, (valid_ub (pow2_UP p s) = true /\
               le_upper (Xscale radix2 (Xreal 1) (StoZ s)) (toX (pow2_UP p s))).
 Proof.
-intros p s. unfold pow2_UP, emax. case Zle_bool_spec; [easy |]; intro Hs1.
+intros p s. unfold pow2_UP, emax. case Zle_bool_spec; [easy| ]; intro Hs1.
 destruct (Z.le_ge_cases s (- 1074)) as [Hs2 | Hs2].
-{ rewrite (Z.max_r _ _ Hs2). cbn -[FtoR]. split; [easy |]. rewrite FtoR_split.
+{ rewrite (Z.max_r _ _ Hs2). cbn -[FtoR]. split; [easy| ]. rewrite FtoR_split.
   simpl. rewrite Float_prop.F2R_bpow. rewrite Rmult_1_l. apply bpow_le. easy. }
 rewrite (Z.max_l _ _ Hs2). unfold scale, valid_ub, toX, toF.
 rewrite <- (B2Prim_Prim2B (ldshiftexp (fromZ 1) (of_Z s + of_Z FloatOps.shift))) at 1.
@@ -2068,7 +2068,7 @@ rewrite <-Z.add_mod by easy. rewrite Z.mod_small.
 ring_simplify (s + FloatOps.shift - FloatOps.shift)%Z.
 change (fromZ 1) with 1%float.
 replace (B2R (Prim2B 1)) with 1%R;
-  [| cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
+  [ |cbn; unfold Defs.F2R; cbn; unfold Prim2B; now apply Rinv_r_sym].
 rewrite Rmult_1_l. rewrite Generic_fmt.round_generic.
 2: apply valid_rnd_round_mode.
 2: {
