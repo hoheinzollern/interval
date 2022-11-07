@@ -1120,6 +1120,7 @@ Ltac do_integral prec degree fuel native nocheck :=
         apply (eval_RInt_gen_infty_invxln prec degree fuel) with (1 := eq_refl true)
       | fun t => (_ * (powerRZ t _ * ln t ^ _))%R =>
         apply (eval_RInt_gen_infty_bertrand prec degree fuel) with (1 := eq_refl Lt) (2 := eq_refl true)
+      | _ => fail "No integral recognized"
       end
     | context [RInt_gen ?fm (at_right 0) (at_point ?v)] =>
       reify_RInt_gen_zero y fm v ;
@@ -1128,6 +1129,7 @@ Ltac do_integral prec degree fuel native nocheck :=
         apply (eval_RInt_gen_zero_bertrand prec degree fuel) with (1 := eq_refl Lt) (2 := eq_refl true)
       | fun t => (_ * ln t ^ _)%R =>
         apply (eval_RInt_gen_zero_bertrand_pow0 prec degree fuel) with (1 := eq_refl true)
+      | _ => fail "No integral recognized"
       end
     | _ => fail "No integral recognized"
     end
@@ -1161,6 +1163,7 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
         apply (eval_RInt_gen_infty_contains_invxln prec degree fuel) with (1 := eq_refl true)
       | fun t => (_ * (powerRZ t _ * ln t ^ _))%R =>
         apply (eval_RInt_gen_infty_contains_bertrand prec degree fuel) with (1 := eq_refl Lt) (2 := eq_refl true)
+      | _ => fail "No integral recognized"
       end ;
       match goal with
       | |- _ ?hyps ?mi ?pf ?pfm ?pu ?cf ?cfm ?cu _ = true =>
@@ -1174,6 +1177,7 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
         apply (eval_RInt_gen_zero_contains_bertrand prec degree fuel) with (1 := eq_refl Lt) (2 := eq_refl true)
       | fun t => (_ * ln t ^ _)%R =>
         apply (eval_RInt_gen_zero_contains_bertrand_pow0 prec degree fuel) with (1 := eq_refl true)
+      | _ => fail "No integral recognized"
       end ;
       match goal with
       | |- _ ?hyps ?mi ?pf ?pfm ?pv ?cf ?cfm ?cv _ = true =>
