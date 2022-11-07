@@ -82,8 +82,9 @@ are also supported, when expressed using `RInt_gen`. The supported bounds
 are then `(at_right 0) (at_point _)` and `(at_point _) (Rbar_locally
 p_infty)`. In the improper case, the integrand should be of the form
 `(fun t => f t * g t)` with `f` a function bounded on the integration
-domain and `g` one of the following expressions:
+domain and `g t` one of the following expressions:
 
+  - `(ln t) ^ _`,
   - `powerRZ t _ * (ln t) ^ _`,
   - `/ (t * (ln t) ^ _)`.
 

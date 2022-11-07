@@ -1045,6 +1045,62 @@ apply I.subset_correct with (2 := H).
 now apply contains_RInt_gen_zero_bertrand.
 Qed.
 
+Lemma contains_RInt_gen_zero_bertrand_pow0 :
+  forall prec deg limit check vars hyps beta pf pv cf cv,
+  R.eval_hyps_bnd (R.merge_hyps prec hyps) vars ->
+  no_floor_prog pf = true ->
+  let hyps := R.merge_hyps prec hyps in
+  let (mid, Fi) := eval_RInt_gen_zero_init prec deg hyps (bertrand_zero_interval 0 beta) pf (bertrand_prog 0 beta pf) pv cf cf cv in
+  contains (I.convert (IR.bisect prec limit mid Fi check))
+    (Xreal (RInt_gen (fun t => Prog.eval_real' pf (t :: vars) cf * pow (ln t) beta)
+      (at_right 0) (at_point (Prog.eval_real' pv vars cv)))).
+Proof.
+intros prec deg limit check vars hyps beta pf pv cf cv H' Hp.
+generalize (contains_RInt_gen_zero_bertrand prec deg limit check vars hyps 0 beta pf pv cf cv H' eq_refl Hp).
+cbv zeta.
+intro H.
+rewrite RInt_gen_ext_eq with (g := (fun t : R => eval_real' pf (t :: vars) cf * (powerRZ t 0 * ln t ^ beta))).
+exact H.
+intros x.
+now rewrite powerRZ_O, Rmult_1_l.
+Qed.
+
+Theorem eval_RInt_gen_zero_bertrand_pow0 :
+  forall prec deg limit vars hyps beta pg pf pv cg cf cv g,
+  no_floor_prog pf = true ->
+  eval_RInt_gen_zero prec deg limit hyps (bertrand_zero_interval 0 beta) pg pf (bertrand_prog 0 beta pf) pv cg cf cf cv g = true ->
+  eval_hyps hyps vars (
+    eval_goal g (Prog.eval_real' pg (
+      (RInt_gen (fun t => Prog.eval_real' pf (t :: vars) cf * pow (ln t) beta)
+        (at_right 0) (at_point (Prog.eval_real' pv vars cv))) :: vars) cg)).
+Proof.
+intros prec deg limit vars hyps beta pg pf pv cg cf cv g Hp H.
+apply (R.eval_hyps_bnd_correct prec).
+intros H'.
+apply (R.eval_goal_bnd_correct prec) with (2 := H).
+unfold eval_real'.
+simpl.
+fold (compute_inputs prec hyps cg).
+apply A.BndValuator.eval_correct_ext'.
+now apply app_merge_hyps_eval_bnd.
+now apply contains_RInt_gen_zero_bertrand_pow0.
+Qed.
+
+Theorem eval_RInt_gen_zero_contains_bertrand_pow0 :
+  forall prec deg limit vars hyps beta pf pv cf cv b,
+  no_floor_prog pf = true ->
+  eval_RInt_gen_zero_contains prec deg limit hyps (bertrand_zero_interval 0 beta) pf (bertrand_prog 0 beta pf) pv cf cf cv b = true ->
+  eval_hyps hyps vars (contains (I.convert b)
+    (Xreal (RInt_gen (fun t => Prog.eval_real' pf (t :: vars) cf * pow (ln t) beta)
+       (at_right 0) (at_point (Prog.eval_real' pv vars cv))))).
+Proof.
+intros prec deg limit vars hyps beta pf pv cf cv b Hp H.
+apply (R.eval_hyps_bnd_correct prec).
+intros H'.
+apply I.subset_correct with (2 := H).
+now apply contains_RInt_gen_zero_bertrand_pow0.
+Qed.
+
 Ltac do_integral prec degree fuel native nocheck :=
   massage_goal ;
   match goal with
@@ -1070,6 +1126,8 @@ Ltac do_integral prec degree fuel native nocheck :=
       lazymatch fm with
       | fun t => (_ * (powerRZ t _ * ln t ^ _))%R =>
         apply (eval_RInt_gen_zero_bertrand prec degree fuel) with (1 := eq_refl Lt) (2 := eq_refl true)
+      | fun t => (_ * ln t ^ _)%R =>
+        apply (eval_RInt_gen_zero_bertrand_pow0 prec degree fuel) with (1 := eq_refl true)
       end
     | _ => fail "No integral recognized"
     end
@@ -1114,6 +1172,8 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
       lazymatch fm with
       | fun t => (_ * (powerRZ t _ * ln t ^ _))%R =>
         apply (eval_RInt_gen_zero_contains_bertrand prec degree fuel) with (1 := eq_refl Lt) (2 := eq_refl true)
+      | fun t => (_ * ln t ^ _)%R =>
+        apply (eval_RInt_gen_zero_contains_bertrand_pow0 prec degree fuel) with (1 := eq_refl true)
       end ;
       match goal with
       | |- _ ?hyps ?mi ?pf ?pfm ?pv ?cf ?cfm ?cv _ = true =>
