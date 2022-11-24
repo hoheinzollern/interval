@@ -218,6 +218,11 @@ Ltac get_vars t l :=
       lazymatch is_Z_const n with true => l end
     end
     | _ =>
+      lazymatch t with
+      | Generic_fmt.round _ _ _ _ =>
+        list_add t l
+      end
+    | _ =>
       let v := hyp_on_var t in
       list_add t l
     | _ =>
