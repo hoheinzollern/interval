@@ -141,9 +141,11 @@ elim: s1 s2 n => [|x1 s1 IHs1] s2 n.
   by case: n =>[|n] //=; rewrite IHs2.
 case: s2 => [|x2 s2] /=.
   by case: leqP => H; last rewrite nth_default.
-case: n => [|n] //=.
-by rewrite IHs1.
+case: n => [|n] /=.
+  done.
+exact: IHs1.
 Qed.
+
 End Map2.
 
 Lemma nth_mkseq_dflt (C : Type) (x0 : C) (f : nat -> C) (n i : nat) :
