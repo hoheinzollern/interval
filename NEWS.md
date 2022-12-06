@@ -1,3 +1,9 @@
+Version 4.6.1
+-------------
+
+* ensured compatibility from Coq 8.8 to 8.17
+* made `integral` a bit more lenient on `(ln t)^n` bounding integrands
+
 Version 4.6.0
 -------------
 
