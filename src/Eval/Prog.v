@@ -102,6 +102,16 @@ Fixpoint rcons_unique (e : expr) (l : list expr) :=
   | nil => cons e nil
   end.
 
+Lemma rcons_unique_correct : forall e l, exists l',
+  rcons_unique e l = l ++ l'.
+Proof.
+induction l as [ | e' l [l' IHl]].
+- now exists (e :: nil).
+- simpl. destruct expr_beq.
+  + exists nil. apply app_nil_end.
+  + exists l'. now rewrite IHl.
+Qed.
+
 Definition cons_unique (e : expr) (l : list expr) :=
   let fix aux (l' : list expr) :=
     match l' with
@@ -135,6 +145,18 @@ Fixpoint split_expr (e : expr) (lp lc : list expr) :=
     end
   end.
 
+Lemma eval_nth_rcons_unique : forall vars e l, eval e vars = eval e nil -> (
+  forall n, eval (nth n l (Econst (Int 0))) vars = eval (nth n l (Econst (Int 0))) nil) ->
+    forall n,
+    eval (nth n (rcons_unique e l) (Econst (Int 0))) vars = eval (nth n (rcons_unique e l) (Econst (Int 0))) nil.
+Proof.
+intros vars e l He Hl. induction l as [|h t IH] ; simpl; [now intros [|[|n]] |].
+generalize (internal_expr_dec_bl e h). destruct expr_beq.
+intros H [|n]. simpl. now rewrite <- H.
+apply Hl. intros _ [|n]. apply (Hl 0%nat). apply IH. intros n'.
+apply (Hl (S n')).
+Qed.
+
 Theorem split_expr_correct :
   forall vars e lp lc,
   (forall n, eval (nth n lc (Econst (Int 0))) vars = eval (nth n lc (Econst (Int 0))) nil) ->
@@ -151,33 +173,14 @@ induction e as [n|o|o e1 IHe1|o e1 IHe1 e2 IHe2] ; intros lp lc Hc ; simpl ; try
   now apply f_equal.
   apply IHe1.
 specialize (IHe2 lp lc Hc).
-assert (H: forall e l,
-    eval e vars = eval e nil ->
-    (forall n, eval (nth n l (Econst (Int 0))) vars = eval (nth n l (Econst (Int 0))) nil) ->
-    forall n,
-    eval (nth n (rcons_unique e l) (Econst (Int 0))) vars = eval (nth n (rcons_unique e l) (Econst (Int 0))) nil).
-  intros e l He Hl.
-  induction l as [|h t IH] ; simpl.
-    now intros [|[|n]].
-  generalize (internal_expr_dec_bl e h).
-  destruct expr_beq.
-  intros H [|n].
-  simpl.
-  now rewrite <- H.
-  apply Hl.
-  intros _ [|n].
-  apply (Hl 0%nat).
-  apply IH.
-  intros n'.
-  apply (Hl (S n')).
 destruct split_expr as [|lp2 lc2].
   specialize (IHe1 lp lc Hc).
   destruct split_expr as [|lp1 lc1].
   now apply f_equal2.
-  now apply H.
+  now apply eval_nth_rcons_unique.
 specialize (IHe1 lp2 lc2 IHe2).
 destruct split_expr as [|lp1 lc1].
-  now apply H.
+  now apply eval_nth_rcons_unique.
 apply IHe1.
 Qed.
 
@@ -275,22 +278,26 @@ Fixpoint decompose (vars : nat) (p : list term) (lp lc : list expr) :=
   match lp with
   | nil => Some p
   | cons h t =>
-    match h with
-    | Evar n => decompose vars (cons (Forward (length t + n)) p) t lc
-    | Econst _ => None
-    | Eunary o e1 =>
-      match find_expr e1 vars t lc with
-      | Some n => decompose vars (cons (Unary o n) p) t lc
-      | None => None
-      end
-    | Ebinary o e1 e2 =>
-      match find_expr e1 vars t lc with
-      | Some n1 =>
-        match find_expr e2 vars t lc with
-        | Some n2 => decompose vars (cons (Binary o n1 n2) p) t lc
+    match find_expr h vars t lc with
+    | Some n => decompose vars (cons (Forward n) p) t lc
+    | None =>
+      match h with
+      | Evar n => decompose vars (cons (Forward (length t + n)) p) t lc
+      | Econst _ => None
+      | Eunary o e1 =>
+        match find_expr e1 vars t lc with
+        | Some n => decompose vars (cons (Unary o n) p) t lc
         | None => None
         end
-      | None => None
+      | Ebinary o e1 e2 =>
+        match find_expr e1 vars t lc with
+        | Some n1 =>
+          match find_expr e2 vars t lc with
+          | Some n2 => decompose vars (cons (Binary o n1 n2) p) t lc
+          | None => None
+          end
+        | None => None
+        end
       end
     end
   end.
@@ -302,8 +309,8 @@ Theorem decompose_correct :
   match decompose (length vars) p lp lc with
   | None => True
   | Some lp' =>
-    eval_real lp' (app vars lc') =
-    eval_real p (app (map (fun c => eval c (app vars lc')) lp) (app vars lc'))
+    eval_real lp' (vars ++ lc') =
+    eval_real p ((map (fun c => eval c (vars ++ lc')) lp) ++ (vars ++ lc'))
   end.
 Proof.
 intros vars p lp lc Hc lc'.
@@ -343,6 +350,13 @@ assert (H: forall n e,
   rewrite map_nth, H.
   rewrite <- H at 2.
   now rewrite Hc, H.
+destruct find_expr eqn:H0.
+{ generalize (find_expr_correct h (length vars) t lc).
+  rewrite H0. specialize (IH (Forward n :: p)).
+  destruct decompose; [| easy].
+  rewrite IH. intros H1. apply H in H1. rewrite <-H1.
+  unfold eval_real. simpl. now unfold eval_generic_body. }
+clear H0.
 destruct h as [n|o|o e1|o e1 e2] ; try easy.
 - specialize (IH (Forward (length t + n) :: p)).
   destruct decompose ; try easy.
@@ -387,27 +401,127 @@ Fixpoint max_arity (e : expr) (n : nat) :=
   | Ebinary o e1 e2 => if max_arity e1 n then max_arity e2 n else false
   end.
 
+Lemma max_arity_correct : forall e k, max_arity e k = true ->
+  forall vars v, k <= length vars ->
+  eval e (vars ++ v) = eval e vars.
+Proof.
+induction e as [n | o | o e | o e1 e2]; [ | easy | | ]; simpl in *; intros k.
+- rewrite Nat.ltb_lt. intros Hnk vars v Hk.
+  apply Nat.lt_le_trans with (1 := Hnk) in Hk. now apply app_nth1.
+- intros Hek vars v Hk. now rewrite (IHe k).
+- rewrite <-Bool.andb_lazy_alt. intros H vars v Hk.
+  apply andb_prop in H. destruct H as [H1 H3].
+  now rewrite (e2 k), (IHe1 k).
+Qed.
+
 Inductive extracted_expr : Set :=
   | Eabort
   | Eprog (lp : list term) (lc : list expr).
 
-Definition extract (e : expr) (vars : nat) :=
-  match split_expr e nil nil with
-  | Sconst => Eprog (cons (Forward vars) nil) (cons e nil)
-  | Scomposed lp lc =>
-    let lp' :=
-      match lp with
-      | cons h t => if expr_beq e h then lp else e :: lp
-      | nil => e :: lp
-      end in
-    match decompose vars nil lp' lc with
-    | Some p => if max_arity e vars then Eprog p lc else Eabort
-    | None => Eabort
+Fixpoint fold_split (le lp lc : list expr) := match le with
+  | nil     => (lp, lc)
+  | e :: le => let (lp, lc) := fold_split le lp lc in
+    match split_expr e lp lc with
+    | Sconst => (lp, (rcons_unique e lc))
+    | Scomposed lp lc => (lp, lc)
     end
   end.
 
+Fixpoint max_arity_list (le : list expr) (vars : nat) := match le with
+  | nil => true
+  | e :: le => andb (max_arity e vars) (max_arity_list le vars) end.
+
+Lemma max_arity_nth : forall le vars k d, max_arity_list le vars = true ->
+  k < length le -> max_arity (nth k le d) vars = true.
+Proof.
+induction le; [easy | ].
+intros vars [ | k] d H Hk; simpl in *; apply andb_prop in H; destruct H as [Ha Hle];
+  [assumption |].
+apply lt_S_n in Hk. now apply IHle.
+Qed.
+
+Definition extract_list (le : list expr) (vars : nat) :=
+  if max_arity_list le vars then
+    let (lp, lc) := fold_split le nil nil in
+    let lp' := le ++ lp in
+    match decompose vars nil lp' lc with
+    | Some p =>  Eprog p lc
+    | None => Eabort
+    end
+  else Eabort.
+
+Definition eval_real_nth k prog vars consts :=
+  nth k (eval_real prog (vars ++ map (fun c => eval c nil) consts)) 0%R.
+
+Theorem extract_list_correct :
+  forall le vars,
+  match extract_list le (length vars) with
+  | Eabort => True
+  | Eprog lp lc => forall k, k < length le -> eval_real_nth k lp vars lc = eval (nth k le (Econst (Int 0))) vars
+  end.
+Proof.
+intros le vars.
+unfold extract_list.
+destruct max_arity_list eqn:Ha; [ | exact I].
+destruct fold_split as (lp, lc) eqn:Hf.
+destruct decompose as [lp' | ] eqn:Hd; [ | easy].
+
+generalize (decompose_correct vars nil (le ++ lp) lc). rewrite Hd. clear Hd.
+assert ((forall (vars0 : list R) (n : nat),
+ eval (nth n lc (Econst (Int 0))) vars0 = eval (nth n lc (Econst (Int 0))) nil) /\
+ forall k : nat, k < length le ->
+ nth k (eval_real nil
+   (map (fun c : expr => eval c (vars ++ map (fun c0 : expr => eval c0 nil) lc))
+        (le ++ lp) ++ vars ++ map (fun c : expr => eval c nil) lc)) 0%R =
+ eval (nth k le (Econst (Int 0))) vars) as [H1 H2].
+
+2: { intros H. apply H in H1. clear H.
+     unfold eval_real_nth. now rewrite H1. }
+
+revert lp lc Hf lp'.
+unfold eval_real_nth.
+induction le.
+{ intros lp lc [= <- <-]. split; [ | easy]. now intros vars0 [| n]. }
+intros lp lc. simpl fold_split.
+
+simpl in Ha. apply andb_prop in Ha. destruct Ha as [Ha1 Ha2].
+
+destruct fold_split as (lp0, lc0) eqn:Hf'. intros Hf lp'.
+destruct (IHle Ha2 lp0 lc0 eq_refl lp') as [IH1 IH2]. clear IHle.
+
+generalize (fun v => split_expr_correct v a lp0 lc0). intros Hs.
+destruct split_expr as [ | lp1 lc1] eqn:Hs'; injection Hf as <- <-; split.
+- intros vars0 n. now apply eval_nth_rcons_unique; [apply Hs |].
+- intros [ | k] Hk; simpl in *.
+  { rewrite Hs; [| apply IH1]. now rewrite (Hs vars); [| apply IH1]. }
+  apply lt_S_n in Hk. generalize Hk.
+  intros Hk''. apply IH2 in Hk''. destruct (rcons_unique_correct a lc0) as [l' Hr].
+  rewrite Hr. set (f := fun c : expr =>
+    eval c (vars ++ map (fun c0 : expr => eval c0 nil) (lc0 ++ l'))).
+  change 0%R with (f (Econst (Int 0))). generalize Hk. intros Hk'.
+  apply Nat.lt_le_trans with (2 := (le_plus_l _ (length lp0))) in Hk'.
+  rewrite <-app_length in Hk'. rewrite <-(map_length f) in Hk'.
+  rewrite app_nth1; [ | assumption]. rewrite (map_nth _ _ _ k).
+  rewrite app_nth1; [ | assumption]. unfold f.
+  apply max_arity_correct with (length vars); [ | reflexivity].
+  now apply max_arity_nth.
+- intros vars0. now apply Hs.
+- intros [ | k] Hk; simpl in *; [now apply max_arity_correct with (length vars) | ].
+  apply lt_S_n in Hk. set (f := fun c : expr =>
+    eval c (vars ++ map (fun c0 : expr => eval c0 nil) lc1)).
+  change 0%R with (f (Econst (Int 0))). generalize Hk. intros Hk'.
+  apply Nat.lt_le_trans with (2 := (le_plus_l _ (length lp1))) in Hk'.
+  rewrite <-app_length in Hk'. rewrite <-(map_length f) in Hk'.
+  rewrite app_nth1; [ | assumption]. rewrite (map_nth _ _ _ k).
+  rewrite app_nth1; [ | assumption]. unfold f.
+  apply max_arity_correct with (length vars); [ | reflexivity].
+  now apply max_arity_nth.
+Qed.
+
+Definition extract e vars := extract_list (e :: nil) vars.
+
 Definition eval_real' prog vars consts :=
-  nth 0 (eval_real prog (vars ++ map (fun c => eval c nil) consts)) 0%R.
+  nth O (eval_real prog (vars ++ map (fun c => eval c nil) consts)) 0%R.
 
 Theorem extract_correct :
   forall e vars,
@@ -417,51 +531,10 @@ Theorem extract_correct :
   end.
 Proof.
 intros e vars.
-unfold extract.
-generalize (fun v => split_expr_correct v e nil nil).
-destruct split_expr as [|lp lc].
-  unfold eval_real'.
-  simpl.
-  intros H.
-  rewrite app_nth2 by apply le_refl.
-  rewrite Nat.sub_diag.
-  apply sym_eq, H.
-  now intros [|n].
-intros H.
-assert (exists lp',
-    match lp with
-    | cons h t => if expr_beq e h then lp else e :: lp
-    | nil => e :: lp
-    end = e :: lp') as [lp' ->].
-  destruct lp as [|h t].
-  now exists nil.
-  generalize (internal_expr_dec_bl e h).
-  destruct expr_beq.
-  intros ->.
-  now exists t.
-  apply eq_refl.
-  intros _.
-  now exists (h :: t).
-simpl in H.
-generalize (decompose_correct vars nil (e :: lp') lc).
-destruct decompose as [p|] ; try easy.
-case_eq (max_arity e (length vars)).
-2: easy.
-unfold eval_real'.
-intros H' ->.
-simpl.
-clear -H'.
-induction e as [n|o|o e1|o e1 IHe1 e2 IHe2] ; simpl ; try easy.
-apply app_nth1.
-simpl in H'.
-now apply Nat.ltb_lt.
-now apply f_equal, IHe1.
-simpl in H'.
-destruct max_arity ; try easy.
-apply f_equal2.
-now apply IHe1.
-now apply IHe2.
-intros v.
-apply H.
-now intros [|n].
+change (eval e vars) with (eval (nth O (e :: nil) (Econst (Int 0))) vars).
+unfold eval_real', extract.
+generalize (extract_list_correct (e :: nil) vars).
+destruct extract_list; [easy | ]. intros H.
+now specialize (H O (lt_O_Sn _)).
 Qed.
+
