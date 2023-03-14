@@ -177,12 +177,12 @@ rewrite BigN.spec_even.
 rewrite <- Zodd_even_bool.
 apply Zdiv2_odd_eqn.
 rewrite BigN.spec_even.
-case_eq (Z.even [e]%bigN).
+case_eq (Z.even (BigN.to_Z e)).
 unfold EtoZ.
 simpl BigZ.to_Z.
 rewrite BigN.spec_shiftr.
 rewrite <- Z.div2_spec.
-rewrite (Zdiv2_odd_eqn [e]%bigN) at 2.
+rewrite (Zdiv2_odd_eqn (BigN.to_Z e)) at 2.
 rewrite Zodd_even_bool.
 intros ->.
 simpl negb ; cbv iota.
@@ -192,7 +192,7 @@ simpl BigZ.to_Z.
 rewrite BigN.spec_succ.
 rewrite BigN.spec_shiftr.
 rewrite <- Z.div2_spec.
-rewrite (Zdiv2_odd_eqn [e]%bigN) at 2.
+rewrite (Zdiv2_odd_eqn (BigN.to_Z e)) at 2.
 rewrite Zodd_even_bool.
 intros ->.
 simpl negb ; cbv iota.
@@ -332,7 +332,7 @@ rewrite BigN.spec_sub_pos.
 rewrite BigN.spec_Ndigits.
 rewrite <- digits_conversion.
 rewrite <- Zplus_0_r.
-rewrite <- (Zplus_opp_r [BigN.head0 x]%bigN)%Z.
+rewrite <- (Zplus_opp_r (BigN.to_Z (BigN.head0 x)))%Z.
 rewrite Zplus_assoc.
 apply (f_equal (fun v => v + _)%Z).
 rewrite <- Zdigits_mult_Zpower.
@@ -343,7 +343,7 @@ refine (_ (BigN.spec_head0 x _)).
 intros (H1,H2).
 unfold MtoP.
 rewrite Vx.
-set (d := Zdigits radix (Zpos px * radix ^ [BigN.head0 x]%bigN)).
+set (d := Zdigits radix (Zpos px * radix ^ (BigN.to_Z (BigN.head0 x)))).
 cut (d <= Zpos (BigN.digits x) /\ Zpos (BigN.digits x) - 1 < d)%Z. lia.
 unfold d ; clear d.
 split.
@@ -360,15 +360,15 @@ simpl Z.abs.
 now rewrite <- Vx.
 apply Zpower_ge_0.
 rewrite BigN.spec_Ndigits.
-assert (Zpower 2 [BigN.head0 x]%bigN * 1 < Zpower 2 (Zpos (BigN.digits x)))%Z.
-apply Z.le_lt_trans with (Zpower 2 [BigN.head0 x]%bigN * Zpos px)%Z.
+assert (Zpower 2 (BigN.to_Z (BigN.head0 x)) * 1 < Zpower 2 (Zpos (BigN.digits x)))%Z.
+apply Z.le_lt_trans with (Zpower 2 (BigN.to_Z (BigN.head0 x)) * Zpos px)%Z.
 apply Zmult_le_compat_l.
 now case px.
 apply (Zpower_ge_0 radix2).
 rewrite <- Vx.
 apply BigN.spec_head0.
 now rewrite Vx.
-change (~ ([BigN.head0 x]%bigN > Zpos (BigN.digits x))%Z).
+change (~ ((BigN.to_Z (BigN.head0 x)) > Zpos (BigN.digits x))%Z).
 intros H'.
 apply (Zlt_not_le _ _ H).
 rewrite Zmult_1_r.
@@ -396,7 +396,7 @@ Proof.
 intros x y z (py, Vy) Hz.
 unfold mantissa_shl, MtoP, valid_mantissa.
 rewrite BigN.spec_shiftl, Vy.
-enough (Z.shiftl (Zpos py) [BigZ.to_N z]%bigN = Zpos (shift radix py x))%Z as ->.
+enough (Z.shiftl (Zpos py) (BigN.to_Z (BigZ.to_N z)) = Zpos (shift radix py x))%Z as ->.
 repeat split.
 refl_exists.
 unfold EtoZ in Hz.
@@ -530,7 +530,7 @@ case Zcompare_spec ; intros Hc.
     contradict H2.
     rewrite Hy2, Zplus_0_r.
     change (Z.pow_pos radix x) with (Zpower 2 (Zpos x)).
-    replace (Zpos x) with (Zpos x - 1 - [BigN.tail0 y]%bigN + 1 + [BigN.tail0 y]%bigN)%Z by ring.
+    replace (Zpos x) with (Zpos x - 1 - (BigN.to_Z (BigN.tail0 y)) + 1 + (BigN.to_Z (BigN.tail0 y)))%Z by ring.
     rewrite <- (Zmult_comm (Zpos q)).
     rewrite Zpower_plus.
     2: clear -Hc ; lia.
@@ -565,12 +565,12 @@ case Zcompare_spec ; intros Hc.
     rewrite Zpower_plus by easy.
     change (2 ^ 1)%Z with 2%Z.
     replace (2 * 2 ^ (Zpos x - 1) * Zpos q + 2 ^ (Zpos x - 1))%Z with ((1 + Zpos q * 2) * 2 ^ (Zpos x - 1))%Z by ring.
-    replace (Zpos x - 1)%Z with (Zpos x - 2 - [BigN.tail0 y]%bigN + ([BigN.tail0 y]%bigN + 1))%Z by ring.
+    replace (Zpos x - 1)%Z with (Zpos x - 2 - (BigN.to_Z (BigN.tail0 y)) + ((BigN.to_Z (BigN.tail0 y)) + 1))%Z by ring.
     rewrite Zpower_plus.
     2: clear -Hc ; lia.
     2: apply Z.le_le_succ_r, BigN.spec_pos.
     intros H2.
-    apply (f_equal (fun v => Zmod v (2 ^ ([BigN.tail0 y]%bigN + 1)))) in H2.
+    apply (f_equal (fun v => Zmod v (2 ^ ((BigN.to_Z (BigN.tail0 y)) + 1)))) in H2.
     revert H2.
     rewrite Zmult_assoc, Z_mod_mult.
     rewrite Zmult_plus_distr_l.
@@ -634,7 +634,7 @@ case Zcompare_spec ; intros Hc.
   replace Z0 with (Zmod (Zpos y') (Zpower 2 (Zpos x))).
   apply Z.mod_unique_pos with (1 := H3) (2 := H2).
   rewrite Hy2.
-  replace [BigN.tail0 y]%bigN with ([BigN.tail0 y]%bigN - Zpos x + Zpos x)%Z by ring.
+  replace (BigN.to_Z (BigN.tail0 y)) with ((BigN.to_Z (BigN.tail0 y)) - Zpos x + Zpos x)%Z by ring.
   rewrite Zpower_plus.
   rewrite Zmult_assoc.
   apply Z_mod_mult.
@@ -693,7 +693,7 @@ rewrite Z.mul_1_l.
 rewrite <- Hx at 2.
 rewrite Pos2Z.inj_succ.
 rewrite Z.pow_succ_r, Z.mul_comm; try lia.
-replace (Z.shiftl (Z.pos v) [1]%bigN)  with
+replace (Z.shiftl (Z.pos v) (BigN.to_Z 1))  with
    (Zpos v * 2)%Z by (cbn; lia).
 rewrite <- Pos2Z.inj_pow; try easy.
 now rewrite <- Zmult_compare_compat_r.
@@ -740,7 +740,7 @@ rewrite BigN.spec_compare.
 rewrite BigN.spec_shiftl_pow2.
 rewrite Hr', Vy.
 change (BigN.to_Z 0) with Z0.
-change (2 ^ [1]%bigN)%Z with 2%Z.
+change (2 ^ (BigN.to_Z 1))%Z with 2%Z.
 destruct (Z.eqb_spec r' 0) as [Hr|Hr].
 - apply Bracket.inbetween_Exact.
   rewrite H1, Hq, Hr, Zplus_0_r.
@@ -823,7 +823,7 @@ clear H.
 rewrite H1.
 replace (s * s + r - s * s)%Z with r by ring.
 rewrite Zmax_right by easy.
-change [0]%bigN with Z0.
+change (BigN.to_Z 0) with Z0.
 case Z.eqb_spec.
 easy.
 intros H.
