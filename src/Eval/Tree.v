@@ -159,6 +159,35 @@ Ltac reify_round m :=
   | Raux.Zceil => rnd_UP
   end.
 
+Ltac unfold_head t :=
+  let rec head t :=
+    lazymatch t with
+    | Ropp _ => t
+    | Rabs _ => t
+    | Rinv _ => t
+    | Rsqr _ => t
+    | Rmult _ _ => t
+    | sqrt _ => t
+    | cos _ => t
+    | sin _ => t
+    | tan _ => t
+    | atan _ => t
+    | exp _ => t
+    | ln _ => t
+    | powerRZ _ _ => t
+    | pow _ _ => t
+    | Rdiv _ _ => t
+    | Rpower _ _ => t
+    | Rnearbyint _ _ => t
+    | Generic_fmt.round _ _ _ _ => t
+    | IZR _ => t
+    | Raux.bpow _ _ => t
+    | ?f _ => head f
+    | _ => t
+    end in
+  let h := head t in
+  eval unfold h in t.
+
 Ltac get_vars t l :=
   let rec aux t l top :=
     let aux_u a := aux a l top in
@@ -218,21 +247,10 @@ Ltac get_vars t l :=
       lazymatch is_Z_const n with true => l end
     end
     | _ =>
-      lazymatch t with
-      | Generic_fmt.round _ _ _ _ =>
-        list_add t l
-      end
-    | _ =>
       let v := hyp_on_var t in
       list_add t l
     | _ =>
-      let rec head t :=
-        lazymatch t with
-        | ?f _ => head f
-        | _ => t
-        end in
-      let h := head t in
-      let t' := eval unfold h in t in
+      let t' := unfold_head t in
       aux t' l false
     | _ =>
       lazymatch t with
@@ -315,13 +333,7 @@ Ltac reify t l :=
       match is_Z_const n with true => constr:(Econst (Int n)) end
     end
     | _ =>
-      let rec head t :=
-        lazymatch t with
-        | ?f _ => head f
-        | _ => t
-        end in
-      let h := head t in
-      let t' := eval unfold h in t in
+      let t' := unfold_head t in
       aux t'
     end in
   aux t.
