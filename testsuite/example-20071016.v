@@ -125,11 +125,14 @@ Definition equal_0_442854401002 x :=
 
 (* Tactic plot and command Plot *)
 
+From Interval Require Import Plot.
+
 Definition p1 := ltac:(plot (fun x => x^2 * sin (x^2)) (-4) 4).
 
 Definition p2 := ltac:(
   plot (fun x => sin (x + exp x))
     0 6 (-5/4) (5/4) with (i_size 120 90, i_degree 6)).
+Plot p2 as "picture.gnuplot".
 
-Definition p3 := ltac:(plot (fun x => sqrt (1 - x^2) * sin (x * 200)) (-1) 1
-  with (i_degree 1, i_size 100 300)).
+Plot ltac:(plot (fun x => sqrt (1 - x^2) * sin (x * 200)) (-1) 1
+  with (i_degree 1, i_size 100 300)) as "picture.gnuplot".

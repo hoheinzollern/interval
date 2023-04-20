@@ -105,12 +105,13 @@ check: src/Tactic.vo
 	rm -f check_tmp.v
 	for f in *.v; do
 	  cp "$f" check_tmp.v
-	  @COQC@ -R ../src Interval check_tmp.v > output.tmp 2>&1
+	  @COQC@ -R ../src Interval -I ../src/Plot check_tmp.v > output.tmp 2>&1
 	  return_code=$?
 	  if [ ${return_code} -ne 0 ]; then
 	    (echo "*** $f exited with error code ${return_code}"; cat output.tmp; echo) >> "$logfile"
 	    echo "$f exited with error code ${return_code}" >> log.tmp
 	  fi
+	  rm -f picture.gnuplot
 	  rm -f check_tmp.v check_tmp.vo check_tmp.glob .check_tmp.aux output.tmp
 	  rm -f .coq-native/N*check_tmp.o .coq-native/N*check_tmp.cm*
 	done
