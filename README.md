@@ -242,17 +242,19 @@ arguments, if any):
   - `i_delay`
 
     Prevent Coq from verifying the generated proof at invocation time.
-    Instead, Coq will check the proof term at `Qed` time. This makes the
-    tactics `interval` and `integral` instant. But it also means that
-    failures, if any, will only be detected at `Qed` time, possibly with
-    an inscrutable error message. This parameter is thus meant to be used
-    when editing a proof script for which the tactics are already known
-    to succeed. For the tactics `interval_intro` and `integral_intro`,
-    computations are still performed (the risk of failure is thus
-    negligible), but the `i_delay` parameter delays their verification to
-    `Qed` time. This makes these tactics twice as fast. This is
-    especially useful when looking for optimal values for parameters such
-    as `i_prec` and `i_degree`.
+    Instead, Coq will check the proof term at `Qed` time. This makes
+    the tactics `interval`, `integral`, and `root` instant. But it
+    also means that failures, if any, will only be detected at `Qed`
+    time, possibly with an inscrutable error message. This parameter
+    is thus meant to be used when editing a proof script for which the
+    tactics are already known to succeed. For the tactics
+    `interval_intro`, `integral_intro`, and `root_intro`, computations
+    are performed anyway (the risk of failure is thus negligible), but
+    the `i_delay` parameter postpones their verification until `Qed`
+    time. This makes these tactics twice as fast and is especially useful
+    when optimizing the arguments of `i_prec`, `i_degree`, etc. For
+    the degenerate forms of `interval_intro`, `integral_intro`, and
+    `root_intro`, the `i_delay` parameter is always passed implicitly.
 
   - `i_decimal`
 

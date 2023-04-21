@@ -1,3 +1,10 @@
+Version 4.7.0
+-------------
+
+* ensured compatibility from Coq 8.11 to 8.17
+* made the tactics a bit more robust against unknown symbols
+* changed the degenerate tactics so that they always use `i_delay`
+
 Version 4.6.1
 -------------
 
