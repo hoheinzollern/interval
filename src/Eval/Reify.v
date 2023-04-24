@@ -180,17 +180,17 @@ Ltac reify_partial y vars :=
   let expr' := reify y vars in
   let expr := fresh "__expr" in
   set (expr := expr') ;
-  change y with (eval expr vars) ;
-  generalize (extract_correct expr vars) ;
   let decomp := eval lazy in (extract expr (length vars)) in
-  change (extract expr (length vars)) with decomp ;
-  cbv iota beta ;
   match decomp with
   | Eprog ?prog' ?consts' =>
     let prog := fresh "__prog" in
     set (prog := prog') ;
     let consts := fresh "__consts" in
-    set (consts := consts')
+    set (consts := consts') ;
+    generalize (extract_correct expr vars) ;
+    match goal with
+    | |- _ -> ?G => change (eval_real' prog vars consts = y -> G)
+    end
   end.
 
 Ltac reify_full vars0 :=
