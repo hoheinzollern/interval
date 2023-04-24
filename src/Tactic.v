@@ -265,6 +265,7 @@ Ltac do_root Zy params :=
   tryif
     match goal with |- ?G => is_evar G end
   then
+    let params := constr:(cons i_delay params) in
     lazymatch type of Zy with
     | R =>
       refine (_ : Zy = 0%R -> _) ;
@@ -313,22 +314,22 @@ Tactic Notation "interval" "with" constr(params) :=
   do_interval ltac:(tuple_to_list params (@nil interval_tac_parameters)).
 
 Tactic Notation "interval" constr(t) :=
-  do_interval_intro t ie_none (@nil interval_tac_parameters) ; exact (fun H => H).
+  do_interval_intro t ie_none (cons i_delay nil) ; exact (fun H => H).
 
 Tactic Notation "interval" constr(t) "lower" :=
-  do_interval_intro t ie_upper (@nil interval_tac_parameters) ; exact (fun H => H).
+  do_interval_intro t ie_upper (cons i_delay nil) ; exact (fun H => H).
 
 Tactic Notation "interval" constr(t) "upper"  :=
-  do_interval_intro t ie_lower (@nil interval_tac_parameters) ; exact (fun H => H).
+  do_interval_intro t ie_lower (cons i_delay nil) ; exact (fun H => H).
 
 Tactic Notation "interval" constr(t) "with" constr(params) :=
-  do_interval_intro t ie_none ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; exact (fun H => H).
+  do_interval_intro t ie_none ltac:(tuple_to_list params (cons i_delay nil)) ; exact (fun H => H).
 
 Tactic Notation "interval" constr(t) "lower" "with" constr(params) :=
-  do_interval_intro t ie_upper ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; exact (fun H => H).
+  do_interval_intro t ie_upper ltac:(tuple_to_list params (cons i_delay nil)) ; exact (fun H => H).
 
 Tactic Notation "interval" constr(t) "upper" "with" constr(params) :=
-  do_interval_intro t ie_lower ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; exact (fun H => H).
+  do_interval_intro t ie_lower ltac:(tuple_to_list params (cons i_delay nil)) ; exact (fun H => H).
 
 Tactic Notation "interval_intro" constr(t) :=
   do_interval_intro t ie_none (@nil interval_tac_parameters) ; intro.
@@ -373,22 +374,22 @@ Tactic Notation "integral" "with" constr(params) :=
   do_integral ltac:(tuple_to_list params (@nil interval_tac_parameters)).
 
 Tactic Notation "integral" constr(t) :=
-  do_integral_intro t ie_none (@nil interval_tac_parameters) ; exact (fun H => H).
+  do_integral_intro t ie_none (cons i_delay nil) ; exact (fun H => H).
 
 Tactic Notation "integral" constr(t) "lower" :=
-  do_integral_intro t ie_upper (@nil interval_tac_parameters) ; exact (fun H => H).
+  do_integral_intro t ie_upper (cons i_delay nil) ; exact (fun H => H).
 
 Tactic Notation "integral" constr(t) "upper"  :=
-  do_integral_intro t ie_lower (@nil interval_tac_parameters) ; exact (fun H => H).
+  do_integral_intro t ie_lower (cons i_delay nil) ; exact (fun H => H).
 
 Tactic Notation "integral" constr(t) "with" constr(params) :=
-  do_integral_intro t ie_none ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; exact (fun H => H).
+  do_integral_intro t ie_none ltac:(tuple_to_list params (cons i_delay nil)) ; exact (fun H => H).
 
 Tactic Notation "integral" constr(t) "lower" "with" constr(params) :=
-  do_integral_intro t ie_upper ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; exact (fun H => H).
+  do_integral_intro t ie_upper ltac:(tuple_to_list params (cons i_delay nil)) ; exact (fun H => H).
 
 Tactic Notation "integral" constr(t) "upper" "with" constr(params) :=
-  do_integral_intro t ie_lower ltac:(tuple_to_list params (@nil interval_tac_parameters)) ; exact (fun H => H).
+  do_integral_intro t ie_lower ltac:(tuple_to_list params (cons i_delay nil)) ; exact (fun H => H).
 
 Tactic Notation "integral_intro" constr(t) :=
   do_integral_intro t ie_none (@nil interval_tac_parameters) ; intro.
