@@ -266,16 +266,13 @@ Ltac do_root Zy params :=
     match goal with |- ?G => is_evar G end
   then
     let params := constr:(cons i_delay params) in
+    let H := fresh "H" in
     lazymatch type of Zy with
     | R =>
-      refine (_ : Zy = 0%R -> _) ;
-      let H := fresh "H" in
-      intros H ;
+      refine (fun H : Zy = 0%R => _) ;
       do_root_intro' H params
     | Prop =>
-      refine (_ : Zy -> _) ;
-      let H := fresh "H" in
-      intros H ;
+      refine (fun H : Zy => _) ;
       do_root_intro H params
     | _ = _ =>
       do_root_intro Zy params
