@@ -273,7 +273,7 @@ Ltac do_root_intro x Zy prec depth native nocheck output :=
     reify_partial x vars ;
     intros <- ;
     find_hyps vars ;
-    apply (root_contains_correct prec depth) ;
+    apply (root_contains_correct prec depth v) ;
     match goal with
     | |- _ ?hyps ?px ?cx ?pf ?cf _ = true =>
       do_instantiate i (fun xi : I.type => xi) native (root_plain prec depth hyps px cx pf cf)
