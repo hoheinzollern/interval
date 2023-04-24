@@ -262,9 +262,9 @@ Ltac do_root_intro Zy params :=
   end.
 
 Ltac do_root Zy params :=
-  match goal with
-  | |- ?G =>
-    is_evar G ;
+  tryif
+    match goal with |- ?G => is_evar G end
+  then
     lazymatch type of Zy with
     | R =>
       refine (_ : Zy = 0%R -> _) ;
@@ -280,7 +280,7 @@ Ltac do_root Zy params :=
       do_root_intro Zy params
     end ;
     exact (fun K => K)
-  | _ =>
+  else
     lazymatch type of Zy with
     | R =>
       cut (Zy = 0%R) ; [
@@ -300,8 +300,7 @@ Ltac do_root Zy params :=
       let H := fresh "H" in
       assert (H := Rminus_diag_eq y1 y2 Zy) ;
       do_root' H params
-    end
-  end.
+    end.
 
 End Private.
 
