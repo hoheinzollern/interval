@@ -56,19 +56,16 @@ Ltac do_interval_generalize output :=
   apply output in H ;
   revert H ;
   match goal with
-  | |- contains_output ?b ?t -> _ =>
+  | |- contains_output ?b ?t -> ?G =>
     let b' := eval vm_compute in b in
     replace b with b' by (vm_cast_no_check (eq_refl b')) ;
-    intro H ;
     let o := eval cbv -[IZR Rdiv Rle Q2R] in (contains_output b') in
     let o := eval unfold Stdlib.Compatibility.Q2R in o in
     let o := eval cbv -[IZR Rdiv Rle Q2R] in o in
     let o := eval cbv beta in (o t) in
     lazymatch o with
     | True => fail "Nothing known about" t
-    | _ =>
-      change o in H ;
-      revert H
+    | _ => change (o -> G)
     end
   end.
 
