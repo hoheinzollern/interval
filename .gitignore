@@ -13,6 +13,7 @@
 /src/Plot.v
 /src/Tactic_float.v
 /src/Missing/Int63Compat.v
+/src/Missing/MathComp1or2.v
 /src/Plot/interval_plot.ml
 
 /html/

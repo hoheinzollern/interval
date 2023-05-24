@@ -660,7 +660,7 @@ apply: (filterlim_comp _ _ _ (fun x => opp (exp (-(lam * x)) / lam)) (fun x => p
   exact: continuous_const.
   exact: continuous_id.
   apply: filterlim_comp; last first. rewrite -[0]Ropp_involutive. exact: filterlim_opp.
-have -> : - 0 = Rbar_mult (Finite 0) (Finite (/ lam)) by rewrite /=; ring.
+have -> : - 0 = Rbar_mult (Rbar.Finite 0) (Rbar.Finite (/ lam)) by rewrite /=; ring.
 rewrite /Rdiv.
 apply: (is_lim_mult (fun x => exp (-(lam * x))) (fun x => / lam) p_infty 0 (/ lam)) => // .
   apply: is_lim_comp.

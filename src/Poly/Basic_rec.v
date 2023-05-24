@@ -562,8 +562,6 @@ Definition falling_rec (p : Z) (a : Z) (n : nat) : Z :=
   (a * (p - (Z.of_nat n) + 1))%Z.
 Definition falling_seq (p : Z) := rec1up (falling_rec p) 1%Z.
 
-Canonical Zmul_monoid := Monoid.Law Z.mul_assoc Z.mul_1_l Z.mul_1_r.
-
 Theorem falling_seq_correct (d : Z) (p : Z) (n k : nat) :
   k <= n ->
   nth d (falling_seq p n) k =

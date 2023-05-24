@@ -101,7 +101,7 @@ apply: J.add_correct;
 rewrite 2!PolR.hornerE.
 rewrite (@big_nat_leq_idx _ _ _ (3 + (PolR.size p - 3))).
 rewrite big_mkord.
-rewrite 3?big_ord_recl -/a0 -/a1 -/a2 ![Radd_monoid _]/= /q3 PolR.size_tail.
+rewrite 3?big_ord_recl -/a0 -/a1 -/a2 ![[the Monoid.law _ of Rplus] _]/= /q3 PolR.size_tail.
 (* simpl Z.of_nat. *)
 set x0 := powerRZ x 0.
 set x1 := powerRZ x 1.
@@ -133,7 +133,7 @@ suff->: s1 = Rmult x3 s2.
   have->: Rmult a0 x0 = a0 by simpl; rewrite /x0 powerRZ_O Rmult_1_r.
   rewrite -!Rplus_assoc /Rminus; congr Rplus.
   rewrite /x1 /x2 /Rsqr.
-  field.
+  rewrite /=; field.
   split =>//.
 by rewrite -Rplus_assoc in H4.
 rewrite /s1 /s2 /x3; clear.
