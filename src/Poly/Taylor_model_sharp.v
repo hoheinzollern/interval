@@ -1836,7 +1836,7 @@ constructor.
       rewrite !(is_derive_n_unique _ _ _ _ (is_derive_n_sqrt _ _ gt0_x)).
       rewrite big_ord_recr.
       set big := \big[Rmult/1%R]_(i < k) _.
-      simpl (Rmul_monoid _ _).
+      simpl ([the Monoid.law _ of Rmult] _ _).
       rewrite fact_simpl mult_INR !addn1.
       have->: (/2 - INR k.+1 = /2 - INR k + (- 1))%R
         by rewrite -addn1 plus_INR /=; ring.
@@ -1845,8 +1845,9 @@ constructor.
         by simpl; field.
       move/(gt0_correct Hx)/Rgt_not_eq in E1.
       simpl (INR 1). simpl (INR 2).
-      change eq with (@eq R); field.
-      repeat first [exact E1 | split | exact: INR_fact_neq_0 | exact: not_0_INR ].
+      rewrite /=; field.
+      split; [exact: INR_fact_neq_0|split; [|exact: E1]].
+      change (INR k.+1 <> 0%R); exact: not_0_INR.
   }
 constructor.
 - by move=> *; rewrite PolR.size_rec1 Pol.size_rec1.
@@ -1944,7 +1945,7 @@ constructor.
       rewrite !(is_derive_n_unique _ _ _ _ (is_derive_n_invsqrt _ _ gt0_x)).
       rewrite big_ord_recr.
       set big := \big[Rmult/1%R]_(i < k) _.
-      simpl (Rmul_monoid _ _).
+      simpl ([the Monoid.law _ of Rmult] _ _).
       rewrite fact_simpl mult_INR !addn1.
       have->: (-/2 - INR k.+1 = -/2 - INR k + (- 1))%R
         by rewrite -addn1 plus_INR /=; ring.
@@ -1953,8 +1954,9 @@ constructor.
         by simpl; field.
       move/(gt0_correct Hx)/Rgt_not_eq in E1.
       simpl (INR 1). simpl (INR 2).
-      change eq with (@eq R); field.
-      repeat first [exact E1 | split | exact: INR_fact_neq_0 | exact: not_0_INR ].
+      rewrite /=; field.
+      split; [exact: INR_fact_neq_0|split; [|exact: E1]].
+      change (INR k.+1 <> 0%R); exact: not_0_INR.
   }
 constructor.
 - by move=> *; rewrite PolR.size_rec1 Pol.size_rec1.
@@ -2130,12 +2132,12 @@ constructor.
         rewrite -positive_nat_Z in Hpk; move/Nat2Z.inj_le/leP in Hpk.
         by apply: leq_trans _ Hpk; rewrite addn1.
       rewrite [in LHS]big_ord_recr big_mkord [in RHS]big_ord_recr.
-      simpl (Rmul_monoid _ _).
+      try simpl (Rmul_monoid _ _).
       have->: Pos.to_nat p - k = 0.
         rewrite -positive_nat_Z addn1 in Hpk; move/Nat2Z.inj_lt/ltP in Hpk.
         rewrite ltnS in Hpk.
         by apply/eqP; rewrite subn_eq0.
-      rewrite !Rsimpl Hpow ifF ?Rsimpl //.
+      rewrite Hpow ifF /= ?Rmult_0_l ?Rmult_0_r ?Rmult_0_l//.
       apply: negbTE.
       by move/Zlt_is_lt_bool: Hpk; rewrite Z.ltb_antisym =>->.
     - rewrite (is_derive_n_unique _ _ _ _ (is_derive_n_inv_pow _ _ _ _ _)); first last.
@@ -2276,7 +2278,7 @@ constructor.
       rewrite !(is_derive_n_unique _ _ _ _ (is_derive_n_inv _ _ neq0_x)).
       rewrite big_ord_recr.
       set big := \big[Rmult/1%R]_(i < k) _.
-      simpl (Rmul_monoid _).
+      try simpl (Rmul_monoid _).
       rewrite /Rdiv !Rmult_assoc; congr Rmult.
       rewrite fact_simpl mult_INR.
       rewrite !add1n -[(x ^ k.+2)%R]/(x * x ^ k.+1)%R.

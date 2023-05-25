@@ -110,6 +110,17 @@ AS_IF(
   [ AC_MSG_RESULT([no])
     AC_MSG_ERROR([ *** Unable to find library mathcomp.ssreflect >= 1.6 (http://math-comp.github.io/math-comp/)])])
 rm -f conftest.v conftest.vo conftest.err
+# meet_morphism is a random constant that only exists in MathComp 2
+AC_MSG_CHECKING([for MathComp version])
+AS_IF(
+  [ echo "Require Import mathcomp.ssreflect.order. Definition foo := Order.meet_morphism." > conftest.v
+    $COQC conftest.v 2> conftest.err ],
+  [ AC_MSG_RESULT([2])
+    MATHCOMP_1_OR_2=2 ],
+  [ AC_MSG_RESULT([1])
+    MATHCOMP_1_OR_2=1 ])
+rm -f conftest.v conftest.vo conftest.err
+AC_SUBST(MATHCOMP_1_OR_2)
 
 AC_MSG_CHECKING([for Coquelicot])
 AS_IF(
@@ -252,5 +263,5 @@ echo "Primitive floats        $prim_float"
 echo "Plot tactic            $tactic_mode"
 echo
 
-AC_CONFIG_FILES([Remakefile src/Plot.v src/Missing/Int63Compat.v])
+AC_CONFIG_FILES([Remakefile src/Plot.v src/Missing/Int63Compat.v src/Missing/MathComp1or2.v])
 AC_OUTPUT
