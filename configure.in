@@ -226,7 +226,7 @@ AC_SUBST(COQINTERVALLIB)
 AC_SUBST(PLOTPLUGIN)
 
 if test "$prim_float" = "yes"; then
-   PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops"
+   PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops Interval/Float_full_primfloat"
    PRIM_FLOAT_TAC=src/Tactic_primfloat.v
 else
    PRIM_FLOAT=
