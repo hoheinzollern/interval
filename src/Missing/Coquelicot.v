@@ -25,6 +25,7 @@ From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat se
 Require Import Stdlib.
 Require Import MathComp.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_Rinv x :
   x <> 0 ->
   continuous (fun x => / x) x.
@@ -36,6 +37,7 @@ apply continuity_pt_filterlim.
 apply: continuous_id.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_Rinv_comp (f : R -> R) x:
   continuous f x ->
   f x <> 0 ->
@@ -46,12 +48,14 @@ apply: continuous_comp => //.
 by apply: continuous_Rinv.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_cos x : continuous cos x.
 Proof.
 apply continuity_pt_filterlim.
 by apply: continuity_cos => // .
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_cos_comp (f : R -> R) x:
   continuous f x ->
   continuous (fun x => cos (f x)) x.
@@ -61,12 +65,14 @@ apply: continuous_comp => //.
 by apply: continuous_cos.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_sin x : continuous sin x.
 Proof.
 apply continuity_pt_filterlim.
 by apply: continuity_sin => // .
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_sin_comp (f : R -> R) x:
   continuous f x ->
   continuous (fun x => sin (f x)) x.
@@ -76,6 +82,7 @@ apply: continuous_comp => //.
 by apply: continuous_sin.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_tan x : cos x <> 0 -> continuous tan x.
 Proof.
 move => Hcos.
@@ -84,6 +91,7 @@ apply: continuous_mult; first by apply: continuous_sin.
 by apply: continuous_Rinv_comp; first by apply: continuous_cos.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_atan x : continuous atan x.
 Proof.
 apply: ex_derive_continuous.
@@ -91,6 +99,7 @@ apply: ex_derive_Reals_1.
 exact: derivable_pt_atan.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_atan_comp (f : R -> R) x:
   continuous f x ->
   continuous (fun x => atan (f x)) x.
@@ -100,6 +109,7 @@ apply: continuous_comp => //.
 by apply: continuous_atan.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_exp x : continuous exp x.
 Proof.
 apply: ex_derive_continuous.
@@ -107,6 +117,7 @@ apply: ex_derive_Reals_1.
 exact: derivable_pt_exp.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_exp_comp (f : R -> R) x:
   continuous f x ->
   continuous (fun x => exp (f x)) x.
@@ -116,6 +127,7 @@ apply: continuous_comp => //.
 by apply: continuous_exp.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_sqrt (x : R) : continuous sqrt x.
 Proof.
 destruct (Rle_or_lt 0 x) as [Hx|Hx].
@@ -138,6 +150,7 @@ rewrite Hs //.
 now apply locally_singleton.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_sqrt_comp (f : R -> R) x:
   continuous f x ->
   continuous (fun x => sqrt (f x)) x.
@@ -147,6 +160,7 @@ apply: continuous_comp => // .
 by apply: continuous_sqrt.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_ln x : (0 < x) -> continuous ln x.
 Proof.
 move => Hxgt0.
@@ -156,6 +170,7 @@ apply is_derive_Reals.
 exact: derivable_pt_lim_ln.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma continuous_Rabs_comp f (x : R) :
   continuous f x -> continuous (fun x0 => Rabs (f x0)) x.
 Proof.
@@ -319,6 +334,7 @@ Ltac help_is_derive_n fresh_n fresh_x :=
    clear IHn]]]
   end.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma is_derive_n_exp : forall n x, is_derive_n exp n x (exp x).
 Proof.
 help_is_derive_n_whole n x.
@@ -454,6 +470,7 @@ apply sym_eq, is_derive_unique.
 now apply is_derive_Reals, derivable_pt_lim_ln.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma is_derive_ln x :
   0 < x -> is_derive ln x (/ x)%R.
 Proof. move=> H; exact/is_derive_Reals/derivable_pt_lim_ln. Qed.
@@ -555,6 +572,7 @@ apply is_derive_scal.
 apply is_derive_Reals, derivable_pt_lim_cos.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Definition is_derive_atan x :
   is_derive atan x (/ (1 + x²)).
 Proof.
@@ -562,10 +580,12 @@ rewrite Rsqr_pow2.
 apply is_derive_Reals, derivable_pt_lim_atan.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Definition is_derive_tan x :
   cos x <> 0%R -> is_derive tan x (tan x ^ 2 + 1)%R.
 Proof. now intros Hx; unfold tan; auto_derive; trivial; field_simplify. Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma filterlimi_lim_ext_loc {T U} {F G} {FF : Filter F} (f : T -> U) (g : T -> U -> Prop) :
   F (fun x => g x (f x)) ->
   filterlim f F G ->
@@ -678,6 +698,7 @@ apply: (is_lim_mult (fun x => exp (-(lam * x))) (fun x => / lam) p_infty 0 (/ la
 exact: is_lim_const.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma ex_RInt_gen_Chasles :
   forall {V : NormedModule R_AbsRing} {Fa Fc : (R -> Prop) -> Prop},
   forall {FFa : Filter Fa} {FFc : Filter Fc},
@@ -691,6 +712,7 @@ exists (plus Iab Ibc).
 now apply is_RInt_gen_Chasles with b.
 Qed.
 
+(* TODO: remove once Coquelicot is >= 3.1 *)
 Lemma RInt_gen_Chasles :
   forall {V : CompleteNormedModule R_AbsRing} {Fa Fc : (R -> Prop) -> Prop},
   forall {FFa : ProperFilter' Fa} {FFc : ProperFilter' Fc},
