@@ -955,15 +955,15 @@ by case: iv1 => [|[|x1] [|x2]] /=;
    case: iv2 => [|[|x3] [|x4]] //=; try lra.
 Qed.
 
-Definition round_flt (u : U) (emin : Z) (prec : positive)
+Definition round_flt (u : U) (m : rounding_mode) (emin : Z) (prec : positive)
      (X : I.type) (t : T) : T :=
   let e := eval u t X X in
-  let err := I.error_flt u.1 emin prec e in
+  let err := I.error_flt u.1 m emin prec e in
   add u X t (Tm (TM_any u.1 err X 0)).
 
-Theorem round_flt_correct m u e p (Y : I.type) tf f :
+Theorem round_flt_correct u m e p (Y : I.type) tf f :
   approximates Y tf f ->
-  approximates Y (round_flt u e p Y tf) (fun x => Xround_flt m e p (f x)).
+  approximates Y (round_flt u m e p Y tf) (fun x => Xround_flt m e p (f x)).
 Proof.
 move=> Hf.
 rewrite /round_flt.
@@ -984,7 +984,7 @@ intros x. destruct (f x) eqn:Hfx; move=> Hx /=.
 - generalize (@eval_correct u Y tf f). move=> Haux.
   apply Haux in Hf. unfold I.extension in Hf.
   apply Hf in Hx. simpl in Hx. unfold Basic.round_flt.
-  generalize (I.error_flt_correct m u.1 e p (eval u tf Y Y) (f x)).
+  generalize (I.error_flt_correct u.1 m e p (eval u tf Y Y) (f x)).
   rewrite -/i /= {}/Xerror_flt {}/error_flt {}/Xbind Hfx.
   rewrite Hfx in Hx. now intros; revert Hx.
 Qed.

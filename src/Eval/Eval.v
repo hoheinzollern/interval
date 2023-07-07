@@ -614,7 +614,7 @@ Definition operations prec :=
     | Ln => I.ln prec
     | PowerInt n => fun x => I.power_int prec x n
     | Nearbyint m => I.nearbyint m
-    | Round m emin p => J.round_flt prec emin p
+    | Round m emin p => J.round_flt prec m emin p
     end)
    (fun o =>
     match o with
@@ -1896,7 +1896,7 @@ Definition operations prec deg xi :=
     | Ln => TM.ln (prec, deg) xi
     | PowerInt n => TM.power_int n (prec, deg) xi
     | Nearbyint m => TM.nearbyint m (prec, deg) xi
-    | Round m emin p => TM.round_flt (prec, deg) emin p xi
+    | Round m emin p => TM.round_flt (prec, deg) m emin p xi
  (* | _ => fun _ => TM.dummy *)
     end)
    (fun o =>

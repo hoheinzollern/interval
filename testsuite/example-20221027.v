@@ -14,14 +14,15 @@ Qed.
 Notation "x = y ± z" := (Rle (Rabs (x - y)) z) (at level 70, y at next level).
 
 From Flocq Require Import Core.
-Notation round := (round radix2 (FLT_exp (-1074) 53) ZnearestE).
+Notation round := (round radix2 (FLT_exp (-149) 24) ZnearestE).
 Definition fadd x y := round (x + y).
 Definition fmul x y := round (x * y).
 
 Goal
   forall x, -1/256 <= x <= 1/256 ->
-  let c2 := 9007164895206513 * bpow radix2 (-54) in
-  fadd 1 (fmul x (fadd 1 (fmul x c2))) = exp x ± 1/100000000.
+  let c1 := 524289 * bpow radix2 (-19) in
+  let c2 := 1/2 in
+  fadd 1 (fmul x (fadd c1 (fmul x c2))) = exp x ± 7/10 * bpow radix2 (-23).
 Proof.
   intros x Hx c2.
   unfold fadd, fmul, c2.

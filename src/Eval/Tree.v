@@ -378,7 +378,7 @@ Definition unary_bnd prec (o : unary_op) : I.type -> I.type :=
   | Ln => I.ln prec
   | PowerInt n => fun x => I.power_int prec x n
   | Nearbyint m => I.nearbyint m
-  | Round m emin p => J.round_flt prec emin p
+  | Round m emin p => J.round_flt prec m emin p
   end.
 
 Lemma unary_bnd_correct :
@@ -401,7 +401,7 @@ apply I.exp_correct.
 apply J.ln_correct.
 apply J.power_int_correct.
 apply I.nearbyint_correct.
-apply (J.round_flt_correct m).
+apply J.round_flt_correct.
 Qed.
 
 Definition binary_bnd prec (o : binary_op) : I.type -> I.type -> I.type :=
