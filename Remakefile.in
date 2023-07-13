@@ -23,6 +23,9 @@ FILES = \
 	Interval/Float_full \
 	Interval/Transcend \
 	Interval/Univariate_sig \
+	Language/Lang_expr \
+	Language/Lang_simpl \
+	Language/Lang_tac \
 	Missing/Coquelicot \
 	Missing/MathComp@MATHCOMP_1_OR_2@ \
 	Missing/MathComp1or2 \
