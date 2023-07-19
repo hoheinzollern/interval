@@ -91,6 +91,15 @@ AS_IF(
     AC_MSG_ERROR([ *** Unable to find library Flocq >= 3.1 (http://flocq.gitlabpages.inria.fr/)])])
 rm -f conftest.v conftest.vo conftest.err
 
+AC_MSG_CHECKING([for Flocq >= 4.1])
+AS_IF(
+  [ echo "Require Import Flocq.Version BinNat." \
+         "Goal (40100 <= Flocq_version)%N. easy. Qed." > conftest.v
+    $COQC conftest.v 2> conftest.err ],
+  [ lang_tac=yes ], [ lang_tac=no ])
+rm -f conftest.v conftest.vo conftest.err
+AC_MSG_RESULT([$lang_tac])
+
 AC_MSG_CHECKING([for primitive floats])
 AS_IF(
   [ echo "Require Import Flocq.IEEE754.PrimFloat." > conftest.v
@@ -235,6 +244,16 @@ fi
 AC_SUBST(PRIM_FLOAT)
 AC_SUBST(PRIM_FLOAT_TAC)
 
+if test "$COQVERSION" -lt 81600; then
+   lang_tac=no
+fi
+if test "$lang_tac" = "yes"; then
+   LANG_FILES="Language/Lang_expr Language/Lang_simpl Language/Lang_tac"
+else
+   LANG_FILES=
+fi
+AC_SUBST([LANG_FILES])
+
 AC_ARG_VAR(REMAKE, [Remake [vendored version]])
 
 if test -z "$REMAKE"; then
@@ -260,6 +279,7 @@ echo "=== Summary ==="
 echo "Vernacular directory    $COQUSERCONTRIB/Interval"
 echo "Plugin directory        $COQINTERVALLIB"
 echo "Primitive floats        $prim_float"
+echo "Language tactics        $lang_tac"
 echo "Plot tactic            $tactic_mode"
 echo
 

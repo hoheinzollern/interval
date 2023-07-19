@@ -23,9 +23,7 @@ FILES = \
 	Interval/Float_full \
 	Interval/Transcend \
 	Interval/Univariate_sig \
-	Language/Lang_expr \
-	Language/Lang_simpl \
-	Language/Lang_tac \
+	@LANG_FILES@ \
 	Missing/Coquelicot \
 	Missing/MathComp@MATHCOMP_1_OR_2@ \
 	Missing/MathComp1or2 \
@@ -151,8 +149,9 @@ deps.dot: $(VFILES)
 	echo "node [shape=ellipse, style=filled, URL=\"html/Interval.\N.html\", color=black];";
 	(cd src ; @COQDEP@ -R . Interval $(addsuffix .v,$(FILES))) |
 	  sed -n -e 's,/,.,g;s/[.]vo.*: [^ ]*[.]v//p' |
+	  grep -v META |
 	  while read src dst; do
-	    color=$$(echo "$src" | sed -e 's,Real.*,turquoise,;s,Interval[.].*,plum,;s,Integral.*,lightcoral,;s,Poly.*,yellow,;s,Float.*,cornflowerblue,;s,Eval.*,green,;s,[A-Z].*,white,')
+	    color=$$(echo "$src" | sed -e 's,Real.*,turquoise,;s,Interval[.].*,plum,;s,Integral.*,lightcoral,;s,Poly.*,yellow,;s,Float.*,lightskyblue,;s,Eval.*,lawngreen,;s,Language.*,khaki,;s,Tactics.*,lightcyan,;s,Missing.*,lightgrey,;s,[A-Z].*,white,')
 	    echo "\"$src\" [fillcolor=$color];"
 	    for d in $dst; do
 	      echo "\"$src\" -> \"${d%.vo}\" ;"
@@ -189,7 +188,7 @@ public: deps.png deps.map html/index.html
 install:
 	dir="${DESTDIR}@COQUSERCONTRIB@/Interval"
 	mkdir -p $dir
-	for d in Eval Float Integral Interval Missing Poly Real Tactics; do mkdir -p $dir/$d; done
+	for d in Eval Float Integral Interval Language Missing Poly Real Tactics; do mkdir -p $dir/$d; done
 	for f in $(FILES); do cp src/$f.vo $dir/$f.vo; done
 	( cd src && find . -type d -name ".coq-native" -exec cp -RT "{}" "$dir/{}" \; )
 	dir="${DESTDIR}@COQINTERVALLIB@"
