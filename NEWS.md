@@ -1,3 +1,9 @@
+Version 4.8.0
+-------------
+
+* tightened enclosures of rounding operators and errors
+* added an experimental framework for verification of floating-point expressions in `Language`
+
 Version 4.7.0
 -------------
 
