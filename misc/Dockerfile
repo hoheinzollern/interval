@@ -21,8 +21,10 @@ WORKDIR /home/user
 ENV OPAM_PACKAGES="conf-autoconf conf-g++"
 RUN opam init -y --no-setup -j4 --bare --disable-sandboxing && \
     opam switch create minimal ocaml-system && \
+    opam switch create fp      ocaml-system && \
     opam switch create latest  ocaml-system && \
     opam repository add coq-released https://coq.inria.fr/opam/released --all-switches && \
-    opam install -y --switch=minimal $OPAM_PACKAGES coq.8.11.2 coq-bignums.8.11.0        coq-flocq.3.2.1 coq-mathcomp-ssreflect.1.9.0 coq-coquelicot.3.1.0 && \
-    opam install -y --switch=latest  $OPAM_PACKAGES coq.8.17.0 coq-bignums.9.0.0+coq8.17 coq-flocq.4.1.1 coq-mathcomp-ssreflect.2.0.0 coq-coquelicot.3.3.1 && \
+    opam install -y --switch=minimal $OPAM_PACKAGES coq.8.11.2 coq-bignums.8.11.0        coq-flocq.3.2.1 coq-mathcomp-ssreflect.1.9.0  coq-coquelicot.3.1.0 && \
+    opam install -y --switch=fp      $OPAM_PACKAGES coq.8.13.2 coq-bignums.8.13.0        coq-flocq.3.4.3 coq-mathcomp-ssreflect.1.15.0 coq-coquelicot.3.2.0 && \
+    opam install -y --switch=latest  $OPAM_PACKAGES coq.8.17.1 coq-bignums.9.0.0+coq8.17 coq-flocq.4.1.1 coq-mathcomp-ssreflect.2.0.0  coq-coquelicot.3.4.0 && \
     opam clean -a -c -r -s --logs
