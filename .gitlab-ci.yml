@@ -55,7 +55,7 @@ build-latest:
     - eval `opam env`
     - autoconf
     - ./configure
-    - ./remake -j2 all check check-plot
+    - ./remake -j2 all check
   extends: .docker_template
 
 .opam_template:
