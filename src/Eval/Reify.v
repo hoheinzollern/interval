@@ -157,7 +157,7 @@ Ltac find_hyps_aux2 vars cont :=
       let k' := constr:(@nil hyp) in
       find_hyps_aux h k' cont'' in
     find_hyps_aux2 t cont'
-  | @nil R =>
+  | nil =>
     let k := constr:(@nil (list hyp)) in
     cont k
   end.
