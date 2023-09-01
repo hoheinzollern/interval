@@ -17,7 +17,7 @@ the economic rights, and the successive licensors have only limited
 liability. See the COPYING file for more details.
 *)
 
-From Coq Require Import Reals Psatz.
+From Coq Require Import ZArith Reals Psatz.
 From Flocq Require Import Raux.
 
 Ltac evar_last :=
@@ -1292,8 +1292,15 @@ Qed.
 
 End Integral.
 
+(* To obtain Q2R, "Import Stdlib.Compatibility Rdefinitions." *)
+(* TODO: remove once we require Coq >= 8.13. *)
 Module Compatibility.
 Definition Q2R x := (IZR (QArith_base.Qnum x) / IZR (Z.pos (QArith_base.Qden x)))%R.
 End Compatibility.
-(* To obtain Q2R, "Import Stdlib.Compatibility Rdefinitions." *)
-(* TODO: remove once we require Coq >= 8.13. *)
+
+(* TODO: remove once we require Coq >= 8.14. *)
+Lemma Z_div_mod_eq : forall a b : Z, (b > 0)%Z -> a = (b * (a / b) + a mod b)%Z.
+Proof.
+intros a b H.
+apply Z_div_mod_eq_full ; now apply Zaux.Zgt_not_eq, Z.gt_lt.
+Qed.

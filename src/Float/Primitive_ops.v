@@ -4,8 +4,10 @@ From Coq Require Import Floats Psatz.
 From Flocq Require Import Zaux Raux BinarySingleNaN PrimFloat Sterbenz Mult_error.
 
 (* Compatibility workaround, remove once requiring Coq >= 8.15 *)
+Module Import Compat.
 Definition ldexp f (_ : Z) : float := f.
 Definition frexp (f : float) := (f, Z0).
+End Compat.
 Import FloatOps.
 Module Import Z.
 Notation ldexp := ldexp.
@@ -14,6 +16,7 @@ End Z.
 Import Floats.
 Import Zaux BinarySingleNaN.
 
+Require Import Stdlib.
 Require Import Xreal.
 Require Import Basic.
 Require Import Sig.
@@ -728,7 +731,7 @@ assert (Pe : (0 <= e)%Z).
   apply Zle_minus_le_0.
   refine (proj1 (Z.log2_le_pow2 _ _ _) _); [now simpl| ].
   generalize (Pos2Z.pos_lt_pos _ _ Hp'); lia. }
-rewrite <-(B2Prim_Prim2B (ldexp _ _)) at 1; rewrite toX_Prim2B.
+rewrite <-(B2Prim_Prim2B (Z.ldexp _ _)) at 1; rewrite toX_Prim2B.
 rewrite ldexp_equiv, opp_equiv.
 rewrite Bldexp_Bopp_NE.
 rewrite BtoX_Bopp.

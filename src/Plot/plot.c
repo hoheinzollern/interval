@@ -18,6 +18,12 @@ let constr_of_global gr = UnivGen.constr_of_monomorphic_global (Global.env ()) g
 let constr_of_global = UnivGen.constr_of_monomorphic_global
 #endif
 
+#if COQVERSION >= 81800
+let decompose_app = EConstr.decompose_app
+#else
+let decompose_app = Termops.decompose_app_vect
+#endif
+
 let find_reference t x =
   lazy (EConstr.of_constr (constr_of_global (Coqlib.gen_reference_in_modules "Interval" [t] x)))
 
@@ -102,8 +108,8 @@ let rec tr_list evd t =
   | _ -> raise (NotPlot t)
 
 let tr_goal evd p =
-  match EConstr.decompose_app evd p with
-  | c, [_; ox; dx; oy; dy; h; l] when is_global evd interval_plot2 c ->
+  match decompose_app evd p with
+  | c, [|_; ox; dx; oy; dy; h; l|] when is_global evd interval_plot2 c ->
       (tr_R evd ox, tr_R evd dx, tr_R evd oy, tr_R evd dy, tr_Z evd h, tr_list evd l)
   | _ ->
       raise (NotPlot p)
@@ -169,8 +175,14 @@ let vtreadproofopt = Vernacextend.vtreadproofopt
 let vtreadproofopt x = Vernacextend.VtReadProofOpt x
 #endif
 
+#if COQVERSION >= 81800
+let vernac_extend = Vernacextend.static_vernac_extend ~plugin:(Some "coq-interval.plot")
+#else
+let vernac_extend = Vernacextend.vernac_extend
+#endif
+
 let () =
-  Vernacextend.vernac_extend
+  vernac_extend
     ~command:"VernacPlot"
     ~classifier:(fun _ -> Vernacextend.classify_as_query) ?entry:None
     [Vernacextend.TyML
