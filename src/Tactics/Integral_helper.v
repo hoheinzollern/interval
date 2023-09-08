@@ -1146,7 +1146,7 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
   evar (i : I.type) ;
   cut (contains (I.convert i) (Xreal y))%R ; cycle 1 ; [
     lazymatch y with
-    | context [RInt ?f ?u ?v] =>
+    | RInt ?f ?u ?v =>
       reify_RInt y f u v ;
       apply (eval_RInt_contains_correct prec degree fuel) with (1 := eq_refl true) ;
       match goal with
@@ -1154,7 +1154,7 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
         let yi := constr:(eval_RInt_plain prec degree fuel hyps pf pu pv cf cu cv width) in
         do_instantiate i extend native yi
       end
-    | context [RInt_gen ?fm (at_point ?u) (Rbar_locally p_infty)] =>
+    | RInt_gen ?fm (at_point ?u) (Rbar_locally p_infty) =>
       reify_RInt_gen_infty y fm u ;
       lazymatch fm with
       | fun t => (_ / (t * ln t ^ _))%R =>
@@ -1170,7 +1170,7 @@ Ltac do_integral_intro y extend prec degree fuel width native nocheck output :=
         let yi := constr:(eval_RInt_gen_infty_plain prec degree fuel hyps mi pf pfm pu cf cfm cu width) in
         do_instantiate i extend native yi
       end
-    | context [RInt_gen ?fm (at_right 0) (at_point ?v)] =>
+    | RInt_gen ?fm (at_right 0) (at_point ?v) =>
       reify_RInt_gen_zero y fm v ;
       lazymatch fm with
       | fun t => (_ * (powerRZ t _ * ln t ^ _))%R =>
