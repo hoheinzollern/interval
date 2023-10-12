@@ -467,6 +467,22 @@ Module GenericFloat (Rad : Radix) <: FloatOps.
   now case x, y.
   Qed.
 
+  Lemma mag_correct :
+    forall f, (Rabs (toR f) < bpow radix (mag f))%R.
+  Proof.
+  intros f.
+  unfold mag, Fmag.
+  destruct f as [ | |s m e] ;
+    try (change (Rabs _) with (Rabs 0) ; rewrite Rabs_R0 ; apply bpow_gt_0).
+  unfold toR, toX. simpl.
+  rewrite FtoR_split.
+  rewrite <- digits_conversion, Zplus_comm.
+  apply Rlt_le_trans with (1 := bpow_mag_gt radix _).
+  apply bpow_le, Z.eq_le_incl.
+  rewrite <- Raux.mag_abs, <- Float_prop.F2R_Zabs, abs_cond_Zopp.
+  now apply Float_prop.mag_F2R_Zdigits.
+  Qed.
+
   Lemma div2_correct :
     forall x, sensible_format = true ->
     (1 / 256 <= Rabs (toR x))%R ->

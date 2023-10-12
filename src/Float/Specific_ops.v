@@ -377,6 +377,10 @@ rewrite Zplus_comm, bpow_plus, <- 2!Rmult_assoc.
 unfold radix. now rewrite Ep.
 Qed.
 
+(*
+ * pow2
+ *)
+
 Definition pow2_UP (p : precision) e :=
   if sensible_format then scale2 (Float (mantissa_pos mantissa_one) exponent_zero) e else Fnan.
 
@@ -401,6 +405,39 @@ Lemma ZtoS_correct:
   forall p z,
   (z <= StoZ (ZtoS z))%Z \/ toX (pow2_UP p (ZtoS z)) = Xnan.
 Proof. left. now rewrite ZtoE_correct. Qed.
+
+(*
+ * mag
+ *)
+
+Lemma mag_correct :
+  forall f, (Rabs (toR f) < bpow radix (StoZ (mag f)))%R.
+Proof.
+intros f.
+unfold StoZ, mag.
+destruct f as [ |sm e].
+{ change (toR Fnan) with 0%R.
+  rewrite Rabs_R0.
+  apply bpow_gt_0. }
+unfold toR, toX.
+simpl.
+generalize (mantissa_sign_correct sm).
+destruct mantissa_sign as [ |s m].
+{ intros _.
+  change (proj_val (FtoX Fzero)) with 0%R.
+  rewrite Rabs_R0.
+  apply bpow_gt_0. }
+simpl.
+intros H.
+rewrite FtoR_split.
+rewrite exponent_add_correct.
+rewrite mantissa_digits_correct by apply H.
+rewrite <- digits_conversion, Zplus_comm.
+apply Rlt_le_trans with (1 := bpow_mag_gt radix _).
+apply bpow_le, Z.eq_le_incl.
+rewrite <- Raux.mag_abs, <- Float_prop.F2R_Zabs, abs_cond_Zopp.
+now apply Float_prop.mag_F2R_Zdigits.
+Qed.
 
 (*
  * div2

@@ -112,6 +112,9 @@ Parameter real_correct :
 Parameter is_nan_correct :
   forall f, is_nan f = match classify f with Fnan => true | _ => false end.
 
+Parameter mag_correct :
+  forall f, (Rabs (toR f) < bpow radix (StoZ (mag f)))%R.
+
 Parameter valid_lb_correct :
   forall f, valid_lb f = match classify f with Fpinfty => false | _ => true end.
 

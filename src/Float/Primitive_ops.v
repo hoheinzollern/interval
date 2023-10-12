@@ -418,6 +418,31 @@ case Pos.compare_spec; intro Hp'.
 lia.
 Qed.
 
+Lemma mag_correct :
+  forall f, (Rabs (toR f) < bpow radix2 (StoZ (mag f)))%R.
+Proof.
+intros f.
+unfold mag.
+generalize (frshiftexp_equiv f).
+destruct frshiftexp as [m' e'].
+generalize (Bfrexp_correct _ _ _ (Prim2B f)).
+unfold toR.
+rewrite toX_Prim2B.
+destruct (Prim2B f) as [ | | |s m e H] ;
+  try (intros _ _ ; change (Rabs _) with (Rabs 0) ; rewrite Rabs_R0 ; apply bpow_gt_0).
+destruct Bfrexp as [m'' e''].
+intros H1 H2.
+injection H2 as <- ->.
+simpl.
+specialize (H1 eq_refl).
+destruct H1 as [H1 H2].
+specialize (H2 eq_refl).
+destruct H2 as [H2 H3].
+simpl in H1, H3.
+rewrite FtoR_split, H3, H1.
+apply bpow_mag_gt.
+Qed.
+
 Lemma valid_ub_next_up x : valid_ub (next_up x) = true.
 Proof.
 rewrite valid_ub_correct.
