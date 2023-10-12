@@ -751,22 +751,27 @@ Definition nearbyint mode xi :=
   | Ibnd xl xu => Ibnd (F.nearbyint_DN mode xl) (F.nearbyint_UP mode xu)
   end.
 
-Definition error_flt' prec emin p xi :=
+Definition error_flt prec mode emin p xi :=
   match xi with
   | Inan => Inan
   | Ibnd xl xu =>
     let xu' := F.max (F.neg xl) xu in
-    let err_rel := F.pow2_UP prec (F.ZtoS (1 - Z.pos p)) in
-    let err_min := F.pow2_UP prec (F.ZtoS emin) in
-    let err_abs := F.mul_UP prec xu' err_rel in
-    let err := F.max err_min err_abs in
-    Ibnd (F.neg err) err
-  end.
-
-Definition error_flt prec mode emin p xi :=
-  match mode with
-  | rnd_NE => error_flt' prec (Z.pred emin) (Pos.succ p) xi
-  | _ => error_flt' prec emin p xi
+    if andb (F.real xu') (Z.eqb (Zaux.radix_val F.radix) 2) then
+      let e := FLT.FLT_exp emin (Z.pos p) (F.StoZ (F.mag xu')) in
+      let e :=
+        match mode with
+        | rnd_NE => Z.pred e
+        | _ => e
+        end in
+      let err := F.pow2_UP prec (F.ZtoS e) in
+      match mode with
+      | rnd_NE => Ibnd (F.neg err) err
+      | rnd_UP => Ibnd F.zero err
+      | rnd_DN => Ibnd (F.neg err) F.zero
+      | rnd_ZR => Ibnd (F.neg err) err
+      end
+    else
+      Inan
   end.
 
 Ltac xreal_tac v :=
@@ -3504,8 +3509,8 @@ Qed.
 Lemma error_flt_correct_aux :
   forall prec mode emin p xi x,
   contains (convert xi) x ->
-  contains (convert (error_flt' prec emin p xi)) (Xerror_flt mode emin p x) /\
-  contains (convert (error_flt' prec emin p xi)) (Xreal 0).
+  contains (convert (error_flt prec mode emin p xi)) (Xerror_flt mode emin p x) /\
+  contains (convert (error_flt prec mode emin p xi)) (Xreal 0).
 Proof.
 intros prec mode emin p [|xl xu] [|xr]; try easy; [now unfold convert; case (_ && _)|].
 simpl.
@@ -3516,212 +3521,121 @@ simpl. intros Vu Vl [Hl Hu].
 generalize (abs_correct_aux xl xu xr). unfold convert.
 rewrite Vu, Vl.
 set (xu' := F.max (F.neg xl) xu). intros Hr.
-assert (Vuxu' : F.valid_ub xu' = true).
+assert (Vu' : F.valid_ub xu' = true).
 { apply F'.max_valid_ub; [| easy]. now rewrite F'.valid_ub_neg. }
-assert (xu'_correct :
-  match F.toX xl with
-    | Xnan => True
-    | Xreal r => (r <= xr)%R
-    end /\
-  match F.toX xu with
-    | Xnan => True
-    | Xreal r => (xr <= r)%R
-    end); [now split |]. apply Hr in xu'_correct. clear Hr.
+simple refine (let Hx := Hr _ in _).
+now split.
+clearbody xu' Hx.
+clear -Hx Vu'.
 
-generalize (F.pow2_UP_correct prec (F.ZtoS (Z.pos_sub 1 p))).
-set (err_rel := F.pow2_UP prec (F.ZtoS (Z.pos_sub 1 p))).
-intros [Vuerr_rel err_rel_correct].
+destruct F.real eqn:Ru'. 2: easy.
+case Z.eqb_spec. 2: easy.
+intros R2.
+cbv [andb].
 
-generalize (F.pow2_UP_correct prec (F.ZtoS emin)).
-set (err_min := F.pow2_UP prec (F.ZtoS emin)).
-intros [Vuerr_min err_min_correct].
+apply F'.real_correct in Ru'.
+rewrite Ru' in Hx. simpl in Hx.
+set (e := FLT.FLT_exp emin (Z.pos p) (F.StoZ (F.mag xu'))).
+assert (Hx': (Ulp.ulp radix2 (FLT.FLT_exp emin (Z.pos p)) xr <= bpow radix2 e)%R).
+{ unfold Ulp.ulp.
+  case Req_bool_spec ; intros Hxr.
+  { destruct (@FLT.negligible_exp_FLT emin (Z.pos p) eq_refl) as [n [-> H]].
+    unfold e, FLT.FLT_exp.
+    rewrite Z.max_r by lia.
+    apply bpow_le, Z.le_max_r. }
+  apply bpow_le, Generic_fmt.cexp_le_bpow ; try easy.
+  apply FLT.FLT_exp_monotone.
+  apply Rle_lt_trans with (1 := Hx).
+  rewrite <- (Rabs_pos_eq (F.toR xu')).
+  2: apply Rle_trans with (2 := Hx), Rabs_pos.
+  generalize (F.mag_correct xu').
+  unfold bpow.
+  now rewrite R2.
+}
 
-set (err_abs := F.mul_UP prec xu' err_rel).
-assert (Herr_abs :
-  F.valid_ub err_abs = true /\
-  le_upper (F.toX xu' * F.toX err_rel)%XR (F.toX err_abs)).
-{ apply (F.mul_UP_correct prec xu' err_rel).
-  destruct (F.toX xu') as [| r] eqn:Hxu'; [| destruct (Rle_or_lt 0 r)]; try (
-    left; unfold F.is_non_neg; rewrite Hxu';  repeat split; try easy;
-    destruct (F.toX err_rel); [easy |]; simpl in err_rel_correct;
-    rewrite Rmult_1_l in err_rel_correct; apply Rle_trans with (2 := err_rel_correct);
-    apply bpow_ge_0).
-  apply Rle_trans with (1 := Rabs_pos xr) in xu'_correct. lra. }
-destruct Herr_abs as [Vuerr_abs err_abs_correct].
+set (e' := match mode with rnd_NE => Z.pred e | _ => e end).
+set (err := F.pow2_UP prec (F.ZtoS e')).
+assert (mode = rnd_NE \/ e' = e) as [-> | ->]
+  by now (destruct mode ; left + right).
 
-set (err := F.max err_min err_abs).
-assert (Vuerr : F.valid_ub err = true).
-{ now apply F'.max_valid_ub. }
+- destruct (F.pow2_UP_correct prec (F.ZtoS e')) as [Hp1 Hp2].
+  generalize (F.ZtoS_correct prec e').
+  fold err in Hp1, Hp2 |- *.
+  rewrite F'.valid_lb_neg, Hp1, F'.neg_correct.
+  destruct (F.toX err) as [ |er]. easy.
+  intros [Hs|Hs] ; [|easy].
+  simpl.
+  simple refine (let H := _ in conj H _).
+  2: {
+    apply Rabs_le in H.
+    apply Rabs_le_inv.
+    apply Rle_trans with (2 := H).
+    rewrite Rabs_R0.
+    apply Rabs_pos.
+  }
+  apply Rabs_le_inv.
+  apply Rle_trans with (2 := Hp2).
+  eapply Rle_trans.
+  apply Ulp.error_le_half_ulp.
+  now apply FLT.FLT_exp_valid.
+  rewrite Rmult_1_l.
+  apply Rle_trans with (bpow radix2 (e - 1)).
+  2: now apply bpow_le.
+  unfold Z.sub.
+  rewrite Zplus_comm, bpow_plus.
+  apply Rmult_le_compat_l with (2 := Hx').
+  apply bpow_ge_0.
 
-rewrite F'.valid_lb_neg. rewrite Vuerr. simpl.
-rewrite F'.neg_correct. unfold err.
-rewrite (proj2 (F'.max_valid_ub _ _ Vuerr_min Vuerr_abs)).
-xreal_tac2; [easy |]. rename X into X_min. rename r into rmin.
-xreal_tac2; [easy |]. rename X into X_abs. rename r into rabs.
-simpl in *. split; apply Rabs_le_inv.
-2: { rewrite Rabs_R0. apply Rle_trans with (2 := (Rmax_l _ _)).
-     apply Rle_trans with (2 := err_min_correct). rewrite Rmult_1_l.
-     apply bpow_ge_0. }
-
-eapply Rle_trans.
-apply Ulp.error_le_ulp.
-now apply FLT.FLT_exp_valid.
-apply valid_rnd_of_mode.
-
-unfold Ulp.ulp.
-case Req_bool_spec ; intros Hxr.
-- destruct (@FLT.negligible_exp_FLT emin (Z.pos p) eq_refl) as [n [-> H]].
-  unfold FLT.FLT_exp. rewrite Z.max_r by lia. clear H.
-  apply Rle_trans with (2 := Rmax_l _ _).
-  apply Rle_trans with (2 := err_min_correct).
-  rewrite Rmult_1_l. apply bpow_le.
-  destruct (F.ZtoS_correct prec emin) as [H | H]; [easy |].
-  fold err_min in H. now rewrite X_min in H.
-- unfold Generic_fmt.cexp, FLT.FLT_exp.
-  destruct (Z.le_gt_cases (mag Zaux.radix2 xr) (emin + Z.pos p)) as [H | H].
-  + rewrite Z.max_r by lia. clear H.
-    apply Rle_trans with (2 := Rmax_l _ _).
-    apply Rle_trans with (2 := err_min_correct).
-    rewrite Rmult_1_l. apply bpow_le.
-    destruct (F.ZtoS_correct prec emin) as [H | H]; [easy |].
-    fold err_min in H. now rewrite X_min in H.
-  + rewrite Z.max_l by lia. clear H.
-    apply Rle_trans with (2 := Rmax_r _ _).
-    revert err_abs_correct.
-    xreal_tac2; [easy |]. rename X into X_u'. rename r into ru'.
-    xreal_tac2; [easy |]. rename X into X_rel. rename r into rrel.
-    simpl in *. apply Rle_trans. apply (Rle_trans _ ((Rabs xr) * rrel)).
-    2: { apply Rmult_le_compat_r; [| easy].
-      apply Rle_trans with (2 := err_rel_correct).
-      rewrite Rmult_1_l. apply bpow_ge_0. }
-    apply (Rle_trans _ (bpow Zaux.radix2 (mag Zaux.radix2 xr - 1) * rrel) _).
-    2: { apply Rmult_le_compat_r.
-      - apply Rle_trans with (2 := err_rel_correct).
-        rewrite Rmult_1_l. apply bpow_ge_0.
-      - now apply bpow_mag_le. }
-    apply (Rle_trans _ (bpow Zaux.radix2 (mag Zaux.radix2 xr - 1) *
-      (1 * bpow Zaux.radix2 (F.StoZ (F.ZtoS (Z.pos_sub 1 p))))) _).
-    { rewrite Rmult_1_l, <-bpow_plus, <-(Z.sub_add 1 (mag Zaux.radix2 xr)) at 1.
-      unfold Z.sub. rewrite <-Zplus_assoc. apply bpow_le, Zplus_le_compat_l.
-      destruct (F.ZtoS_correct prec (Z.pos_sub 1 p)) as [H | H]; [easy |].
-      fold err_rel in H. now rewrite X_rel in H. }
-    apply Rmult_le_compat_l; [| easy]. apply bpow_ge_0.
-Qed.
-
-Lemma error_fltn_correct_aux :
-  forall prec emin p, extension (Xerror_flt rnd_NE emin p) (error_flt' prec (Z.pred emin) (Pos.succ p)).
-Proof.
-intros prec emin p [|xl xu] [|xr]; try easy; [now unfold convert; case (_ && _)|].
-simpl.
-case_eq (F.valid_lb xl); [| simpl; lra].
-case_eq (F.valid_ub xu); [| simpl; lra].
-simpl. intros Vu Vl [Hl Hu].
-
-generalize (abs_correct_aux xl xu xr). unfold convert.
-rewrite Vu, Vl.
-set (xu' := F.max (F.neg xl) xu). intros Hr.
-assert (Vuxu' : F.valid_ub xu' = true).
-{ apply F'.max_valid_ub; [| easy]. now rewrite F'.valid_ub_neg. }
-assert (xu'_correct :
-  match F.toX xl with
-    | Xnan => True
-    | Xreal r => (r <= xr)%R
-    end /\
-  match F.toX xu with
-    | Xnan => True
-    | Xreal r => (xr <= r)%R
-    end); [now split |]. apply Hr in xu'_correct. clear Hr.
-
-change (Z.pos_sub _ _) with (Z.sub 1 (Z.pos (Pos.succ p))).
-
-generalize (F.pow2_UP_correct prec (F.ZtoS (Z.sub 1 (Z.pos (Pos.succ p))))).
-set (err_rel := F.pow2_UP prec _).
-intros [Vuerr_rel err_rel_correct].
-
-generalize (F.pow2_UP_correct prec (F.ZtoS (Z.pred emin))).
-set (err_min := F.pow2_UP prec (F.ZtoS (Z.pred emin))).
-intros [Vuerr_min err_min_correct].
-
-set (err_abs := F.mul_UP prec xu' err_rel).
-assert (Herr_abs :
-  F.valid_ub err_abs = true /\
-  le_upper (F.toX xu' * F.toX err_rel)%XR (F.toX err_abs)).
-{ apply (F.mul_UP_correct prec xu' err_rel).
-  destruct (F.toX xu') as [| r] eqn:Hxu'; [| destruct (Rle_or_lt 0 r)]; try (
-    left; unfold F.is_non_neg; rewrite Hxu';  repeat split; try easy;
-    destruct (F.toX err_rel); [easy |]; simpl in err_rel_correct;
-    rewrite Rmult_1_l in err_rel_correct; apply Rle_trans with (2 := err_rel_correct);
-    apply bpow_ge_0).
-  apply Rle_trans with (1 := Rabs_pos xr) in xu'_correct. lra. }
-destruct Herr_abs as [Vuerr_abs err_abs_correct].
-
-set (err := F.max err_min err_abs).
-assert (Vuerr : F.valid_ub err = true).
-{ now apply F'.max_valid_ub. }
-
-rewrite F'.valid_lb_neg. rewrite Vuerr. simpl.
-rewrite F'.neg_correct. unfold err.
-rewrite (proj2 (F'.max_valid_ub _ _ Vuerr_min Vuerr_abs)).
-xreal_tac2; [easy |]. rename X into X_min. rename r into rmin.
-xreal_tac2; [easy |]. rename X into X_abs. rename r into rabs.
-simpl. apply Rabs_le_inv.
-destruct (F.ZtoS_correct prec (Z.pred emin)) as [Hs|Hs].
-2: fold err_min in Hs ; now rewrite X_min in Hs.
-
-unfold Basic.error_flt.
-eapply Rle_trans.
-apply Ulp.error_le_half_ulp.
-now apply FLT.FLT_exp_valid.
-
-unfold Ulp.ulp.
-case Req_bool_spec ; intros Hxr.
-- destruct (@FLT.negligible_exp_FLT emin (Z.pos p) eq_refl) as [n [-> H]].
-  unfold FLT.FLT_exp. rewrite Z.max_r by lia. clear H.
-  apply Rle_trans with (2 := Rmax_l _ _).
-  apply Rle_trans with (2 := err_min_correct).
-  rewrite Rmult_1_l. change (/ 2)%R with (bpow Zaux.radix2 (-1)).
-  rewrite <- bpow_plus. apply bpow_le.
-  now rewrite Zplus_comm.
-- unfold Generic_fmt.cexp, FLT.FLT_exp.
-  destruct (Z.le_gt_cases (mag Zaux.radix2 xr) (emin + Z.pos p)) as [H | H].
-  + rewrite Z.max_r by lia. clear H.
-    apply Rle_trans with (2 := Rmax_l _ _).
-    apply Rle_trans with (2 := err_min_correct).
-    rewrite Rmult_1_l. change (/ 2)%R with (bpow Zaux.radix2 (-1)).
-    rewrite <- bpow_plus. apply bpow_le.
-    now rewrite Zplus_comm.
-  + rewrite Z.max_l by lia. clear H.
-    apply Rle_trans with (2 := Rmax_r _ _).
-    revert err_abs_correct.
-    xreal_tac2; [easy |]. rename X into X_u'. rename r into ru'.
-    xreal_tac2; [easy |]. rename X into X_rel. rename r into rrel.
-    simpl. apply Rle_trans. apply (Rle_trans _ ((Rabs xr) * rrel)).
-    2: { apply Rmult_le_compat_r; [| easy].
-      apply Rle_trans with (2 := err_rel_correct).
-      rewrite Rmult_1_l. apply bpow_ge_0. }
-    apply (Rle_trans _ (bpow Zaux.radix2 (mag Zaux.radix2 xr - 1) * rrel) _).
-    2: { apply Rmult_le_compat_r.
-      - apply Rle_trans with (2 := err_rel_correct).
-        rewrite Rmult_1_l. apply bpow_ge_0.
-      - now apply bpow_mag_le. }
-    apply (Rle_trans _ (bpow Zaux.radix2 (mag Zaux.radix2 xr - 1) *
-      (1 * bpow Zaux.radix2 (F.StoZ (F.ZtoS (Z.sub 1 (Z.pos (Pos.succ p))))))) _).
-    { rewrite Rmult_1_l, <-bpow_plus, <-(Z.sub_add 1 (mag Zaux.radix2 xr)) at 1.
-      change (/ 2)%R with (bpow Zaux.radix2 (-1)). rewrite <- bpow_plus.
-      apply bpow_le.
-      destruct (F.ZtoS_correct prec (Z.sub 1 (Z.pos (Pos.succ p)))) as [H|H].
-      rewrite Pos2Z.inj_succ in H at 1.
-      clear -H ; lia.
-      fold err_rel in H. now rewrite X_rel in H. }
-    apply Rmult_le_compat_l; [| easy]. apply bpow_ge_0.
+- destruct (F.pow2_UP_correct prec (F.ZtoS e)) as [Hp1 Hp2].
+  generalize (F.ZtoS_correct prec e).
+  fold err in Hp1, Hp2 |- *.
+  assert (Hp3 := F'.valid_lb_neg err).
+  rewrite Hp1 in Hp3.
+  destruct (F.toX err) as [ |er] eqn:He.
+  { intros _.
+    destruct mode ;
+      rewrite ?Hp1, ?Hp3, ?F'.valid_lb_zero, ?F'.valid_ub_zero ; simpl ;
+      rewrite ?F'.neg_correct, ?F.zero_correct, He ; simpl ; try easy ;
+      repeat split ; try apply Rle_refl.
+    apply Rle_0_minus.
+    apply Generic_fmt.round_UP_pt.
+    now apply FLT.FLT_exp_valid.
+    apply Rle_minus.
+    apply Generic_fmt.round_DN_pt.
+    now apply FLT.FLT_exp_valid. }
+  intros [Hs|Hs] ; [|easy].
+  assert (- er <= Basic.error_flt mode emin p xr <= er)%R.
+  { apply Rabs_le_inv.
+    eapply Rle_trans.
+    apply Ulp.error_le_ulp.
+    now apply FLT.FLT_exp_valid.
+    apply valid_rnd_of_mode.
+    apply Rle_trans with (2 := Hp2).
+    rewrite Rmult_1_l.
+    apply Rle_trans with (1 := Hx').
+    now apply bpow_le. }
+  assert (H1 := Rabs_le _ _ H).
+  assert (H2 := Rle_trans _ _ _ (Rabs_pos _) H1).
+  destruct mode ;
+    rewrite ?Hp1, ?Hp3, ?F'.valid_lb_zero, ?F'.valid_ub_zero ; simpl ;
+    rewrite ?F'.neg_correct, ?F.zero_correct, He ; simpl ;
+    split ; try apply Rabs_le_inv ;
+    try split ; try rewrite Rabs_R0 ; try easy ; try apply Rle_refl ; try apply H.
+  apply Rle_0_minus.
+  apply Generic_fmt.round_UP_pt.
+  now apply FLT.FLT_exp_valid.
+  apply Rle_minus.
+  apply Generic_fmt.round_DN_pt.
+  now apply FLT.FLT_exp_valid.
+  rewrite <- Ropp_0.
+  now apply Ropp_le_contravar.
 Qed.
 
 Lemma error_flt_correct :
   forall prec mode emin p, extension (Xerror_flt mode emin p) (error_flt prec mode emin p).
 Proof.
-unfold extension, error_flt. intros.
-destruct mode ; try now apply error_flt_correct_aux.
-now apply error_fltn_correct_aux.
+unfold extension. intros.
+now apply error_flt_correct_aux.
 Qed.
 
 Lemma error_flt_contains_0 :
