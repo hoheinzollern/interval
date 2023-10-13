@@ -955,25 +955,20 @@ by case: iv1 => [|[|x1] [|x2]] /=;
    case: iv2 => [|[|x3] [|x4]] //=; try lra.
 Qed.
 
-Definition round_flt (u : U) (m : rounding_mode) (emin : Z) (prec : positive)
+Definition error_flt (u : U) (m : rounding_mode) (emin : Z) (prec : positive)
      (X : I.type) (t : T) : T :=
   let e := eval u t X X in
   let err := I.error_flt u.1 m emin prec e in
-  add u X t (Tm (TM_any u.1 err X 0)).
+  Tm (TM_any u.1 err X 0).
 
-Theorem round_flt_correct u m e p (Y : I.type) tf f :
+Theorem error_flt_correct u m e p (Y : I.type) tf f :
   approximates Y tf f ->
-  approximates Y (round_flt u m e p Y tf) (fun x => Xround_flt m e p (f x)).
+  approximates Y (error_flt u m e p Y tf) (fun x => Xerror_flt m e p (f x)).
 Proof.
 move=> Hf.
-rewrite /round_flt.
-set i :=  I.error_flt _ _ _ _.
-apply: (@approximates_ext
-  (fun x : R =>
-    Xadd (f x)
-   (Xsub (Xlift (Basic.round_flt m e p) (f x)) (f x)))).
-{ by move=> x; case: (f x) => //= r; congr Xreal; lra. }
-apply: add_correct => //=. intros He x0.
+rewrite /error_flt.
+set i := I.error_flt _ _ _ _.
+intros He x0.
 apply TM_any_correct. now apply contains_midpoint.
 intros x. destruct (f x) eqn:Hfx; move=> Hx /=.
 - rewrite {}/i contains_Xnan.
@@ -987,6 +982,24 @@ intros x. destruct (f x) eqn:Hfx; move=> Hx /=.
   generalize (I.error_flt_correct u.1 m e p (eval u tf Y Y) (f x)).
   rewrite -/i /= {}/Xerror_flt {}/error_flt {}/Xbind Hfx.
   rewrite Hfx in Hx. now intros; revert Hx.
+Qed.
+
+Definition round_flt (u : U) (m : rounding_mode) (emin : Z) (prec : positive)
+     (X : I.type) (t : T) : T :=
+  add u X t (error_flt u m emin prec X t).
+
+Theorem round_flt_correct u m e p (Y : I.type) tf f :
+  approximates Y tf f ->
+  approximates Y (round_flt u m e p Y tf) (fun x => Xround_flt m e p (f x)).
+Proof.
+move=> Hf.
+rewrite /round_flt.
+apply: (@approximates_ext (fun x : R => Xadd (f x) (Xerror_flt m e p (f x)))).
+{ move=> x. case: (f x) => //= xr.
+  congr Xreal; rewrite /Basic.error_flt /Basic.round_flt.
+  ring. }
+apply: add_correct => //=.
+exact: error_flt_correct.
 Qed.
 
 (** ** Generic implementation of basic functions *)

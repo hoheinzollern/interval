@@ -30,7 +30,8 @@ Inductive unary_op : Set :=
   | Neg | Abs | Inv | Sqr | Sqrt
   | Cos | Sin | Tan | Atan | Exp | Ln
   | PowerInt (n : Z) | Nearbyint (m : rounding_mode)
-  | Round (m : rounding_mode) (emin : Z) (prec : positive).
+  | Round (m : rounding_mode) (emin : Z) (prec : positive)
+  | Error (m : rounding_mode) (emin : Z) (prec : positive).
 
 Inductive binary_op : Set :=
   | Add | Sub | Mul | Div.
@@ -71,6 +72,7 @@ Definition unary_real (o : unary_op) : R -> R :=
   | PowerInt n => fun x => powerRZ x n
   | Nearbyint m => Rnearbyint m
   | Round m emin prec => round_flt m emin prec
+  | Error m emin prec => fun x => Rminus (round_flt m emin prec x) x
   end.
 
 Strategy 1000 [Generic_fmt.round].
@@ -215,10 +217,8 @@ Ltac get_vars t l :=
     | pow ?a ?b =>
       let b := eval lazy in b in
       lazymatch is_nat_const b with true => aux_u a end
-    | Rplus ?a (Ropp ?b) => aux_b a b
     | Rplus ?a ?b => aux_b a b
     | Rminus ?a ?b => aux_b a b
-    | Rmult ?a (Rinv ?b) => aux_b a b
     | Rmult ?a ?b => aux_b a b
     | Rdiv ?a ?b => aux_b a b
     | Rpower ?a ?b => aux_b a b
@@ -298,9 +298,21 @@ Ltac reify t l :=
     | pow ?a ?b =>
       let b := eval lazy in (Z_of_nat b) in
       lazymatch is_Z_const b with true => aux_u (PowerInt b) a end
-    | Rplus ?a (Ropp ?b) => aux_b Sub a b
+    | Rplus ?a (Ropp ?b) =>
+      let u := aux a in
+      let v := aux b in
+      match u with
+      | Eunary (Round ?m ?e ?p) v => constr:(Eunary (Error m e p) v)
+      | _ => constr:(Ebinary Sub u v)
+      end
     | Rplus ?a ?b => aux_b Add a b
-    | Rminus ?a ?b => aux_b Sub a b
+    | Rminus ?a ?b =>
+      let u := aux a in
+      let v := aux b in
+      match u with
+      | Eunary (Round ?m ?e ?p) v => constr:(Eunary (Error m e p) v)
+      | _ => constr:(Ebinary Sub u v)
+      end
     | Rmult ?a (Rinv ?b) => aux_b Div a b
     | Q2R (QArith_base.Qmake ?a ?b) =>
       aux_b Div constr:(IZR a) constr:(IZR (Zpos b))
@@ -379,6 +391,7 @@ Definition unary_bnd prec (o : unary_op) : I.type -> I.type :=
   | PowerInt n => fun x => I.power_int prec x n
   | Nearbyint m => I.nearbyint m
   | Round m emin p => J.round_flt prec m emin p
+  | Error m emin p => I.error_flt prec m emin p
   end.
 
 Lemma unary_bnd_correct :
@@ -402,6 +415,7 @@ apply J.ln_correct.
 apply J.power_int_correct.
 apply I.nearbyint_correct.
 apply J.round_flt_correct.
+apply I.error_flt_correct.
 Qed.
 
 Definition binary_bnd prec (o : binary_op) : I.type -> I.type -> I.type :=

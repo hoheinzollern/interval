@@ -35,7 +35,7 @@ Require Import Tree.
 Require Import Prog.
 
 Definition no_floor_op op :=
-  match op with Nearbyint _ | Round _ _ _ => false | _ => true end.
+  match op with Nearbyint _ | Round _ _ _ | Error _ _ _ => false | _ => true end.
 
 Definition no_floor_term term :=
   match term with Unary op _ => no_floor_op op | _ => true end.
@@ -91,6 +91,7 @@ Definition ext_operations :=
     | PowerInt n => fun x => Xpower_int x n
     | Nearbyint m => Xnearbyint m
     | Round m emin prec => Xround_flt m emin prec
+    | Error m emin prec => Xerror_flt m emin prec
     end)
    (fun o =>
     match o with
@@ -615,6 +616,7 @@ Definition operations prec :=
     | PowerInt n => fun x => I.power_int prec x n
     | Nearbyint m => I.nearbyint m
     | Round m emin p => J.round_flt prec m emin p
+    | Error m emin p => I.error_flt prec m emin p
     end)
    (fun o =>
     match o with
@@ -656,7 +658,8 @@ destruct o ; simpl ;
   | apply I.ln_correct
   | apply I.power_int_correct
   | apply I.nearbyint_correct
-  | apply J.round_flt_correct'].
+  | apply J.round_flt_correct'
+  | apply I.error_flt_correct].
 (* binary *)
 destruct o ; simpl ;
   [ apply I.add_correct
@@ -798,6 +801,7 @@ Definition diff_operations A (ops : @operations A) :=
         (unary ops o v, binary ops Mul d (binary ops Mul (constant ops n) (unary ops (PowerInt (n-1)) v)))
       | Nearbyint m => (unary ops (Nearbyint m) v, unary ops Inv (constant ops 0))
       | Round m emin prec => (unary ops (Round m emin prec) v, unary ops Inv (constant ops 0))
+      | Error m emin prec => (unary ops (Error m emin prec) v, unary ops Inv (constant ops 0))
       end
     end)
    (fun o x y =>
@@ -843,6 +847,8 @@ now apply Xderive_pt_exp.
 rewrite /Xinv' is_zero_0.
 now apply Xderive_pt_ln.
 now apply Xderive_pt_power_int.
+rewrite /Xinv' is_zero_0.
+now destruct x.
 rewrite /Xinv' is_zero_0.
 now destruct x.
 rewrite /Xinv' is_zero_0.
@@ -994,6 +1000,9 @@ apply I.fromZ_correct.
 (* round_flt *)
 apply (I.inv_correct _ _ (Xreal 0)).
 apply I.fromZ_correct.
+(* error_flt *)
+apply (I.inv_correct _ _ (Xreal 0)).
+apply I.fromZ_correct.
 Qed.
 
 Lemma binary_diff_bnd_correct :
@@ -1080,8 +1089,9 @@ destruct o ; simpl ;
   | apply I.ln_correct
   | apply I.power_int_correct
   | apply I.nearbyint_correct
-  | apply J.round_flt_correct'] ;
-  exact Hf.
+  | apply J.round_flt_correct'
+  | apply I.error_flt_correct
+  ] ; exact Hf.
 apply (unary_diff_bnd_correct prec o (fun x => fst (f x)) (fun x => snd (f x))) with (3 := Hx).
 exact (fun x Hx => proj1 (H x Hx)).
 exact (fun x Hx => proj2 (H x Hx)).
@@ -1897,7 +1907,7 @@ Definition operations prec deg xi :=
     | PowerInt n => TM.power_int n (prec, deg) xi
     | Nearbyint m => TM.nearbyint m (prec, deg) xi
     | Round m emin p => TM.round_flt (prec, deg) m emin p xi
- (* | _ => fun _ => TM.dummy *)
+    | Error m emin p => TM.error_flt (prec, deg) m emin p xi
     end)
    (fun o =>
     match o with
@@ -1969,6 +1979,7 @@ induction (rev prog) as [|t l].
     apply TM.power_int_correct.
     apply TM.nearbyint_correct.
     apply TM.round_flt_correct.
+    apply TM.error_flt_correct.
   + generalize (IHl n1) (IHl n2).
     destruct bo.
     apply TM.add_correct.
