@@ -30,8 +30,10 @@ Inductive unary_op : Set :=
   | Neg | Abs | Inv | Sqr | Sqrt
   | Cos | Sin | Tan | Atan | Exp | Ln
   | PowerInt (n : Z) | Nearbyint (m : rounding_mode)
-  | Round (m : rounding_mode) (emin : Z) (prec : positive)
-  | Error (m : rounding_mode) (emin : Z) (prec : positive).
+  | RoundFlt (m : rounding_mode) (emin : Z) (prec : positive)
+  | ErrorFlt (m : rounding_mode) (emin : Z) (prec : positive)
+  | RoundFix (m : rounding_mode) (emin : Z)
+  | ErrorFix (m : rounding_mode) (emin : Z).
 
 Inductive binary_op : Set :=
   | Add | Sub | Mul | Div.
@@ -71,8 +73,10 @@ Definition unary_real (o : unary_op) : R -> R :=
   | Ln => ln
   | PowerInt n => fun x => powerRZ x n
   | Nearbyint m => Rnearbyint m
-  | Round m emin prec => round_flt m emin prec
-  | Error m emin prec => fun x => Rminus (round_flt m emin prec x) x
+  | RoundFlt m emin prec => round_flt m emin prec
+  | ErrorFlt m emin prec => fun x => Rminus (round_flt m emin prec x) x
+  | RoundFix m emin => round_fix m emin
+  | ErrorFix m emin => fun x => Rminus (round_fix m emin x) x
   end.
 
 Strategy 1000 [Generic_fmt.round].
@@ -234,6 +238,12 @@ Ltac get_vars t l :=
       lazymatch prec with Z.pos ?p =>
         aux_u a
       end end end
+    | Generic_fmt.round Zaux.radix2 (FIX.FIX_exp ?emin) ?mode ?a =>
+      let mode := reify_round mode in
+      let emin := eval lazy in emin in
+      lazymatch is_Z_const emin with true =>
+        aux_u a
+      end
     | IZR (Raux.Ztrunc ?a) => aux_u a
     | IZR (Raux.Zfloor ?a) => aux_u a
     | IZR (Raux.Zceil ?a) => aux_u a
@@ -306,7 +316,8 @@ Ltac reify t l :=
       let u := aux a in
       let v := aux b in
       match u with
-      | Eunary (Round ?m ?e ?p) v => constr:(Eunary (Error m e p) v)
+      | Eunary (RoundFlt ?m ?e ?p) v => constr:(Eunary (ErrorFlt m e p) v)
+      | Eunary (RoundFix ?m ?e) v => constr:(Eunary (ErrorFix m e) v)
       | _ => constr:(Ebinary Sub u v)
       end
     | Rmult ?a (Rinv ?b) => aux_b Div a b
@@ -323,8 +334,14 @@ Ltac reify t l :=
       lazymatch is_Z_const prec with true =>
       lazymatch is_Z_const emin with true =>
       lazymatch prec with Z.pos ?p =>
-        aux_u (Round mode emin p) a
+        aux_u (RoundFlt mode emin p) a
       end end end
+    | Generic_fmt.round Zaux.radix2 (FIX.FIX_exp ?emin) ?mode ?a =>
+      let mode := reify_round mode in
+      let emin := eval lazy in emin in
+      lazymatch is_Z_const emin with true =>
+        aux_u (RoundFix mode emin) a
+      end
     | IZR (Raux.Ztrunc ?a) => aux_u (Nearbyint rnd_ZR) a
     | IZR (Raux.Zfloor ?a) => aux_u (Nearbyint rnd_DN) a
     | IZR (Raux.Zceil ?a) => aux_u (Nearbyint rnd_UP) a
@@ -386,8 +403,10 @@ Definition unary_bnd prec (o : unary_op) : I.type -> I.type :=
   | Ln => I.ln prec
   | PowerInt n => fun x => I.power_int prec x n
   | Nearbyint m => I.nearbyint m
-  | Round m emin p => J.round_flt prec m emin p
-  | Error m emin p => I.error_flt prec m emin p
+  | RoundFlt m emin p => J.round_flt prec m emin p
+  | ErrorFlt m emin p => I.error_flt prec m emin p
+  | RoundFix m emin => J.round_fix prec m emin
+  | ErrorFix m emin => I.error_fix prec m emin
   end.
 
 Lemma unary_bnd_correct :
@@ -412,6 +431,8 @@ apply J.power_int_correct.
 apply I.nearbyint_correct.
 apply J.round_flt_correct.
 apply I.error_flt_correct.
+apply J.round_fix_correct.
+apply I.error_fix_correct.
 Qed.
 
 Definition binary_bnd prec (o : binary_op) : I.type -> I.type -> I.type :=

@@ -79,7 +79,7 @@ Fixpoint PTreeToTree t := match t with
     | PFLTDIV => Tree.Ebinary Tree.Div u1 u2
     | PINTDIV => Tree.Eunary (Tree.Nearbyint Basic.rnd_ZR) (Tree.Ebinary Tree.Div u1 u2)
     end
-  | PRnd md t' => Tree.Eunary (Tree.Round (rounding_mode_of_mode md) Rrnd.emin Format64.prec) (PTreeToTree t')
+  | PRnd md t' => Tree.Eunary (Tree.RoundFlt (rounding_mode_of_mode md) Rrnd.emin Format64.prec) (PTreeToTree t')
   | PNearbyint t' => Tree.Eunary (Tree.Nearbyint Basic.rnd_NE) (PTreeToTree t')
   | PTrunc t' => Tree.Eunary (Tree.Nearbyint Basic.rnd_ZR) (PTreeToTree t')
   | PLdexp t' p => Tree.Econst (Tree.Int 0) (* not compatible *)
