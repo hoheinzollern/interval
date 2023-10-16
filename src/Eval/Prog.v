@@ -31,27 +31,28 @@ Set Implicit Arguments.
 
 Record operations (A : Type) : Type :=
   { constant : Z -> A
+  ; unknown : A
   ; unary : unary_op -> A -> A
   ; binary : binary_op -> A -> A -> A
   ; sign : A -> Xcomparison }.
 
 Unset Implicit Arguments.
 
-Definition eval_generic_body {A} def (ops : operations A) values op :=
-  let nth n := nth n values def in
+Definition eval_generic_body {A} (ops : operations A) values op :=
+  let nth n := nth n values (unknown ops) in
   match op with
   | Forward u => nth u
   | Unary o u => unary ops o (nth u)
   | Binary o u v => binary ops o (nth u) (nth v)
   end :: values.
 
-Definition eval_generic {A} def (ops : operations A) :=
-  fold_left (eval_generic_body def ops).
+Definition eval_generic {A} (ops : operations A) :=
+  fold_left (eval_generic_body ops).
 
 Lemma rev_formula :
-  forall A formula terms def (ops : operations A),
-  eval_generic def ops formula terms =
-  fold_right (fun y x => eval_generic_body def ops x y) terms (rev formula).
+  forall A formula terms (ops : operations A),
+  eval_generic ops formula terms =
+  fold_right (fun y x => eval_generic_body ops x y) terms (rev formula).
 Proof.
 intros.
 pattern formula at 1 ; rewrite <- rev_involutive.
@@ -62,16 +63,15 @@ apply refl_equal.
 Qed.
 
 Theorem eval_inductive_prop :
-  forall A B (P : A -> B -> Prop) defA defB (opsA : operations A) (opsB : operations B),
-  P defA defB ->
+  forall A B (P : A -> B -> Prop) (opsA : operations A) (opsB : operations B),
  (forall o a b, P a b -> P (unary opsA o a) (unary opsB o b)) ->
  (forall o a1 a2 b1 b2, P a1 b1 -> P a2 b2 -> P (binary opsA o a1 a2) (binary opsB o b1 b2)) ->
   forall inpA inpB,
- (forall n, P (nth n inpA defA) (nth n inpB defB)) ->
+ (forall n, P (nth n inpA (unknown opsA)) (nth n inpB (unknown opsB))) ->
   forall prog,
-  forall n, P (nth n (eval_generic defA opsA prog inpA) defA) (nth n (eval_generic defB opsB prog inpB) defB).
+  forall n, P (nth n (eval_generic opsA prog inpA) (unknown opsA)) (nth n (eval_generic opsB prog inpB) (unknown opsB)).
 Proof.
-intros A B P defA defB opsA opsB Hdef Hun Hbin inpA inpB Hinp prog.
+intros A B P opsA opsB Hun Hbin inpA inpB Hinp prog.
 do 2 rewrite rev_formula.
 induction (rev prog).
 exact Hinp.
@@ -82,12 +82,12 @@ destruct a as [n|o n|o n1 n2] ;
 Qed.
 
 Definition real_operations :=
-  Build_operations IZR
+  Build_operations IZR 0%R
    unary_real binary_real
    (fun x => Xcmp (Xreal x) (Xreal 0)).
 
 Definition eval_real :=
-  eval_generic 0%R real_operations.
+  eval_generic real_operations.
 
 Scheme Equality for expr.
 

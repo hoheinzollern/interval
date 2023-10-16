@@ -79,7 +79,7 @@ now rewrite no_floor_prog_rcons IH no_floor_prog_cons.
 Qed.
 
 Definition ext_operations :=
-  Build_operations (fun x => Xreal (IZR x))
+  Build_operations (fun x => Xreal (IZR x)) Xnan
    (fun o =>
     match o with
     | Neg => Xneg
@@ -110,21 +110,20 @@ Definition ext_operations :=
    (fun x => Xcmp x (Xreal 0)).
 
 Definition eval_ext :=
-  eval_generic Xnan ext_operations.
+  eval_generic ext_operations.
 
 Theorem eval_inductive_prop_fun :
-  forall {T} A B P defA defB (opsA : operations A) (opsB : operations B),
- (forall a1 a2, (forall x, a1 x = a2 x) -> forall b, P a1 b -> P a2 b) ->
-  P (fun _ : T => defA) defB ->
+  forall {T} A B P (opsA : operations A) (opsB : operations B),
+ (forall a1 a2, (forall x : T, a1 x = a2 x) -> forall b, P a1 b -> P a2 b) ->
  (forall o a b, P a b -> P (fun x => unary opsA o (a x)) (unary opsB o b)) ->
  (forall o a1 a2 b1 b2, P a1 b1 -> P a2 b2 -> P (fun x => binary opsA o (a1 x) (a2 x)) (binary opsB o b1 b2)) ->
   forall inpA inpB,
- (forall n, P (fun x => nth n (inpA x) defA) (nth n inpB defB)) ->
+ (forall n, P (fun x => nth n (inpA x) (unknown opsA)) (nth n inpB (unknown opsB))) ->
   forall prog,
-  forall n, P (fun x => nth n (eval_generic defA opsA prog (inpA x)) defA) (nth n (eval_generic defB opsB prog inpB) defB).
+  forall n, P (fun x => nth n (eval_generic opsA prog (inpA x)) (unknown opsA)) (nth n (eval_generic opsB prog inpB) (unknown opsB)).
 Proof.
-intros T A B P defA defB opsA opsB HP Hdef Hun Hbin inpA inpB Hinp prog n.
-apply HP with (fun x => nth n (fold_right (fun y x => eval_generic_body defA opsA x y) (inpA x) (rev prog)) defA).
+intros T A B P opsA opsB HP Hun Hbin inpA inpB Hinp prog n.
+apply HP with (fun x => nth n (fold_right (fun y x => eval_generic_body opsA x y) (inpA x) (rev prog)) (unknown opsA)).
 intros x.
 now rewrite rev_formula.
 rewrite rev_formula.
@@ -138,18 +137,17 @@ destruct a as [n|o n|o n1 n2] ;
 Qed.
 
 Theorem eval_inductive_prop_floor_fun :
-  forall {T} A B P defA defB (opsA : operations A) (opsB : operations B),
- (forall a1 a2, (forall x, a1 x = a2 x) -> forall b, P a1 b -> P a2 b) ->
-  P (fun _ : T => defA) defB ->
+  forall {T} A B P (opsA : operations A) (opsB : operations B),
+ (forall a1 a2, (forall x : T, a1 x = a2 x) -> forall b, P a1 b -> P a2 b) ->
  (forall o a b, no_floor_op o = true -> P a b -> P (fun x => unary opsA o (a x)) (unary opsB o b)) ->
  (forall o a1 a2 b1 b2, P a1 b1 -> P a2 b2 -> P (fun x => binary opsA o (a1 x) (a2 x)) (binary opsB o b1 b2)) ->
   forall inpA inpB,
- (forall n, P (fun x => nth n (inpA x) defA) (nth n inpB defB)) ->
+ (forall n, P (fun x => nth n (inpA x) (unknown opsA)) (nth n inpB (unknown opsB))) ->
   forall prog, no_floor_prog prog = true ->
-  forall n, P (fun x => nth n (eval_generic defA opsA prog (inpA x)) defA) (nth n (eval_generic defB opsB prog inpB) defB).
+  forall n, P (fun x => nth n (eval_generic opsA prog (inpA x)) (unknown opsA)) (nth n (eval_generic opsB prog inpB) (unknown opsB)).
 Proof.
-intros T A B P defA defB opsA opsB HP Hdef Hun Hbin inpA inpB Hinp prog Hprog n.
-apply HP with (fun x => nth n (fold_right (fun y x => eval_generic_body defA opsA x y) (inpA x) (rev prog)) defA).
+intros T A B P opsA opsB HP Hun Hbin inpA inpB Hinp prog Hprog n.
+apply HP with (fun x => nth n (fold_right (fun y x => eval_generic_body opsA x y) (inpA x) (rev prog)) (unknown opsA)).
 intros x.
 now rewrite rev_formula.
 rewrite rev_formula.
@@ -241,14 +239,14 @@ Proof.
 intros P1 P2 HP1 HP2 prog terms n.
 unfold eval_ext, eval_real.
 refine (_ (eval_inductive_prop _ _ (fun a b => match a with Xreal a => a = b | _ => True end)
-  Xnan R0 ext_operations real_operations _ _ _ (map Xreal terms) terms _ prog n)).
-case (nth n (eval_generic Xnan ext_operations prog (map Xreal terms)) Xnan).
+  ext_operations real_operations _ _ (map Xreal terms) terms _ prog n)).
+simpl.
+case (nth n (eval_generic ext_operations prog (map Xreal terms)) Xnan).
 intros _ H.
 now apply HP1.
 intros y H.
 rewrite H.
 apply HP2.
-easy.
 (* unary *)
 destruct a as [|a].
 now destruct o.
@@ -606,7 +604,7 @@ Qed.
 Module BndValuator.
 
 Definition operations prec :=
-  Build_operations (I.fromZ prec)
+  Build_operations (I.fromZ prec) I.nai
    (fun o =>
     match o with
     | Neg => I.neg
@@ -637,7 +635,7 @@ Definition operations prec :=
     I.sign_strict.
 
 Definition eval prec :=
-  eval_generic I.nai (operations prec).
+  eval_generic (operations prec).
 
 Lemma eval_correct_aux :
   forall prec prog bounds vars,
@@ -649,9 +647,6 @@ Proof.
 intros prec prog bounds vars Hinp.
 unfold eval, eval_ext.
 apply (eval_inductive_prop _ _ (fun a b => contains (I.convert a) b)).
-(* . *)
-rewrite I.nai_correct.
-exact I.
 (* unary *)
 destruct o ; simpl ;
   [ apply I.neg_correct
@@ -785,13 +780,14 @@ Module DiffValuator.
 Definition diff_operations A (ops : @operations A) :=
   Build_operations
    (fun x => (constant ops x, constant ops 0))
+   (unknown ops, unknown ops)
    (fun o x =>
     match x with
     | (v, d) =>
       match o with
       | Neg => let f := unary ops Neg in (f v, f d)
       | Abs => let w := unary ops Abs v in (w,
-        match sign ops v with Xlt => unary ops Neg d | Xgt => d | _ => unary ops Inv (constant ops 0) end)
+        match sign ops v with Xlt => unary ops Neg d | Xgt => d | _ => unknown ops end)
       | Inv => let w := unary ops Inv v in (w,
         binary ops Mul d (unary ops Neg (unary ops Sqr w)))
       | Sqr => let w := binary ops Mul d v in (unary ops Sqr v, binary ops Add w w)
@@ -808,14 +804,14 @@ Definition diff_operations A (ops : @operations A) :=
       | Exp => let w := unary ops Exp v in (w,
         binary ops Mul d w)
       | Ln => (unary ops Ln v,
-        match sign ops v with Xgt => binary ops Div d v | _ => unary ops Inv (constant ops 0) end)
+        match sign ops v with Xgt => binary ops Div d v | _ => unknown ops end)
       | PowerInt n =>
         (unary ops o v, binary ops Mul d (binary ops Mul (constant ops n) (unary ops (PowerInt (n-1)) v)))
-      | Nearbyint m => (unary ops (Nearbyint m) v, unary ops Inv (constant ops 0))
-      | RoundFlt m emin prec => (unary ops (RoundFlt m emin prec) v, unary ops Inv (constant ops 0))
-      | ErrorFlt m emin prec => (unary ops (ErrorFlt m emin prec) v, unary ops Inv (constant ops 0))
-      | RoundFix m emin => (unary ops (RoundFix m emin) v, unary ops Inv (constant ops 0))
-      | ErrorFix m emin => (unary ops (ErrorFix m emin) v, unary ops Inv (constant ops 0))
+      | Nearbyint m => (unary ops (Nearbyint m) v, unknown ops)
+      | RoundFlt m emin prec => (unary ops (RoundFlt m emin prec) v, unknown ops)
+      | ErrorFlt m emin prec => (unary ops (ErrorFlt m emin prec) v, unknown ops)
+      | RoundFix m emin => (unary ops (RoundFix m emin) v, unknown ops)
+      | ErrorFix m emin => (unary ops (ErrorFix m emin) v, unknown ops)
       end
     end)
    (fun o x y =>
@@ -843,7 +839,6 @@ Proof.
 intros o f d x Hd.
 destruct o ; simpl ; repeat split.
 now apply Xderive_pt_neg.
-rewrite /Xinv' is_zero_0.
 now apply Xderive_pt_abs.
 rewrite rewrite_inv_diff.
 now apply Xderive_pt_inv.
@@ -858,18 +853,12 @@ now apply Xderive_pt_sin.
 now apply Xderive_pt_tan.
 now apply Xderive_pt_atan.
 now apply Xderive_pt_exp.
-rewrite /Xinv' is_zero_0.
 now apply Xderive_pt_ln.
 now apply Xderive_pt_power_int.
-rewrite /Xinv' is_zero_0.
 now destruct x.
-rewrite /Xinv' is_zero_0.
 now destruct x.
-rewrite /Xinv' is_zero_0.
 now destruct x.
-rewrite /Xinv' is_zero_0.
 now destruct x.
-rewrite /Xinv' is_zero_0.
 now destruct x.
 Qed.
 
@@ -892,14 +881,14 @@ Qed.
 
 Lemma eval_diff_correct :
   forall prog terms n x,
-  let v := nth n (eval_generic (Xnan, Xnan) (diff_operations _ ext_operations) prog ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) terms)) (Xnan, Xnan) in
+  let v := nth n (eval_generic (diff_operations _ ext_operations) prog ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) terms)) (Xnan, Xnan) in
   nth n (eval_ext prog (x :: map Xreal terms)) Xnan = fst v /\
   Xderive_pt (fun x => nth n (eval_ext prog (x :: map Xreal terms)) Xnan) x (snd v).
 Proof.
 intros prog terms n x.
 (*set (inpA x := x :: map Xreal terms).
 set (inpB := (x, Xmask (Xreal 1) x) :: map (fun v : R => (Xreal v, Xmask (Xreal 0) x)) terms).*)
-refine (eval_inductive_prop_fun _ _ (fun a b => a x = fst b /\ Xderive_pt a x (snd b)) _ _ _ _ _ _ _ _ _ _ _ _ _).
+refine (eval_inductive_prop_fun _ _ (fun a b => a x = fst b /\ Xderive_pt a x (snd b)) _ _ _ _ _ _ _ _ _ _).
 (* extensionality *)
 intros a1 a2 Heq (bl, br).
 simpl.
@@ -909,8 +898,6 @@ now rewrite <- Heq.
 apply Xderive_pt_eq_fun with (2 := Hr).
 intros.
 now apply sym_eq.
-(* default *)
-destruct x ; repeat split.
 (* unary *)
 intros o a (bl, br) (Hl, Hr).
 simpl in Hl.
@@ -957,7 +944,8 @@ Proof.
 intros prec o f f' u yi yi' xi Hf Hf' v x Hx.
 destruct o ; simpl ;
   repeat first
-  [ apply I.neg_correct
+  [ now rewrite I.nai_correct
+  | apply I.neg_correct
   | apply I.abs_correct
   | apply I.inv_correct
   | apply I.sqr_correct
@@ -977,12 +965,10 @@ destruct o ; simpl ;
   | refine (I.mul_correct _ _ _ (Xreal (IZR _)) _ _ _) ] ;
   try now first [ apply Hf | apply Hf' ].
 (* abs *)
-generalize (I.inv_correct prec (I.fromZ prec 0) (Xreal 0) (I.fromZ_correct _ _)).
-rewrite /= /Xinv' is_zero_0.
 specialize (Hf _ Hx).
 generalize (I.sign_strict_correct yi).
-case I.sign_strict ; case (I.convert (I.inv prec (I.fromZ prec 0))) ; try easy.
-intros H _.
+case I.sign_strict ; try rewrite I.nai_correct ; try easy.
+intros H.
 specialize (H _ Hf).
 rewrite (proj1 H).
 simpl.
@@ -990,7 +976,7 @@ rewrite Rcompare_Lt.
 apply I.neg_correct.
 now apply Hf'.
 apply H.
-intros H _.
+intros H.
 specialize (H _ Hf).
 rewrite (proj1 H).
 simpl.
@@ -998,12 +984,10 @@ rewrite Rcompare_Gt.
 now apply Hf'.
 apply H.
 (* ln *)
-generalize (I.inv_correct prec (I.fromZ prec 0) (Xreal 0) (I.fromZ_correct _ _)).
-rewrite /= /Xinv' is_zero_0.
 specialize (Hf _ Hx).
 generalize (I.sign_strict_correct yi).
-case I.sign_strict ; case (I.convert (I.inv prec (I.fromZ prec 0))) ; try easy.
-intros H _.
+case I.sign_strict ; try rewrite I.nai_correct ; try easy.
+intros H.
 specialize (H _ Hf).
 rewrite {1}(proj1 H).
 simpl.
@@ -1012,21 +996,6 @@ apply I.div_correct.
 now apply Hf'.
 exact Hf.
 apply H.
-(* nearbyint *)
-apply (I.inv_correct _ _ (Xreal 0)).
-apply I.fromZ_correct.
-(* round_flt *)
-apply (I.inv_correct _ _ (Xreal 0)).
-apply I.fromZ_correct.
-(* error_flt *)
-apply (I.inv_correct _ _ (Xreal 0)).
-apply I.fromZ_correct.
-(* round_fix *)
-apply (I.inv_correct _ _ (Xreal 0)).
-apply I.fromZ_correct.
-(* error_fix *)
-apply (I.inv_correct _ _ (Xreal 0)).
-apply I.fromZ_correct.
 Qed.
 
 Lemma binary_diff_bnd_correct :
@@ -1054,8 +1023,8 @@ Lemma eval_diff_bnd_correct :
   forall prec prog bounds vars,
   contains_all bounds vars ->
   forall n,
-  let ff' x := nth n (eval_generic (Xnan, Xnan) (diff_operations _ ext_operations) prog ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) vars)) (Xnan, Xnan) in
-  let ffi' xi := nth n (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) prog
+  let ff' x := nth n (eval_generic (diff_operations _ ext_operations) prog ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) vars)) (Xnan, Xnan) in
+  let ffi' xi := nth n (eval_generic (diff_operations _ (BndValuator.operations prec)) prog
     ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai) in
   forall xi,
   nth n (BndValuator.eval prec prog (xi :: bounds)) I.nai = fst (ffi' xi) /\
@@ -1066,7 +1035,6 @@ split.
 (* . *)
 unfold ffi', BndValuator.eval.
 apply (eval_inductive_prop _ (I.type * I.type) (fun a b => a = fst b)).
-apply refl_equal.
 intros o a (bl, br) H.
 rewrite H.
 now destruct o.
@@ -1091,10 +1059,6 @@ apply (eval_inductive_prop_fun (ExtendedR * _) (I.type * _) (fun a b =>
 intros f1 f2 Heq (yi, yi') H x Hx.
 rewrite <- Heq.
 now apply H.
-intros _ _.
-simpl.
-rewrite I.nai_correct.
-now split.
 intros o f (yi, yi') H x Hx.
 rewrite (surjective_pairing (f x)).
 split.
@@ -1682,7 +1646,7 @@ now intros _.
 Qed.
 
 Definition eval prec formula bounds n xi :=
-  match nth n (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) formula
+  match nth n (eval_generic (diff_operations _ (BndValuator.operations prec)) formula
     ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai) with
   | (yi, yi') =>
     diff_refining prec xi yi yi'
@@ -1701,10 +1665,10 @@ intros prec prog bounds vars Hv n xi x Hx.
 unfold eval.
 pose (f := fun x => nth n (eval_ext prog (x :: map Xreal vars)) Xnan).
 fold (f x).
-pose (ff' := fun x => nth n (eval_generic (Xnan, Xnan) (diff_operations _ ext_operations) prog
+pose (ff' := fun x => nth n (eval_generic (diff_operations _ ext_operations) prog
      ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) vars)) (Xnan, Xnan)).
 set (fi := fun xi => nth n (BndValuator.eval prec prog (xi :: bounds)) I.nai).
-pose (ffi' := fun xi => nth n (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) prog
+pose (ffi' := fun xi => nth n (eval_generic (diff_operations _ (BndValuator.operations prec)) prog
      ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai)).
 fold (ffi' xi).
 rewrite (surjective_pairing (ffi' xi)).
@@ -1740,7 +1704,7 @@ apply eval_correct_ext with (1 := Hv) (2 := Hx).
 Qed.
 
 Definition root prec formula bounds xi :=
-  match nth 0 (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) formula
+  match nth 0 (eval_generic (diff_operations _ (BndValuator.operations prec)) formula
     ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai) with
   | (yi, yi') =>
     match I.sign_strict yi with
@@ -1764,10 +1728,10 @@ intros prec prog bounds vars Hv xi x Hx Zx.
 unfold root.
 pose (f := fun x => nth 0 (eval_ext prog (x :: map Xreal vars)) Xnan).
 fold (f x) in Zx.
-pose (ff' := fun x => nth 0 (eval_generic (Xnan, Xnan) (diff_operations _ ext_operations) prog
+pose (ff' := fun x => nth 0 (eval_generic (diff_operations _ ext_operations) prog
      ((x, Xmask (Xreal 1) x) :: map (fun v => (Xreal v, Xmask (Xreal 0) x)) vars)) (Xnan, Xnan)).
 set (fi := fun xi => nth 0 (BndValuator.eval prec prog (xi :: bounds)) I.nai).
-pose (ffi' := fun xi => nth 0 (eval_generic (I.nai, I.nai) (diff_operations _ (BndValuator.operations prec)) prog
+pose (ffi' := fun xi => nth 0 (eval_generic (diff_operations _ (BndValuator.operations prec)) prog
      ((xi, I.mask (I.fromZ_small 1) xi) :: map (fun b => (b, I.mask I.zero xi)) bounds)) (I.nai, I.nai)).
 fold (ffi' xi).
 rewrite (surjective_pairing (ffi' xi)).
@@ -1877,7 +1841,7 @@ destruct (nth 0 (eval_ext _ _) Xnan) as [|y] eqn:Hy.
   unfold root.
   assert (H1 := eval_diff_bnd_correct prec prog bounds vars Hv 0 xi).
   simpl in H1.
-  destruct (nth 0 (eval_generic _ _ _ _) _) as [yi zi].
+  destruct (nth 0 (eval_generic _ _ _) _) as [yi zi].
   generalize (BndValuator.eval_correct_ext prec prog bounds vars Hv 0 _ _ Hx).
   rewrite (proj1 H1) Hy.
   intros H2.
@@ -1891,7 +1855,7 @@ destruct (nth 0 (eval_ext _ _) Xnan) as [|y] eqn:Hy.
   destruct H1 as [_ H1].
   specialize (H1 _ Hx).
   assert (H3 := eval_diff_correct prog vars 0 (Xreal x)).
-  destruct (nth 0 (eval_generic (Xnan, Xnan) _ _ _) _) as [y y'].
+  destruct (nth 0 (eval_generic _ _ _) _) as [y y'].
   apply contains_Xnan.
   destruct H3 as [_ H3].
   unfold Xderive_pt in H3.
@@ -1917,6 +1881,7 @@ Module TM := TM I.
 Definition operations prec deg xi :=
   Build_operations
    (fun _ => TM.dummy) (* fromZ *)
+   TM.dummy
    (fun o =>
     match o with
     | Neg => TM.opp (prec, deg) xi
@@ -1947,7 +1912,7 @@ Definition operations prec deg xi :=
    (fun _ => Xund) (* sign_strict *).
 
 Definition eval prec deg xi :=
-  eval_generic TM.dummy (operations prec deg xi).
+  eval_generic (operations prec deg xi).
 
 Theorem eval_correct_aux :
   forall prec deg prog bounds vars,
@@ -1961,7 +1926,7 @@ intros prec deg prog bounds vars Hv n xi.
 unfold eval, eval_ext.
 rewrite rev_formula.
 apply (@TM.approximates_ext (fun t => nth n (fold_right
-  (fun y l => eval_generic_body Xnan ext_operations l y)
+  (fun y l => eval_generic_body ext_operations l y)
   (Xreal t :: map Xreal vars)
   (rev prog)) Xnan)).
 intros t.
