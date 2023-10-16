@@ -765,6 +765,13 @@ Definition error_aux prec mode e :=
   | rnd_ZR => Ibnd (F.neg err) err
   end.
 
+Definition error_fix prec mode emin (xi : type) :=
+  match xi with
+  | Inan => Inan
+  | Ibnd xl xu =>
+    error_aux prec mode emin
+  end.
+
 Definition error_flt prec mode emin p xi :=
   match xi with
   | Inan => Inan
@@ -3589,6 +3596,38 @@ assert (mode = rnd_NE \/ e' = e) as [-> | ->]
   now apply Generic_fmt.round_DN_pt.
   rewrite <- Ropp_0.
   now apply Ropp_le_contravar.
+Qed.
+
+Lemma error_fix_correct_aux :
+  forall prec mode emin xi x,
+  contains (convert xi) x ->
+  contains (convert (error_fix prec mode emin xi)) (Xerror_fix mode emin x) /\
+  contains (convert (error_fix prec mode emin xi)) (Xreal 0).
+Proof.
+intros prec mode emin [|xl xu] [|xr]; try easy; [now unfold convert; case (_ && _)|].
+intros _.
+cbn -[error_aux].
+refine (_ (error_aux_correct_aux prec mode (FIX.FIX_exp emin) emin xr _ _)).
+now destruct error_aux.
+rewrite FIX.ulp_FIX.
+apply Rle_refl.
+Qed.
+
+Lemma error_fix_correct :
+  forall prec mode emin, extension (Xerror_fix mode emin) (error_fix prec mode emin).
+Proof.
+unfold extension. intros.
+now apply error_fix_correct_aux.
+Qed.
+
+Lemma error_fix_contains_0 :
+  forall prec mode emin x,
+  not_empty (convert x) -> contains (convert (error_fix prec mode emin x)) (Xreal 0).
+Proof.
+intros prec mode emin x [v Hv].
+unfold error_fix.
+assert (H := fun emin => proj2 (error_fix_correct_aux prec mode emin _ _ Hv)).
+destruct mode ; apply H.
 Qed.
 
 Lemma error_flt_correct_aux :

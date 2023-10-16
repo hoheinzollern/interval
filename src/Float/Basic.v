@@ -147,6 +147,16 @@ Definition rnd_of_mode mode :=
   | rnd_NE => rndNE
   end.
 
+Definition error_fix mode emin x :=
+  (round radix2 (FIX_exp emin) (rnd_of_mode mode) x - x)%R.
+
+Definition Xerror_fix mode emin := Xlift (error_fix mode emin).
+
+Definition round_fix mode emin :=
+  round radix2 (FIX_exp emin) (rnd_of_mode mode).
+
+Definition Xround_fix mode emin := Xlift (round_fix mode emin).
+
 Definition error_flt mode emin prec x :=
   (round radix2 (FLT_exp emin (Zpos prec)) (rnd_of_mode mode) x - x)%R.
 

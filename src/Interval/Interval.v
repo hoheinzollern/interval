@@ -418,6 +418,7 @@ Parameter mul : precision -> type -> type -> type.
 Parameter div : precision -> type -> type -> type.
 Parameter power_int : precision -> type -> Z -> type.
 Parameter nearbyint : rounding_mode -> type -> type.
+Parameter error_fix : precision -> rounding_mode -> Z -> type -> type.
 Parameter error_flt : precision -> rounding_mode -> Z -> positive -> type -> type.
 
 Parameter neg_correct : extension Xneg neg.
@@ -431,6 +432,7 @@ Parameter mul_correct : forall prec, extension_2 Xmul (mul prec).
 Parameter div_correct : forall prec, extension_2 Xdiv (div prec).
 Parameter power_int_correct : forall prec n, extension (fun x => Xpower_int x n) (fun x => power_int prec x n).
 Parameter nearbyint_correct : forall mode, extension (Xnearbyint mode) (nearbyint mode).
+Parameter error_fix_correct : forall prec mode emin, extension (Xerror_fix mode emin) (error_fix prec mode emin).
 Parameter error_flt_correct : forall prec mode emin p, extension (Xerror_flt mode emin p) (error_flt prec mode emin p).
 
 Parameter neg_correct' :
@@ -626,6 +628,12 @@ intros prec n.
 apply propagate_extension with (1 := I.power_int_correct prec n).
 Qed.
 
+Lemma error_fix_propagate : forall prec mode emin, propagate (I.error_fix prec mode emin).
+Proof.
+intros prec mode emin.
+apply propagate_extension with (1 := I.error_fix_correct prec mode emin).
+Qed.
+
 Lemma error_flt_propagate : forall prec mode emin p, propagate (I.error_flt prec mode emin p).
 Proof.
 intros prec mode emin p.
@@ -726,6 +734,32 @@ intros mode xi x.
 now apply I.nearbyint_correct.
 Qed.
 
+Definition round_fix prec mode emin xi :=
+  I.add prec xi (I.error_fix prec mode emin xi).
+
+Lemma round_fix_correct :
+  forall mode prec emin, extension (Basic.round_fix mode emin) (round_fix prec mode emin).
+Proof.
+intros mode prec emin xi x Hx.
+unfold round_fix.
+replace (Basic.round_fix mode emin x)
+  with (x + (Basic.round_fix mode emin x - x)) by ring.
+apply add_correct; [easy| ].
+now apply I.error_fix_correct with (x := Xreal x).
+Qed.
+
+Lemma round_fix_correct' :
+  forall mode prec emin, I.extension (Xround_fix mode emin) (round_fix prec mode emin).
+Proof.
+unfold round_fix.
+intros mode prec emin xi [ |x] Hx ; simpl.
+- now apply contains_Xnan, I.add_propagate_l, contains_Xnan.
+- replace (Basic.round_fix mode emin x)
+    with (x + (Basic.round_fix mode emin x - x)) by ring.
+  apply add_correct; [easy| ].
+  now apply I.error_fix_correct with (x := Xreal x).
+Qed.
+
 Definition round_flt prec mode emin p xi :=
   I.add prec xi (I.error_flt prec mode emin p xi).
 
@@ -735,19 +769,21 @@ Proof.
 intros mode prec emin p xi x Hx.
 unfold round_flt.
 replace (Basic.round_flt mode emin p x)
- with (x + (Basic.round_flt mode emin p x - x)) by ring.
-apply add_correct; [easy |]. now apply (I.error_flt_correct _ _ _ _ _ (Xreal x)).
+  with (x + (Basic.round_flt mode emin p x - x)) by ring.
+apply add_correct; [easy| ].
+now apply I.error_flt_correct with (x := Xreal x).
 Qed.
 
 Lemma round_flt_correct' :
   forall mode prec emin p, I.extension (Xround_flt mode emin p) (round_flt prec mode emin p).
 Proof.
 unfold round_flt.
-intros mode prec emin p xi [| x] Hx.
-- simpl. now apply contains_Xnan, I.add_propagate_l, contains_Xnan.
-- simpl. replace (Basic.round_flt mode emin p x)
+intros mode prec emin p xi [| x] Hx ; simpl.
+- now apply contains_Xnan, I.add_propagate_l, contains_Xnan.
+- replace (Basic.round_flt mode emin p x)
     with (x + (Basic.round_flt mode emin p x - x)) by ring.
-  apply add_correct; [easy |]. now apply (I.error_flt_correct _ _ _ _ _ (Xreal x)).
+  apply add_correct; [easy| ].
+  now apply I.error_flt_correct with (x := Xreal x).
 Qed.
 
 Lemma power_int_correct :

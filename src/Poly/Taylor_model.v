@@ -1002,6 +1002,51 @@ apply: add_correct => //=.
 exact: error_flt_correct.
 Qed.
 
+Definition error_fix (u : U) (m : rounding_mode) (emin : Z) (X : I.type) (t : T) : T :=
+  let e := eval u t X X in
+  let err := I.error_fix u.1 m emin e in
+  Tm (TM_any u.1 err X 0).
+
+Theorem error_fix_correct u m e (Y : I.type) tf f :
+  approximates Y tf f ->
+  approximates Y (error_fix u m e Y tf) (fun x => Xerror_fix m e (f x)).
+Proof.
+move=> Hf.
+rewrite /error_fix.
+set i := I.error_fix _ _ _.
+intros He x0.
+apply TM_any_correct. now apply contains_midpoint.
+intros x. destruct (f x) eqn:Hfx; move=> Hx /=.
+- rewrite {}/i contains_Xnan.
+  apply J.error_fix_propagate.
+  apply (eval_correct u) in Hf.
+  apply Hf in Hx. simpl in Hx. rewrite Hfx in Hx.
+  now apply contains_Xnan.
+- generalize (@eval_correct u Y tf f). move=> Haux.
+  apply Haux in Hf. unfold I.extension in Hf.
+  apply Hf in Hx. simpl in Hx. unfold Basic.round_fix.
+  generalize (I.error_fix_correct u.1 m e (eval u tf Y Y) (f x)).
+  rewrite -/i /= {}/Xerror_fix {}/error_fix {}/Xbind Hfx.
+  rewrite Hfx in Hx. now intros; revert Hx.
+Qed.
+
+Definition round_fix (u : U) (m : rounding_mode) (emin : Z) (X : I.type) (t : T) : T :=
+  add u X t (error_fix u m emin X t).
+
+Theorem round_fix_correct u m e (Y : I.type) tf f :
+  approximates Y tf f ->
+  approximates Y (round_fix u m e Y tf) (fun x => Xround_fix m e (f x)).
+Proof.
+move=> Hf.
+rewrite /round_fix.
+apply: (@approximates_ext (fun x : R => Xadd (f x) (Xerror_fix m e (f x)))).
+{ move=> x. case: (f x) => //= xr.
+  congr Xreal; rewrite /Basic.error_fix /Basic.round_fix.
+  ring. }
+apply: add_correct => //=.
+exact: error_fix_correct.
+Qed.
+
 (** ** Generic implementation of basic functions *)
 
 Definition fun_gen
