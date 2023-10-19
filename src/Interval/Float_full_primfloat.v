@@ -39,7 +39,7 @@ Module IT := IntervalTacticAux Iaux.
 Import I.
 
 Definition pi (prec : F.precision) : type :=
-  (Ibnd 0x1.921fb54442d18p+1 0x1.921fb54442d20p+1)%float.
+  (Ibnd 0x1.921fb54442d18p+1 0x1.921fb54442d19p+1)%float.
 
 Theorem pi_correct : forall prec, contains (convert (pi prec)) (Xreal PI).
 Proof.
