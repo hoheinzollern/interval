@@ -418,4 +418,50 @@ Ltac do_interval_intro y extend fvar bvars prec degree depth native nocheck eval
   | unfold i ; clear i ;
     do_interval_generalize (I.output_correct output) ].
 
+Module SimpleTactic.
+
+Inductive interval_tac_parameters : Set :=
+  | i_prec (p : positive)
+  | i_bisect (v : R)
+  | i_autodiff (v : R)
+  | i_taylor (v : R)
+  | i_degree (d : nat)
+  | i_depth (d : nat).
+
+Ltac do_interval_parse params depth :=
+  let rec aux fvar bvars prec degree depth itm params :=
+    lazymatch params with
+    | nil => constr:((fvar, bvars, prec, degree, depth, itm))
+    | cons (i_prec ?p) ?t => aux fvar bvars p degree depth itm t
+    | cons (i_degree ?d) ?t => aux fvar bvars prec d depth itm t
+    | cons (i_bisect ?x) ?t => aux fvar (cons x bvars) prec degree depth itm t
+    | cons (i_autodiff ?x) ?t => aux (Some x) bvars prec degree depth itm_autodiff t
+    | cons (i_taylor ?x) ?t => aux (Some x) bvars prec degree depth itm_taylor t
+    | cons (i_depth ?d) ?t => aux fvar bvars prec degree d itm t
+    | cons ?h _ => fail 100 "Unknown tactic parameter" h
+    end in
+  aux (@None R) (@nil R) 53%positive 10%nat depth itm_naive params.
+
+Ltac do_interval_ params :=
+  match do_interval_parse params 15%nat with
+  | (?fvar, ?bvars, ?prec, ?degree, ?depth, ?itm) =>
+    let prec := eval vm_compute in (I.F.PtoP prec) in
+    do_interval fvar bvars prec degree depth false false itm
+  end.
+
+Ltac do_interval_intro_ t extend params :=
+  match do_interval_parse params 5%nat with
+  | (?fvar, ?bvars, ?prec, ?degree, ?depth, ?itm) =>
+    let prec := eval vm_compute in (I.F.PtoP prec) in
+    do_interval_intro t extend fvar bvars prec degree depth false false itm false
+  end.
+
+Tactic Notation "interval" "with" constr(params) :=
+  do_interval_ ltac:(tuple_to_list params (@nil interval_tac_parameters)).
+
+Tactic Notation "interval_intro" constr(t) "with" constr(params) :=
+  do_interval_intro_ t ie_none ltac:(tuple_to_list params (@nil interval_tac_parameters)).
+
+End SimpleTactic.
+
 End IntervalTacticAux.

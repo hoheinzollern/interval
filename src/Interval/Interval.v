@@ -267,6 +267,7 @@ Parameter type : Type.
 Parameter nan : type.
 Parameter convert : type -> ExtendedR.
 Parameter precision : Type.
+Parameter PtoP : positive -> precision.
 
 End IntervalBounds.
 

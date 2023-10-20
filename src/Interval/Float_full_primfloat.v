@@ -31,11 +31,12 @@ Require Import Interval_helper.
 
 Module PrimFloatIntervalFull <: IntervalOps.
 
-Module I := FloatIntervalFull PrimitiveFloat.
 Module Faux := SpecificFloat BigIntRadix2.
 Module Iaux := FloatIntervalFull Faux.
 Module IT := IntervalTacticAux Iaux.
+Import IT.SimpleTactic.
 
+Module I := FloatIntervalFull PrimitiveFloat.
 Import I.
 
 Definition pi (prec : F.precision) : type :=
@@ -45,7 +46,7 @@ Theorem pi_correct : forall prec, contains (convert (pi prec)) (Xreal PI).
 Proof.
 intros prec.
 cbv -[IZR PI Rle Rdiv].
-IT.do_interval (@None R) (@nil R) (Faux.PtoP 60) 0%nat 0%nat false true itm_naive.
+interval with (i_prec 60).
 Qed.
 
 Include FloatInterval PrimitiveFloat.
