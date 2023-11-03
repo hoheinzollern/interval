@@ -44,10 +44,6 @@ Reserved Notation "i >: x"
 Reserved Notation "i >:: x"
   (at level 70, no associativity, format "i  >::  x").
 
-Reserved Notation "p .[ x ]"
-  (at level 2, left associativity, format "p .[ x ]").
-Reserved Notation "a ^` ()" (at level 8, format "a ^` ()").
-
 Module Type BaseOps.
 Parameter Inline U : Type.
 Parameter Inline T : Type.
