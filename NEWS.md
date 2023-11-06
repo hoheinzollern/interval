@@ -1,3 +1,10 @@
+Version 4.9.0
+-------------
+
+* added support for fixed-point rounding operators from Flocq
+* made the tactics recognize the elementary error `round x - x`
+* tightened enclosures of floating-point rounding operators and errors
+
 Version 4.8.1
 -------------
 
@@ -26,7 +33,7 @@ Version 4.6.0
 -------------
 
 * added option `i_decimal` for producing decimal enclosures
-* added support for rounding operators from Flocq
+* added support for floating-point rounding operators from Flocq
 
 Version 4.5.2
 -------------
