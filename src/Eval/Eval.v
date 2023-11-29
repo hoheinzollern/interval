@@ -526,7 +526,7 @@ eapply proj2.
 revert Hf m H.
 apply: (eval_inductive_prop_floor_fun _ _ (fun (f : R -> R) v => notXnan v -> v = Xreal (f x) /\ continuous f x)) => //.
 intros f1 f2 Heq b H Hb.
-case: (H Hb) => {H} H H'.
+case: (H Hb) => {} H H'.
 split.
 by rewrite -Heq.
 now eapply continuous_ext.

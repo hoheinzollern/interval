@@ -580,7 +580,7 @@ split.
   have [Ig' HIg'']: ex_RInt g u0 v0.
     apply: ex_RInt_Chasles. exact: Hu1.
     exact: ex_RInt_swap.
-  move: (HPint u0 v0 Hu2 Hv2 Ig' HIg'') => {HPint} HPint.
+  move: (HPint u0 v0 Hu2 Hv2 Ig' HIg'') => {} HPint.
   suff Hineq: norm I <= (1 + Rmax (Rabs l) (Rabs u)) * norm Ig'.
     apply: Rle_trans Hineq _.
     rewrite /pos_eps1 /eps1 /=  in HPint.
@@ -739,7 +739,7 @@ split.
     have -> : 0 = scal (v0 - u0) zero by rewrite scal_zero_r.
     by apply: is_RInt_const.
     by move => x Hx; apply: Hg; lra.
-  move: (HPint u0 v0 Hu2 Hv2 Ig' HIg'') => {HPint} HPint.
+  move: (HPint u0 v0 Hu2 Hv2 Ig' HIg'') => {} HPint.
   suff Hineq: norm I <= (1 + Rmax (Rabs l) (Rabs u)) * norm Ig'.
     apply: Rle_trans Hineq _.
     rewrite /pos_eps1 /eps1 /=  in HPint.

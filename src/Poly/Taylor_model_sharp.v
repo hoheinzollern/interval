@@ -1345,7 +1345,7 @@ constructor.
   }
 constructor.
 - by move=> *; rewrite PolR.size_rec1 Pol.size_rec1.
-- { move => {X0 X n Hsubset Hex} X0 xi0 n Hx.
+- { move => {X n Hsubset Hex} X0 xi0 n Hx.
     apply: Pol.rec1_correct =>//.
     by move=> *;
       repeat first [apply: J.div_correct
@@ -1354,7 +1354,7 @@ constructor.
     exact: J.exp_correct.
   }
 - done.
-- move=> {n} n x Hx; eapply ex_derive_n_is_derive_n; exact: is_derive_n_exp.
+- move=> {} n x Hx; eapply ex_derive_n_is_derive_n; exact: is_derive_n_exp.
 Qed.
 
 Lemma nat_ind2 (P : nat -> Prop) :
@@ -1577,7 +1577,7 @@ constructor.
   }
 constructor.
 - by move=> *; rewrite PolR.size_grec1 Pol.size_grec1.
-- { move => {X0 X n Hsubset Hex} X0 xi0 n Hx.
+- { move => {X n Hsubset Hex} X0 xi0 n Hx.
     apply: Pol.grec1_correct =>//.
     + move=> qi q m Hq.
       by repeat first [apply: Pol.div_mixed_r_correct|
@@ -1679,7 +1679,7 @@ constructor.
         (1 := open_comp cos (fun y => y <> 0%R)
           (fun y _ => continuous_cos y)
         (open_neq R0)) (3 := Hdef).
-      move=> {Hdef Hx x} x Hdef.
+      move=> {Hdef Hx} x Hdef.
       by rewrite /Xtan' is_zero_false.
     rewrite last_grec1up // head_gloop1.
     rewrite [size _]/= subn0.
@@ -1717,7 +1717,7 @@ constructor.
     }
 constructor.
 - by move=> *; rewrite PolR.size_grec1 Pol.size_grec1.
-- { move => {X0 X n Hsubset Hex E0} X0 xi0 n Hx.
+- { move => {X n Hsubset Hex E0} X0 xi0 n Hx.
     apply: Pol.grec1_correct =>//.
     + move=> qi q m Hq.
       by repeat first [apply: Pol.div_mixed_r_correct|
@@ -1739,7 +1739,7 @@ constructor.
     + apply: Pol.lift_correct; exact: Pol.one_correct.
     + move=> [/=|k]; rewrite /PolR.nth ?nth_default //; exact: J.zero_correct.
   }
-- { move => {X0 X n Hsubset Hex E0} X x Hx Dx n k Hk.
+- { move => {n Hsubset Hex E0} X x Hx Dx n k Hk.
     apply/Pol.grec1_propagate =>//.
       move=> q _.
       apply/Pol.horner_propagate/contains_Xnan.
@@ -1748,7 +1748,7 @@ constructor.
     by rewrite Pol.size_grec1.
   }
 - move=> m x Hx.
-  have {E0} E0: cos x <> R0.
+  have {}E0: cos x <> R0.
     apply: apart0_correct E0.
     exact: J.cos_correct.
   eapply (@ex_derive_n_ext_loc tan); last first.
@@ -1851,7 +1851,7 @@ constructor.
   }
 constructor.
 - by move=> *; rewrite PolR.size_rec1 Pol.size_rec1.
-- { move => {X0 X n Hsubset Hex E1} X0 xi0 n Hx.
+- { move => {X n Hsubset Hex E1} X0 xi0 n Hx.
     apply: Pol.rec1_correct =>//.
     by move=> *;
       repeat first [apply: J.div_correct
@@ -1960,7 +1960,7 @@ constructor.
   }
 constructor.
 - by move=> *; rewrite PolR.size_rec1 Pol.size_rec1.
-- { move => {X0 X n Hsubset Hex E1} X0 xi0 n Hx.
+- { move => {X n Hsubset Hex E1} X0 xi0 n Hx.
     apply: Pol.rec1_correct =>//.
 by move=> *;
   repeat first [apply: J.div_correct
@@ -2052,7 +2052,7 @@ case: p => [|p|p] Hx.
 - eapply (locally_open (fun _ => True)) =>//; exact: open_true.
 - eapply (locally_open (fun _ => True)) =>//; exact: open_true.
 - eapply (@locally_open _ (fun x => x <> 0)%R) =>//; first exact: open_neq.
-  by move => {x Hx} x Hx; rewrite /= is_zero_false.
+  by move => {Hx} x Hx; rewrite /= is_zero_false.
   case: Hx => // ; by case.
 Qed.
 
@@ -2167,7 +2167,7 @@ constructor.
 - by move=> {n} ? ? n;
     rewrite ?(@PolR.size_dotmuldiv n.+1, @Pol.size_dotmuldiv n.+1,
       Pol.size_rec1, size_rec1up, PolR.size_rec1) //.
-- { move=> {X0 x0 n Hsubset Hex} X0 x0 n Hx0.
+- { move=> {x0 n Hsubset Hex} X0 x0 n Hx0.
     unfold T_power_int, TR.T_power_int.
     apply: Pol.dotmuldiv_correct.
     by rewrite size_falling_seq size_fact_seq.
@@ -2309,7 +2309,7 @@ constructor.
       exact: (I.inv_correct _ _ (Xreal x)).
     - by rewrite Pol.size_rec1.
   }
-- { move=> {X0 n Hsubset Hex} n x Hx.
+- { move=> {X0 Hsubset Hex} n x Hx.
     move/(apart0_correct Hx) in E0.
     apply: (ex_derive_n_ext_loc Rinv).
       apply: (locally_open (fun t => t <> 0)%R) =>//.
@@ -2420,10 +2420,10 @@ constructor.
     by rewrite Z.opp_add_distr.
   }
 constructor.
-- by move=> {n X Hsubset E0} X x [|n]; rewrite /TR.T_ln !sizes //=
+- by move=> {n Hsubset E0} X x [|n]; rewrite /TR.T_ln !sizes //=
     ?(@Pol.size_dotmuldiv n.+1, Pol.size_rec1,
       @PolR.size_dotmuldiv n.+1, PolR.size_rec1, size_rec1up, size_behead).
-- { move=> {X0 x0 n Hsubset Hex} X0 x0 n Hx0.
+- { move=> {x0 n Hsubset Hex} X0 x0 n Hx0.
     rewrite /T_ln /TR.T_ln.
     apply: Pol.polyCons_correct; last exact: J.ln_correct.
     case: n => [|n]; first exact: Pol.polyNil_correct.

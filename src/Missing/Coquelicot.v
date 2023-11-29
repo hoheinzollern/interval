@@ -508,10 +508,10 @@ elim: n x => [|n IHn] x.
 by rewrite /= Rmult_1_l.
 rewrite -addSnnS 2!addSn /=.
 apply is_derive_ext with (f := fun x => (-1)^n * cos x).
-move => /= {x} x.
+move => /= {} x.
 apply sym_eq, is_derive_unique.
 eapply is_derive_ext.
-move => /= {x} x.
+move => /= {} x.
 apply sym_eq, is_derive_n_unique.
 apply IHn.
 apply is_derive_scal.
@@ -529,7 +529,7 @@ rewrite -{1}(odd_double_half n); case: odd => /=.
 2: rewrite -addnn; exact: is_derive_2n_sin.
 set n' := n./2.
 eapply is_derive_ext.
-move => /= {x} x.
+move => /= {} x.
 apply sym_eq, is_derive_n_unique.
 rewrite -addnn; apply: is_derive_2n_sin.
 apply is_derive_scal.
@@ -543,10 +543,10 @@ elim: n x => [|n IHn] x.
 by rewrite /= Rmult_1_l.
 rewrite -addSnnS 2!addSn /=.
 apply is_derive_ext with (f := fun x => (-1)^n * -sin x).
-move => /= {x} x.
+move => /= {} x.
 apply sym_eq, is_derive_unique.
 eapply is_derive_ext.
-move => /= {x} x.
+move => /= {} x.
 apply sym_eq, is_derive_n_unique.
 apply IHn.
 apply is_derive_scal.
@@ -565,7 +565,7 @@ rewrite -{1}(odd_double_half n); case: odd => /=.
 2: rewrite -addnn; exact: is_derive_2n_cos.
 set n' := n./2.
 eapply is_derive_ext.
-move => /= {x} x.
+move => /= {} x.
 apply sym_eq, is_derive_n_unique.
 rewrite -addnn; apply: is_derive_2n_cos.
 apply is_derive_scal.
