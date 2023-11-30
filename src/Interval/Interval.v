@@ -19,7 +19,6 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import Bool Reals Psatz.
 From Coquelicot Require Import Coquelicot.
-From mathcomp.ssreflect Require Import ssreflect.
 
 Require Import Stdlib.
 Require Import Xreal.
@@ -844,39 +843,51 @@ Lemma contains_RInt prec (f3 : R -> R) x1 x2 Y X1 X2 :
   (forall x, (Rmin x1 x2 <= x <= Rmax x1 x2)%R -> contains (I.convert Y) (Xreal (f3 x))) ->
   contains (I.convert (I.mul prec (I.sub prec X2 X1) Y)) (Xreal (RInt f3 x1 x2)).
 Proof.
-move => Hf3_int HZx1 HZx2 Hext.
+intros Hf3_int HZx1 HZx2 Hext.
 destruct (Req_dec x2 x1) as [H|H].
-  rewrite H RInt_point /zero /= -(Rmult_0_l (f3 x1)) -(Rminus_diag_eq x2 x1) //.
-  apply: mul_correct.
-  exact: sub_correct.
-  apply: Hext.
-  exact: Rmin_Rmax_l.
-have -> : (RInt f3 x1 x2 = (x2 - x1) * ((RInt f3 x1 x2) / (x2 - x1)))%R.
-  rewrite /Rdiv (Rmult_comm _ (Rinv _)) -Rmult_assoc Rinv_r ?Rmult_1_l //.
-  exact: Rminus_eq_contra.
-apply: mul_correct.
-exact: sub_correct.
-wlog H': x1 x2 {H HZx1 HZx2} Hext Hf3_int / (x1 < x2)%R.
-  intros H'.
+{ rewrite H, RInt_point.
+  unfold zero ; simpl.
+  rewrite <- (Rmult_0_l (f3 x1)).
+  apply mul_correct.
+  rewrite <- (Rminus_diag_eq x2 x1) by easy.
+  now apply sub_correct.
+  apply Hext.
+  apply Rmin_Rmax_l. }
+replace (RInt f3 x1 x2) with ((x2 - x1) * ((RInt f3 x1 x2) / (x2 - x1)))%R.
+2: {
+  field.
+  now apply Rminus_eq_contra.
+}
+apply mul_correct.
+now apply sub_correct.
+assert (H': forall x1 x2 : R, x1 < x2 ->
+  (forall x, Rmin x1 x2 <= x <= Rmax x1 x2 -> contains (I.convert Y) (Xreal (f3 x))) ->
+  ex_RInt f3 x1 x2 -> contains (I.convert Y) (Xreal (RInt f3 x1 x2 / (x2 - x1)))).
+2: {
   destruct (Rdichotomy _ _ H) as [H21|H12].
-  rewrite -opp_RInt_swap.
+  apply ex_RInt_swap in Hf3_int.
+  rewrite <- opp_RInt_swap by easy.
   replace (-_/_)%R with (RInt f3 x2 x1 / (x1 - x2))%R by (field; lra).
-  apply: H' H21.
-  by rewrite Rmin_comm Rmax_comm.
-  exact: ex_RInt_swap.
-  exact: ex_RInt_swap.
-  exact: H'.
-case: (I.convert Y) Hext => // l u Hext.
-apply: le_contains.
-- rewrite /le_lower /le_upper /=.
-  case: l Hext => //= rl Hext.
-  apply: Ropp_le_contravar.
-  apply: RInt_le_l => // x Hx.
+  apply H' ; try easy.
+  now rewrite Rmin_comm, Rmax_comm.
+  now apply H'.
+}
+clear.
+intros x1 x2 H' Hext Hf3_int.
+destruct (I.convert Y) as [|l u].
+easy.
+apply le_contains.
+- destruct l as [|rl]. easy.
+  unfold le_lower, le_upper. simpl.
+  apply Ropp_le_contravar.
+  apply RInt_le_l ; try easy.
+  intros x Hx.
   apply Hext.
   now rewrite -> Rmin_left, Rmax_right ; try apply Rlt_le.
-- rewrite /le_upper /=.
-  case: u Hext => //= ru Hext.
-  apply: RInt_le_r => // x Hx.
+- destruct u as [|ru]. easy.
+  unfold le_upper.
+  apply RInt_le_r ; try easy.
+  intros x Hx.
   apply Hext.
   now rewrite -> Rmin_left, Rmax_right ; try apply Rlt_le.
 Qed.
