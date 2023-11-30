@@ -207,12 +207,6 @@ Proof.
 now intros b Hb; rewrite F'.valid_ub_real; [|rewrite F.real_correct, Hb].
 Qed.
 
-Lemma valid_lb_nan : F.valid_lb F.nan = true.
-Proof. apply F'.valid_lb_nan. Qed.
-
-Lemma valid_ub_nan : F.valid_ub F.nan = true.
-Proof. apply F'.valid_ub_nan. Qed.
-
 Lemma bnd_correct :
   forall l u, valid_lb l -> valid_ub u ->
   convert (bnd l u) = Interval.Ibnd (F.toX l) (F.toX u).
@@ -2740,7 +2734,7 @@ generalize (sign_large_correct_ xl xu x Bx).
 case sign_large_ ; try easy.
 - intros [H1 [H2 H3]].
   simpl.
-  rewrite valid_lb_nan.
+  rewrite F'.valid_lb_nan.
   unfold Fdivz_UP.
   rewrite F.real_correct.
   destruct F.toX as [|xlr] eqn:Hxl.
@@ -2788,7 +2782,7 @@ case sign_large_ ; try easy.
       now apply Rlt_not_eq.
 - intros [H1 [H2 H3]].
   simpl.
-  rewrite valid_ub_nan.
+  rewrite F'.valid_ub_nan.
   unfold Fdivz_DN.
   rewrite F.real_correct.
   destruct F.toX as [|xur] eqn:Hxu.
@@ -3692,5 +3686,8 @@ unfold error_flt.
 assert (H := fun emin p => proj2 (error_flt_correct_aux prec mode emin p _ _ Hv)).
 destruct mode ; apply H.
 Qed.
+
+Definition valid_lb_nan := F'.valid_lb_nan.
+Definition valid_ub_nan := F'.valid_ub_nan.
 
 End FloatInterval.
