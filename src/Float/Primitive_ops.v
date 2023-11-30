@@ -281,11 +281,12 @@ case x as [s|s| |s m e B]; [ |now simpl..| ].
 now simpl; rewrite <-FtoR_split; intro H; injection H.
 Qed.
 
-Lemma B2R_BtoX x r : is_finite x = true -> B2R x = r -> BtoX x = Xreal r.
+Lemma B2R_BtoX : forall x, is_finite x = true -> BtoX x = Xreal (B2R x).
 Proof.
-case x as [s|s| |s m e B]; [ |now intro H; discriminate H..| ]; intros _ <-.
-{ now simpl. }
-now simpl; rewrite FtoR_split.
+intros [s|s| |s m e B] ; try easy.
+intros _.
+simpl.
+now rewrite FtoR_split.
 Qed.
 
 Lemma toX_Prim2B x : toX x = BtoX (Prim2B x).
@@ -2832,7 +2833,7 @@ assert (Hbpow' : (bpow radix2 (- FloatOps.prec + e'') = / IZR (2 ^ (FloatOps.pre
 case mode; clear mode.
 { case_eq s; intro Hs; simpl.
   { rewrite toX_Prim2B, Prim2B_B2Prim, BtoX_Bopp.
-    rewrite (B2R_BtoX _ _ Hfmh Hrmh).
+    rewrite (B2R_BtoX _ Hfmh), Hrmh.
     revert H'f'e''; rewrite Hs; intros->.
     unfold cond_Zopp, Zceil, Xlift.
     rewrite !opp_IZR, <-Ropp_mult_distr_l, Ropp_involutive.
@@ -2844,7 +2845,7 @@ case mode; clear mode.
   unfold Bcompare, B2SF at 2; intros ->.
   case Rcompare_spec.
   { rewrite Hrmh, HB2R_FtoR; simpl.
-    rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ _ Hfmh1 Hrmh1).
+    rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ Hfmh1), Hrmh1.
     rewrite <-Hs, H'f'e'', Hs; unfold cond_Zopp.
     intros H'mh.
     do 2 apply f_equal.
@@ -2862,7 +2863,7 @@ case mode; clear mode.
     apply Z.lt_le_incl, Z_mod_lt.
     apply Z.lt_gt, lt_IZR; rewrite <-Hbpow; apply bpow_gt_0. }
   { rewrite HB2R_FtoR; intros <-; rewrite Hrmh, Zceil_IZR, <-Hrmh; simpl.
-    now rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ _ Hfmh Hrmh), Hrmh. }
+    now rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ Hfmh), Hrmh. }
   intro H; exfalso; revert H; apply Rle_not_lt.
   rewrite Hrmh; unfold mh.
   rewrite HB2R_FtoR, <-Hs, H'f'e'', Hs; unfold cond_Zopp.
@@ -2877,7 +2878,7 @@ case mode; clear mode.
     case Rcompare_spec.
     { rewrite Hromh, HB2R_FtoR; simpl.
       rewrite toX_Prim2B, Prim2B_B2Prim, BtoX_Bopp.
-      rewrite (B2R_BtoX _ _ Hfmh1 Hrmh1).
+      rewrite (B2R_BtoX _ Hfmh1), Hrmh1.
       rewrite <-(Z.opp_involutive (Zfloor _)), <-(Ropp_involutive (FtoR _ _ _ _)).
       fold (Zceil (- (FtoR radix2 true m e))).
       rewrite <-Hs, H'f'e'', Hs; unfold cond_Zopp.
@@ -2901,7 +2902,7 @@ case mode; clear mode.
       apply Z.lt_gt, lt_IZR; rewrite <-Hbpow; apply bpow_gt_0. }
     { rewrite HB2R_FtoR; simpl.
       rewrite toX_Prim2B, Prim2B_B2Prim.
-      rewrite Hromh, (B2R_BtoX _ _ Hfomh Hromh); intros ->.
+      rewrite Hromh, (B2R_BtoX _ Hfomh), Hromh ; intros ->.
       now rewrite <-opp_IZR, Zfloor_IZR. }
     rewrite B2R_Bopp.
     rewrite HB2R_FtoR, <-Hs, H'f'e'', Hs.
@@ -2912,7 +2913,7 @@ case mode; clear mode.
     rewrite Hbpow', <-Zfloor_div; [ |apply pow2_nz; lia].
     apply Zfloor_lb. }
   rewrite toX_Prim2B, Prim2B_B2Prim.
-  rewrite (B2R_BtoX _ _ Hfmh Hrmh).
+  rewrite (B2R_BtoX _ Hfmh), Hrmh.
   revert H'f'e''; rewrite Hs; intros->.
   unfold cond_Zopp, Zceil, Xlift.
   do 2 apply f_equal.
@@ -2923,7 +2924,7 @@ case mode; clear mode.
   { rewrite Rlt_bool_true.
     2:{ apply Generic_proof.FtoR_Rneg. }
     rewrite toX_Prim2B, Prim2B_B2Prim, BtoX_Bopp.
-    rewrite (B2R_BtoX _ _ Hfmh Hrmh).
+    rewrite (B2R_BtoX _ Hfmh), Hrmh.
     rewrite <-Hs, H'f'e'', Hs.
     unfold cond_Zopp, Zceil, Xlift.
     rewrite !opp_IZR, <-Ropp_mult_distr_l, Ropp_involutive.
@@ -2933,7 +2934,7 @@ case mode; clear mode.
   rewrite Rlt_bool_false.
   2:{ apply Rlt_le, Generic_proof.FtoR_Rpos. }
   rewrite toX_Prim2B, Prim2B_B2Prim.
-  rewrite (B2R_BtoX _ _ Hfmh Hrmh).
+  rewrite (B2R_BtoX _ Hfmh), Hrmh.
   rewrite <-Hs, H'f'e'', Hs.
   do 2 apply f_equal.
   rewrite Hbpow'; unfold mh.
@@ -3008,7 +3009,7 @@ case Rcompare_spec; intro Hf'flhalf; simpl.
     do 2 f_equal.
     unfold Generic_fmt.Znearest.
     now rewrite Z.even_opp, Z.add_1_r, Z.even_succ, Z.negb_odd. }
-  unfold fl; rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ _ Hfmh Hrmh).
+  unfold fl; rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ Hfmh), Hrmh.
   unfold Rnearbyint; do 2 apply f_equal.
   apply Generic_fmt.Znearest_imp.
   rewrite <-Hrmh; fold fl.
@@ -3023,7 +3024,7 @@ case Rcompare_spec; intro Hf'flhalf; simpl.
     do 2 f_equal.
     unfold Generic_fmt.Znearest.
     now rewrite Z.even_opp, Z.add_1_r, Z.even_succ, Z.negb_odd. }
-  unfold fu; rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ _ Hfmh1 Hrmh1).
+  unfold fu; rewrite toX_Prim2B, Prim2B_B2Prim, (B2R_BtoX _ Hfmh1), Hrmh1.
   unfold Rnearbyint; do 2 apply f_equal.
   apply Generic_fmt.Znearest_imp.
   rewrite <-Hrmh1; fold fu.
@@ -3052,8 +3053,9 @@ rewrite <-Hrmh; fold fl.
 case Rcompare_spec; [lra| |lra]; intros _.
 rewrite Bool.if_negb.
 cut (Z.even mh = (Z.land mh 1 =? 0)%Z).
-{ now intros <-; case (Z.even mh);
-    rewrite toX_Prim2B, Prim2B_B2Prim; symmetry; apply B2R_BtoX. }
+{ intros <-. rewrite toX_Prim2B.
+  case (Z.even mh) ; rewrite Prim2B_B2Prim, B2R_BtoX by easy ;
+  now apply f_equal, eq_sym. }
 revert Hmh; case mh as [ |pmh|pmh]; [now simpl|intros _|lia]; simpl.
 now case pmh as [pmh|pmh| ].
 Qed.
