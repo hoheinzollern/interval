@@ -774,6 +774,42 @@ Definition atan prec xi :=
   | Inan => Inan
   end.
 
+Lemma pi4_mul2 :
+  forall prec,
+  F.valid_ub (F.mul_UP prec (upper (T.pi4 prec)) (F.fromZ 2)) = true /\
+  le_upper (Xreal (PI/2))%XR (F.toX (F.mul_UP prec (upper (T.pi4 prec)) (F.fromZ 2))).
+Proof.
+intros prec.
+unfold F.is_non_neg, F.is_non_pos, F.is_non_pos_real, F.is_non_neg_real.
+assert (H1 := T.pi4_correct prec).
+assert (H2 := proj2 (T.J.contains_le _ _ H1)).
+elim (F.mul_UP_correct prec (upper (T.pi4 prec)) (F.fromZ 2)).
+- intros H3 H4.
+  split.
+  exact H3.
+  apply le_upper_trans with (2 := H4).
+  clear -H2.
+  destruct F.toX as [|pu]. easy.
+  rewrite F.fromZ_correct by easy.
+  simpl in *.
+  lra.
+- unfold F.is_non_neg.
+  left ; split.
+  split.
+  apply valid_ub_upper.
+  eexists ; exact H1.
+  destruct F.toX as [|pu]. easy.
+  simpl in *.
+  apply Rle_trans with (2 := H2).
+  apply Rlt_le, PI4_RGT_0.
+  split.
+  apply F'.valid_ub_real.
+  rewrite F.real_correct.
+  now rewrite F.fromZ_correct.
+  rewrite F.fromZ_correct by easy.
+  now apply IZR_le.
+Qed.
+
 Lemma atan_correct :
   forall prec, extension Xatan (atan prec).
 Proof.
@@ -789,24 +825,7 @@ assert (Hpi := T.pi4_correct prec).
 simpl.
 unfold c2.
 unfold convert in Hx; rewrite Vxl, Vxu in Hx; simpl in Hx.
-elim (F.mul_UP_correct prec (upper (T.pi4 prec)) (F.fromZ 2)).
-2: {
-  unfold F.is_non_neg, F.is_non_pos, F.is_non_pos_real, F.is_non_neg_real.
-  rewrite F.fromZ_correct by easy.
-  rewrite (F'.valid_ub_real (F.fromZ 2)) by now rewrite F.real_correct, F.fromZ_correct.
-  generalize (T.pi4_correct prec).
-  unfold T.I.convert.
-  case T.pi4.
-  { intros _; left; simpl.
-    rewrite F'.valid_ub_nan, F'.nan_correct; repeat split; lra. }
-  intros pl pu; simpl.
-  rewrite Bool.andb_comm.
-  case (F.valid_ub pu); [|intros [H0 H1]; lra]; intros _.
-  case F.toX; [left; repeat split; lra|].
-  intro r'.
-  case (Rle_or_lt 0 r'); intro Hr'; [left; repeat split; lra|].
-  do 2 right; left; repeat split; lra. }
-intros Vmpi2 Hmpi2.
+destruct (pi4_mul2 prec) as [Vmpi2 Hmpi2].
 set (l := if F.real xl then _ else _).
 set (u := if F.real xu then _ else _).
 assert (Vl : F.valid_lb l = true).
@@ -840,13 +859,6 @@ split.
   rewrite F'.neg_correct.
   revert Hmpi2; unfold le_upper.
   case F.toX; [easy|]; intro rmpi2.
-  rewrite F.fromZ_correct by easy.
-  destruct (T.pi4 prec) as [|pi4l pi4u] ; simpl.
-  now rewrite F'.nan_correct.
-  revert Hpi; simpl.
-  case (_ && _)%bool; [|intros [H0 H1]; lra]; simpl; intro Hpi.
-  destruct (F.toX pi4u) as [|rpi4] ; try easy.
-  simpl.
   intro H.
   apply (Rle_trans _ _ _ (Ropp_le_contravar _ _ H)).
   apply Rlt_le.
@@ -874,17 +886,8 @@ split.
   revert Hmpi2.
   unfold le_upper.
   case F.toX; [easy|]; intro rmpi2.
-  rewrite F.fromZ_correct by easy.
-  destruct (T.pi4 prec) as [|pi4l pi4u] ; simpl.
-  now rewrite F'.nan_correct.
-  revert Hpi; simpl.
-  case (_ && _)%bool; [|intros [H0 H1]; lra]; simpl; intro Hpi.
-  destruct (F.toX pi4u) as [|rpi4] ; [easy|].
-  simpl.
   apply Rle_trans.
-  apply Rlt_le.
-  apply Rlt_le_trans with (1 := proj2 (atan_bound x)).
-  lra.
+  apply Rlt_le, atan_bound.
   intros rl Hl Hx.
   generalize (T.atan_correct prec xu).
   destruct (T.atan_fast prec xu) as [|al au].

@@ -591,6 +591,19 @@ intros x.
 now rewrite I.nai_correct.
 Qed.
 
+Lemma contains_le :
+  forall xi x,
+  contains (I.convert xi) x ->
+  le_lower (I.F.convert (I.lower xi)) x /\ le_upper x (I.F.convert (I.upper xi)).
+Proof.
+intros xi x H.
+assert (H' := not_empty_contains _ _ H).
+rewrite I.lower_correct, I.upper_correct by easy.
+destruct I.convert as [|xl xu].
+easy.
+now apply contains_le.
+Qed.
+
 Definition propagate fi :=
   forall xi, I.convert xi = Inan -> I.convert (fi xi) = Inan.
 
