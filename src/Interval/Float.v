@@ -1628,13 +1628,10 @@ destruct (F.real xl) eqn:Rl.
       apply Rle_0_1.
     * destruct (F.mul_UP_correct p52 xl (F.fromZ 2)) as [Hm1 Hm2].
       { left.
-        unfold F.is_non_neg.
-        repeat split.
-        now apply F'.valid_ub_real.
+        unfold F.is_non_neg'.
+        split.
         rewrite F'.real_correct by easy.
         now apply Rlt_le.
-        apply F'.valid_ub_real.
-        now rewrite F.real_correct, F.fromZ_correct.
         rewrite F.fromZ_correct by easy.
         now apply IZR_le. }
       destruct (F.real (F.mul_UP p52 xl (F.fromZ 2))) eqn:Rp.
@@ -2007,11 +2004,9 @@ elim (F.mul_DN_correct prec xl (F.fromZ 2)); [intros Vl Hl; rewrite Vl|].
     revert Hu; rewrite F.fromZ_correct by easy.
     unfold le_upper.
     now xreal_tac2; simpl; [|lra]. }
-  unfold F.is_non_neg, F.is_non_pos,F.is_non_neg_real, F.is_non_pos_real.
+  unfold F.is_non_neg', F.is_non_pos', F.is_non_neg_real, F.is_non_pos_real.
   rewrite Vxu.
-  rewrite F'.valid_ub_real;
-    [|now rewrite F.real_correct, F.fromZ_correct].
-  rewrite F.fromZ_correct; [|easy..].
+  rewrite F.fromZ_correct by easy.
   xreal_tac2; [now left; repeat split; lra|].
   case (Rlt_or_le 0 r); intro Hr.
   { left; repeat split; lra. }
@@ -2209,15 +2204,13 @@ case Rcompare_spec; intro Hr.
       rewrite X.
       revert Hxl; xreal_tac2; [now simpl|]; intro Hx.
       now apply Rmult_le_compat_neg_r; [apply Rlt_le|]. }
-    unfold F.is_non_neg, F.is_non_pos, F.is_non_pos_real, F.is_non_neg_real.
+    unfold F.is_non_neg', F.is_non_pos', F.is_non_pos_real, F.is_non_neg_real.
+    rewrite X.
     case (F.toX xl).
-    { now right; left; split;
-        [split|split; [rewrite F'.valid_lb_real;
-           [|rewrite F.real_correct, X]|rewrite X; apply Rlt_le]]. }
+    { right; left. split. easy. now apply Rlt_le. }
     intro r'; case (Rlt_or_le 0 r'); intro Hr'.
-    { now do 3 right; split; [|rewrite X]; apply Rlt_le. }
-    now right; left; split; [split|split; [rewrite F'.valid_lb_real;
-      [|rewrite F.real_correct, X]|rewrite X; apply Rlt_le]]. }
+    { now do 3 right; split; apply Rlt_le. }
+    right; left. split. easy. now apply Rlt_le. }
   unfold F.is_non_neg_real, F.is_non_pos_real, F.is_non_pos, F.is_non_neg.
   case (F.toX xu).
   { now right; right; left; split; [split|split; [rewrite F'.valid_lb_real;
@@ -2243,14 +2236,13 @@ elim (F.mul_DN_correct prec xl yf).
     rewrite X.
     revert Hxu; xreal_tac2; [now simpl|]; intro Hx.
     now apply Rmult_le_compat_r; [apply Rlt_le|]. }
-  unfold F.is_non_neg, F.is_non_pos, F.is_non_pos_real, F.is_non_neg_real.
+  unfold F.is_non_neg', F.is_non_pos', F.is_non_pos_real, F.is_non_neg_real.
+  rewrite X.
   case (F.toX xu).
-  { now left; split; [split|split; [rewrite F'.valid_ub_real;
-      [|rewrite F.real_correct, X]|rewrite X; apply Rlt_le]]. }
+  { left. split. easy. now apply Rlt_le. }
   intro r'; case (Rlt_or_le 0 r'); intro Hr'.
-  { now left; split; [split; [|apply Rlt_le]|split; [rewrite F'.valid_ub_real;
-      [|rewrite F.real_correct, X]|rewrite X; apply Rlt_le]]. }
-  now do 2 right; left; split; [|rewrite X; apply Rlt_le]. }
+  { left. now split; apply Rlt_le. }
+  do 2 right; left. split. easy. now apply Rlt_le. }
 unfold F.is_non_neg_real, F.is_non_pos_real, F.is_non_pos, F.is_non_neg.
 case (F.toX xl).
 { now do 3 right; split; [split|split; [rewrite F'.valid_ub_real;
@@ -2300,7 +2292,7 @@ case (sign_large_ xl xu) ; intros (Hx0, Hx0') ;
         end ;
         [ match goal with
           | |- context [F.valid_ub (F.mul_UP ?prec ?x ?y)] =>
-            elim (F.mul_UP_correct prec x y); [intros Vu Hu; rewrite Vu|
+            elim (F'.mul_UP_correct prec x y); [intros Vu Hu; rewrite Vu|
               unfold F.is_non_neg_real, F.is_non_pos_real;
               unfold F.is_non_neg, F.is_non_pos]
           end|] ;
@@ -2338,11 +2330,11 @@ elim (F.mul_DN_correct prec xu yl);
   [intros Vxuyl Hxuyl
   |now (try (now left); try (now (right; left));
         try (now (right; right; left)); try (now (right; right; right)))].
-elim (F.mul_UP_correct prec xl yl);
+elim (F'.mul_UP_correct prec xl yl);
   [intros Vxlyl Hxlyl
   |now (try (now left); try (now (right; left));
         try (now (right; right; left)); try (now (right; right; right)))].
-elim (F.mul_UP_correct prec xu yu);
+elim (F'.mul_UP_correct prec xu yu);
   [intros Vxuyu Hxuyu
   |now (try (now left); try (now (right; left));
         try (now (right; right; left)); try (now (right; right; right)))].
@@ -2878,7 +2870,7 @@ case (sign_large_ xl xu) ; intros [Hx0 Hx0'] ;
       end ;
   try match goal with
       | |- context [ F.mul_UP prec ?x ?y ] =>
-        elim (F.mul_UP_correct prec x x) ;
+        elim (F'.mul_UP_correct prec x x) ;
           [intros Vmdu Hmdu|
            now rewrite ?Vxl, ?Vxu ; try ( now left ) ; now right ; left] ;
         rewrite Vmdu ;
@@ -2902,7 +2894,7 @@ case (sign_large_ xl xu) ; intros [Hx0 Hx0'] ;
 simpl.
 destruct (F.abs_correct xl) as [Haxl Vaxl].
 destruct (F'.max_valid_ub _ _ Vaxl Vxu) as [Vmax Hmax].
-elim (F.mul_UP_correct prec (F.max (F.abs xl) xu) (F.max (F.abs xl) xu)).
+elim (F'.mul_UP_correct prec (F.max (F.abs xl) xu) (F.max (F.abs xl) xu)).
 2:{ unfold F.is_non_neg, F.is_non_pos, F.is_non_neg_real, F.is_non_pos_real.
     rewrite Vmax, Hmax, Haxl.
     left.
@@ -2947,11 +2939,11 @@ revert x Vx Hx; induction n; intros x Vx Hx; last first.
   xreal_tac x.
   now simpl; rewrite Rmult_1_r; right. }
 { assert (Vxx : F.valid_ub (F.mul_UP prec x x) = true).
-  { now apply F.mul_UP_correct; left. }
+  { now apply F'.mul_UP_correct; left. }
   assert (Hxx : le_upper (Xreal 0) (F.toX (F.mul_UP prec x x))).
   { apply (le_upper_trans _ (Xmul (F.toX x) (F.toX x))).
     { now xreal_tac2; apply Rmult_le_pos. }
-    now apply F.mul_UP_correct; left. }
+    now apply F'.mul_UP_correct; left. }
   do 2 (split; [now apply (IHn _ Vxx Hxx)|]).
   generalize (proj2 (proj2 (IHn _ Vxx Hxx))).
   apply le_upper_trans.
@@ -2962,21 +2954,21 @@ revert x Vx Hx; induction n; intros x Vx Hx; last first.
   xreal_tac2.
   { cut (le_upper (Xnan * Xnan)%XR (Xreal r)); [now simpl|].
     rewrite <-X0, <-X.
-    now apply F.mul_UP_correct; left. }
+    now apply F'.mul_UP_correct; left. }
   simpl.
   rewrite Pos2Nat.inj_xO.
   rewrite pow_sqr.
   apply pow_incr; split; [now apply Rmult_le_pos|].
   change (_ <= _)%R with (le_upper (Xmul (Xreal r0) (Xreal r0)) (Xreal r)).
   rewrite <-X0, <-X.
-  now apply F.mul_UP_correct; left; rewrite <-X0 in Hx. }
+  now apply F'.mul_UP_correct; left; rewrite <-X0 in Hx. }
 assert (Vxx : F.valid_ub (F.mul_UP prec x x) = true).
-{ now apply F.mul_UP_correct; left. }
+{ now apply F'.mul_UP_correct; left. }
 assert (Hxx : le_upper (Xreal 0) (F.toX (F.mul_UP prec x x))).
 { apply (le_upper_trans _ (Xmul (F.toX x) (F.toX x))).
   { now xreal_tac2; apply Rmult_le_pos. }
-  now apply F.mul_UP_correct; left. }
-elim (F.mul_UP_correct
+  now apply F'.mul_UP_correct; left. }
+elim (F'.mul_UP_correct
         prec x (Fpower_pos_UP prec (F.mul_UP prec x x) n)).
 { intros Vu Hu.
   split; [now simpl; rewrite Vu|].
@@ -3005,7 +2997,7 @@ elim (F.mul_UP_correct
     rewrite <-Hr1'.
     apply pow_incr; split; [now apply Rmult_le_pos|].
     change (_ <= _)%R with (le_upper (Xmul (Xreal r) (Xreal r)) (Xreal r1)).
-    rewrite <-X, <-X1; apply F.mul_UP_correct.
+    rewrite <-X, <-X1; apply F'.mul_UP_correct.
     left.
     unfold F.is_non_neg.
     now rewrite F'.valid_ub_real, X; [|rewrite F.real_correct, X]. }

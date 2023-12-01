@@ -29,7 +29,7 @@ Require Import Transcend.
 Module FloatIntervalFull (F'' : FloatOps with Definition sensible_format := true) <: IntervalOps.
 
 Module T := TranscendentalFloatFast F''.
-Include FloatInterval F''.
+Include T.I.
 
 Definition c3 := F.fromZ 3.
 Definition c4 := F.fromZ 4.
@@ -266,20 +266,15 @@ case_eq (F'.le' xu (F.mul_DN prec (lower (T.pi4 prec)) (F.fromZ 8))).
     { revert Hl.
       elim (F.mul_UP_correct prec (upper (T.pi4 prec)) (F.fromZ 4)).
       2:{
-        unfold F.is_non_neg_real, F.is_non_pos_real, F.is_non_neg, F.is_non_pos.
+        left ; unfold F.is_non_neg' ; split.
+        clear.
+        assert (H := T.pi4_correct prec).
+        rewrite T.I.valid_ub_upper, T.I.upper_correct by (eexists ; exact H).
+        destruct T.I.convert as [|l [|u]] ; try easy.
+        apply Rle_trans with (2 := proj2 H).
+        apply Rlt_le, PI4_RGT_0.
         rewrite F.fromZ_correct by easy.
-        rewrite (F'.valid_ub_real (F.fromZ 4)) by now rewrite F.real_correct, F.fromZ_correct.
-        generalize (T.pi4_correct prec).
-        unfold T.I.convert.
-        case T.pi4.
-        { simpl; intros _; left; rewrite F'.valid_ub_nan, F'.nan_correct.
-          repeat split; lra. }
-        intros l u; simpl.
-        rewrite F.valid_ub_correct, Bool.andb_comm.
-        case F.classify; [..|intros [H0 H1]; lra|]; intros _;
-          (case F.toX; [now left; repeat split; lra|]; intro ru);
-          (case (Rle_or_lt 0 ru); intro Hru;
-           [now left; repeat split; lra|do 2 right; left; lra]). }
+        now apply IZR_le. }
       intros Vmup.
       rewrite F.fromZ_correct by easy.
       unfold le_upper.
@@ -793,19 +788,13 @@ elim (F.mul_UP_correct prec (upper (T.pi4 prec)) (F.fromZ 2)).
   rewrite F.fromZ_correct by easy.
   simpl in *.
   lra.
-- unfold F.is_non_neg.
+- unfold F.is_non_neg'.
   left ; split.
-  split.
-  apply valid_ub_upper.
-  eexists ; exact H1.
-  destruct F.toX as [|pu]. easy.
-  simpl in *.
-  apply Rle_trans with (2 := H2).
-  apply Rlt_le, PI4_RGT_0.
-  split.
-  apply F'.valid_ub_real.
-  rewrite F.real_correct.
-  now rewrite F.fromZ_correct.
+  revert H2.
+  change T.I.F.convert with F.toX.
+  rewrite valid_ub_upper, T.I.upper_correct by (eexists ; exact H1).
+  destruct T.I.convert as [|l [|u]] ; try easy.
+  apply Rle_trans, Rlt_le, PI4_RGT_0.
   rewrite F.fromZ_correct by easy.
   now apply IZR_le.
 Qed.

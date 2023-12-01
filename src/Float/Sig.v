@@ -196,6 +196,9 @@ Definition is_non_neg x :=
   valid_ub x = true
   /\ match toX x with Xnan => True | Xreal r => (0 <= r)%R end.
 
+Definition is_non_neg' x :=
+  match toX x with Xnan => valid_ub x = true | Xreal r => (0 <= r)%R end.
+
 Definition is_pos x :=
   valid_ub x = true
   /\ match toX x with Xnan => True | Xreal r => (0 < r)%R end.
@@ -203,6 +206,9 @@ Definition is_pos x :=
 Definition is_non_pos x :=
   valid_lb x = true
   /\ match toX x with Xnan => True | Xreal r => (r <= 0)%R end.
+
+Definition is_non_pos' x :=
+  match toX x with Xnan => valid_lb x = true | Xreal r => (r <= 0)%R end.
 
 Definition is_neg x :=
   valid_lb x = true
@@ -222,12 +228,12 @@ Definition is_neg_real x :=
 
 Parameter mul_UP_correct :
   forall p x y,
-    ((is_non_neg x /\ is_non_neg y)
-     \/ (is_non_pos x /\ is_non_pos y)
-     \/ (is_non_pos_real x /\ is_non_neg_real y)
-     \/ (is_non_neg_real x /\ is_non_pos_real y))
-    -> (valid_ub (mul_UP p x y) = true
-        /\ le_upper (Xmul (toX x) (toX y)) (toX (mul_UP p x y))).
+  ((is_non_neg' x /\ is_non_neg' y) \/
+   (is_non_pos' x /\ is_non_pos' y) \/
+   (is_non_pos_real x /\ is_non_neg_real y) \/
+   (is_non_neg_real x /\ is_non_pos_real y)) ->
+  valid_ub (mul_UP p x y) = true /\
+  le_upper (Xmul (toX x) (toX y)) (toX (mul_UP p x y)).
 
 Parameter mul_DN_correct :
   forall p x y,
@@ -610,6 +616,45 @@ case_eq (F.classify x); intro Cx ; [..|easy|] ;
   rewrite ?Hx, ?Hy ;
   [case F.classify ; easy|..] ;
   now case F.toX.
+Qed.
+
+Lemma mul_UP_correct :
+  forall p x y,
+  ((F.is_non_neg x /\ F.is_non_neg y) \/
+   (F.is_non_pos x /\ F.is_non_pos y) \/
+   (F.is_non_pos_real x /\ F.is_non_neg_real y) \/
+   (F.is_non_neg_real x /\ F.is_non_pos_real y)) ->
+  (F.valid_ub (F.mul_UP p x y) = true /\
+  le_upper (Xmul (F.toX x) (F.toX y)) (F.toX (F.mul_UP p x y))).
+Proof.
+intros prec x y H.
+apply F.mul_UP_correct.
+destruct H as [[[H1 H2] [H3 H4]]|[[[H1 H2] [H3 H4]]|[[H1 H2]|[H1 H2]]]].
+- left ; unfold F.is_non_neg' ; split.
+  now destruct (F.toX x).
+  now destruct (F.toX y).
+- right ; left ; unfold F.is_non_pos' ; split.
+  now destruct (F.toX x).
+  now destruct (F.toX y).
+- intuition.
+- intuition.
+Qed.
+
+Lemma sqr_UP_correct :
+  forall prec x,
+  F.valid_lb x = true \/ F.valid_ub x = true ->
+  F.valid_ub (F.mul_UP prec x x) = true /\
+  le_upper (F.toX x * F.toX x)%XR (F.toX (F.mul_UP prec x x)).
+Proof.
+intros prec x Vx.
+apply F.mul_UP_correct.
+unfold F.is_non_neg', F.is_non_pos', F.is_non_pos_real, F.is_non_neg_real.
+destruct F.toX as [|xr].
+intuition.
+destruct (Rlt_or_le 0 xr) as [H|H].
+apply Rlt_le in H.
+now left.
+now right ; left.
 Qed.
 
 End FloatExt.

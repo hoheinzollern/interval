@@ -932,6 +932,9 @@ Definition is_non_neg x :=
   valid_ub x = true
   /\ match toX x with Xnan => True | Xreal r => (0 <= r)%R end.
 
+Definition is_non_neg' x :=
+  match toX x with Xnan => valid_ub x = true | Xreal r => (0 <= r)%R end.
+
 Definition is_pos x :=
   valid_ub x = true
   /\ match toX x with Xnan => True | Xreal r => (0 < r)%R end.
@@ -939,6 +942,9 @@ Definition is_pos x :=
 Definition is_non_pos x :=
   valid_lb x = true
   /\ match toX x with Xnan => True | Xreal r => (r <= 0)%R end.
+
+Definition is_non_pos' x :=
+  match toX x with Xnan => valid_lb x = true | Xreal r => (r <= 0)%R end.
 
 Definition is_neg x :=
   valid_lb x = true
@@ -958,12 +964,12 @@ Definition is_neg_real x :=
 
 Lemma mul_UP_correct :
   forall p x y,
-    ((is_non_neg x /\ is_non_neg y)
-     \/ (is_non_pos x /\ is_non_pos y)
-     \/ (is_non_pos_real x /\ is_non_neg_real y)
-     \/ (is_non_neg_real x /\ is_non_pos_real y))
-    -> (valid_ub (mul_UP p x y) = true
-        /\ le_upper (Xmul (toX x) (toX y)) (toX (mul_UP p x y))).
+  ((is_non_neg' x /\ is_non_neg' y) \/
+   (is_non_pos' x /\ is_non_pos' y) \/
+   (is_non_pos_real x /\ is_non_neg_real y) \/
+   (is_non_neg_real x /\ is_non_pos_real y)) ->
+  valid_ub (mul_UP p x y) = true /\
+  le_upper (Xmul (toX x) (toX y)) (toX (mul_UP p x y)).
 Proof.
 intros p x y _; split; [reflexivity|].
 unfold mul_UP.
