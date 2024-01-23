@@ -36,7 +36,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Ltac flatten := repeat
-  first[rewrite<-pred_of_minus in *| rewrite<-plusE in *|rewrite<-minusE in *].
+  first[rewrite Nat.sub_1_r in *| rewrite<-plusE in *|rewrite<-minusE in *].
 Ltac iomega := intros; flatten; (lia || apply/leP; lia).
 Ltac iomega_le := (repeat move/leP=>?); iomega.
 

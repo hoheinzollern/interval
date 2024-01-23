@@ -39,7 +39,7 @@ Proof.
 induction n as [|n IH] ; intros [|h p] d Hl ; try easy.
 simpl.
 apply IH.
-now apply lt_S_n.
+now rewrite Nat.succ_lt_mono.
 Qed.
 
 Lemma onth_rev :
@@ -68,7 +68,7 @@ easy.
 intros [|n] ; simpl.
 easy.
 intros H.
-apply lt_S_n in H.
+rewrite <-Nat.succ_lt_mono in H.
 now apply IH.
 Qed.
 
@@ -235,7 +235,7 @@ simple refine (Permut _ _ _ _ _ _).
     easy.
   now rewrite 2!onth_app_l.
   rewrite 2!onth_app_r by lia.
-  rewrite 2!minus_plus.
+  rewrite !(Nat.add_comm (length p)), !Nat.add_sub.
   apply H1.
 Qed.
 
@@ -246,12 +246,12 @@ Proof.
 intros l1 l2.
 assert (H1: length l2 + length l1 = length (l1 ++ l2)).
   rewrite app_length.
-  apply plus_comm.
+  apply Nat.add_comm.
 assert (H2: length (l1 ++ l2) = length l1 + length l2).
   apply app_length.
 simple refine (Permut _ _ _ _ _ _).
 - rewrite 2!app_length.
-  apply plus_comm.
+  apply Nat.add_comm.
 - intros k.
   apply (cast_ord H1).
   apply unsplit.
@@ -266,14 +266,14 @@ simple refine (Permut _ _ _ _ _ _).
   case splitP ; simpl ; change ssrnat.addn with plus ; intros k Hk.
   rewrite onth_app_l.
   rewrite onth_app_r by lia.
-  rewrite minus_plus.
+  rewrite Nat.add_comm, Nat.add_sub.
   now rewrite <- Hk.
   eapply elimT.
   now apply ssrnat.ltP.
   now rewrite Hk.
   rewrite onth_app_r by lia.
   rewrite onth_app_l.
-  now rewrite Hk, minus_plus.
+  now rewrite Hk, Nat.add_comm, Nat.add_sub.
   cut (n < length l1 + length l2). lia.
   eapply elimT.
   apply ssrnat.ltP.
