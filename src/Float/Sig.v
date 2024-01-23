@@ -237,12 +237,12 @@ Parameter mul_UP_correct :
 
 Parameter mul_DN_correct :
   forall p x y,
-    ((is_non_neg_real x /\ is_non_neg_real y)
-     \/ (is_non_pos_real x /\ is_non_pos_real y)
-     \/ (is_non_neg x /\ is_non_pos y)
-     \/ (is_non_pos x /\ is_non_neg y))
-    -> (valid_lb (mul_DN p x y) = true
-        /\ le_lower (toX (mul_DN p x y)) (Xmul (toX x) (toX y))).
+  ((is_non_neg_real x /\ is_non_neg_real y) \/
+   (is_non_pos_real x /\ is_non_pos_real y) \/
+   (is_non_neg' x /\ is_non_pos' y) \/
+   (is_non_pos' x /\ is_non_neg' y)) ->
+  (valid_lb (mul_DN p x y) = true /\
+  le_lower (toX (mul_DN p x y)) (Xmul (toX x) (toX y))).
 
 Parameter pow2_UP_correct :
   forall p s, (valid_ub (pow2_UP p s) = true /\
@@ -638,6 +638,28 @@ destruct H as [[[H1 H2] [H3 H4]]|[[[H1 H2] [H3 H4]]|[[H1 H2]|[H1 H2]]]].
   now destruct (F.toX y).
 - intuition.
 - intuition.
+Qed.
+
+Lemma mul_DN_correct :
+  forall p x y,
+  ((F.is_non_neg_real x /\ F.is_non_neg_real y) \/
+   (F.is_non_pos_real x /\ F.is_non_pos_real y) \/
+   (F.is_non_neg x /\ F.is_non_pos y) \/
+   (F.is_non_pos x /\ F.is_non_neg y)) ->
+  (F.valid_lb (F.mul_DN p x y) = true /\
+  le_lower (F.toX (F.mul_DN p x y)) (Xmul (F.toX x) (F.toX y))).
+Proof.
+intros prec x y H.
+apply F.mul_DN_correct.
+destruct H as [[H1 H2]|[[H1 H2]|[[[H1 H2] [H3 H4]]|[[H1 H2] [H3 H4]]]]].
+- intuition.
+- intuition.
+- right ; right ; left ; unfold F.is_non_neg', F.is_non_pos' ; split.
+  now destruct (F.toX x).
+  now destruct (F.toX y).
+- right ; right ; right ; unfold F.is_non_pos', F.is_non_neg' ; split.
+  now destruct (F.toX x).
+  now destruct (F.toX y).
 Qed.
 
 Lemma sqr_UP_correct :

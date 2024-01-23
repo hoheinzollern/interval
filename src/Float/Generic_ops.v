@@ -327,12 +327,12 @@ Module GenericFloat (Rad : Radix) <: FloatOps.
 
   Lemma mul_DN_correct :
     forall p x y,
-    ((is_non_neg_real x /\ is_non_neg_real y)
-     \/ (is_non_pos_real x /\ is_non_pos_real y)
-     \/ (is_non_neg x /\ is_non_pos y)
-     \/ (is_non_pos x /\ is_non_neg y))
-    -> (valid_lb (mul_DN p x y) = true
-        /\ le_lower (toX (mul_DN p x y)) (Xmul (toX x) (toX y))).
+    ((is_non_neg_real x /\ is_non_neg_real y) \/
+     (is_non_pos_real x /\ is_non_pos_real y) \/
+     (is_non_neg' x /\ is_non_pos' y) \/
+     (is_non_pos' x /\ is_non_neg' y)) ->
+    (valid_lb (mul_DN p x y) = true /\
+    le_lower (toX (mul_DN p x y)) (Xmul (toX x) (toX y))).
   Proof.
   intros p x y _; split; [easy|].
   now apply (rnd_binop_DN_correct _ _ (@Fmul_correct _)).
