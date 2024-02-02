@@ -2023,160 +2023,119 @@ split.
   rewrite <- H1. rewrite FtoR_split. apply Rle_refl.
 Qed.
 
+Definition is_real_ub x :=
+  match toX x with Xnan => valid_ub x = true | _ => True end.
+
+Definition is_real_lb x :=
+  match toX x with Xnan => valid_lb x = true | _ => True end.
+
 Lemma div_UP_correct :
   forall p x y,
-    ((is_non_neg x /\ is_pos_real y)
-     \/ (is_non_pos x /\ is_neg_real y)
-     \/ (is_non_neg_real x /\ is_neg_real y)
-     \/ (is_non_pos_real x /\ is_pos_real y))
-    -> (valid_ub (div_UP p x y) = true
-        /\ le_upper (Xdiv (toX x) (toX y)) (toX (div_UP p x y))).
+  ((is_real_ub x /\ is_pos_real y) \/
+   (is_real_lb x /\ is_neg_real y)) ->
+  valid_ub (div_UP p x y) = true /\
+  le_upper (Xdiv (toX x) (toX y)) (toX (div_UP p x y)).
 Proof.
 intros p x y.
-unfold div_UP.
-intro H; split; [now apply valid_ub_next_up| ]; revert H.
-unfold toX, toF.
-unfold is_non_neg, is_non_pos.
-unfold is_pos_real, is_neg_real, is_non_pos_real, is_non_neg_real.
-rewrite !valid_lb_correct, !valid_ub_correct.
+unfold div_UP, is_real_ub, is_real_lb, is_pos_real, is_neg_real.
+intros HH.
+split.
+now rewrite valid_ub_next_up.
+revert HH.
+rewrite valid_ub_correct, valid_lb_correct.
 unfold classify.
-rewrite !classify_spec.
-unfold toX, toF.
-rewrite <-!B2SF_Prim2B.
+rewrite classify_spec.
+rewrite <- B2SF_Prim2B.
+rewrite 3!toX_Prim2B.
+intros HH.
 rewrite next_up_equiv, div_equiv.
-case_eq (Prim2B x); [intros sx|intros sx| |intros sx mx ex Bx]; intro Hx;
-  [..|reflexivity| ].
-{ case_eq (Prim2B y); [intros sy|intros sy| |intros sy my ey By]; intro Hy;
-    [reflexivity| |reflexivity| ]; simpl.
-  { now intros [H|[H|H]]; destruct H. }
-  intros _; unfold Xdiv', Rdiv; rewrite is_zero_correct_float; lra. }
-{ simpl; intros [H|[H|[H|H]]]; [ | |now destruct H..]; revert H;
-    intros [[H1 _] H2];
-    (revert H1; case sx; try (now intro H; discriminate H); [intros _]);
-    (revert H2;
-     case_eq (Prim2B y); [intros sy|intros sy| |intros [ | ] my ey By]; intro Hy;
-     try reflexivity;
-     intro H2; exfalso; revert H2; simpl; try lra;
-     try (generalize (Generic_proof.FtoR_Rneg radix2 my ey); simpl; lra);
-     try (generalize (Generic_proof.FtoR_Rpos radix2 my ey); simpl; lra)). }
-case_eq (Prim2B y); [intros sy|intros sy| |intros sy my ey By]; intro Hy;
-  [..|reflexivity| ].
-{ intros [H|[H|[H|H]]]; revert H; intros [_ H]; exfalso; revert H; simpl; lra. }
-{ now simpl; intros [H|[H|[H|H]]]; destruct H. }
-intros _.  (* x and y finite now, don't need the big hypothesis anymore *)
-unfold Xdiv, Xdiv', FtoX.
-unfold B2SF at 1 2.
+destruct (Prim2B y) as [sy|sy| |sy my ey By] eqn:Hy.
+{ destruct HH as [[_ HH]|[_ HH]] ; now elim (Rlt_irrefl 0). }
+{ now destruct HH as [[_ HH]|[_ HH]]. }
+{ now destruct HH as [[_ HH]|[_ HH]]. }
+unfold Xdiv', Xbind2. simpl.
 rewrite is_zero_correct_float.
-rewrite <-Hx, <-Hy.
-set (b_x := Prim2B x).
-set (b_y := Prim2B y).
-set (b_xdy := Bdiv _ _ _).
-generalize (Bsucc_correct _ _ Hprec Hmax b_xdy).
-assert (Fx : is_finite b_x = true).
-{ now unfold b_x; rewrite Hx. }
-assert (Fy : is_finite b_y = true).
-{ now unfold b_y; rewrite Hy. }
-assert (Nzy : B2R b_y <> 0%R).
-{ unfold b_y, B2R; rewrite Hy, <-FtoR_split; apply Generic_proof.FtoR_non_neg. }
-generalize (Bdiv_correct _ _ Hprec Hmax mode_NE b_x b_y Nzy).
-fold b_xdy.
-assert (Hrx : B2R b_x = FtoR radix2 sx mx ex).
-{ now unfold b_x, B2R; rewrite Hx, <-FtoR_split. }
-assert (Hry : B2R b_y = FtoR radix2 sy my ey).
-{ now unfold b_y, B2R; rewrite Hy, <-FtoR_split. }
-case Rlt_bool_spec => Hb.
-{ rewrite Fx.
-  intros [Rxdy [Fxdy Sxdy]].
-  intro H; generalize (H Fxdy); clear H.
-  case Rlt_bool; [ |now intros ->].
-  set (b_s := Bsucc _).
-  case_eq b_s; [intro ss..| |intros ss ms es Hes]; intro Hs.
-  { intros [Rs _]; revert Rs; simpl=> ->.
-    rewrite Rxdy, Hrx, Hry.
-    apply Ulp.succ_round_ge_id.
-    { now apply FLT.FLT_exp_valid. }
-    now apply Generic_fmt.valid_rnd_N. }
-  { now case ss. }
-  { now simpl. }
-  intros [Rs _]; revert Rs; simpl.
-  rewrite <-FtoR_split => ->.
-  rewrite Rxdy, Hrx, Hry.
+rewrite FtoR_split.
+destruct (Prim2B x) as [sx|sx| |sx mx ex Bx] eqn:Hx ; try easy.
+{ simpl. unfold Rdiv at 1 ; rewrite Rmult_0_l. clear ; lra. }
+{ destruct sx, sy ; try easy ; simpl in HH |- *.
+  destruct HH as [[HH _]|[_ HH]] ; try easy.
+  apply Rle_not_lt with (2 := HH).
+  apply Rlt_le, Generic_proof.FtoR_Rpos.
+  destruct HH as [[_ HH]|[HH _]] ; try easy.
+  apply Rle_not_lt with (2 := HH).
+  apply Rlt_le, Generic_proof.FtoR_Rneg. }
+clear HH.
+set (b_mxy := Bdiv _ _ _).
+generalize (Bsucc_correct _ _ Hprec Hmax b_mxy).
+assert (Hd: B2R (B754_finite sy my ey By) <> 0%R).
+{ destruct sy.
+  now apply Rlt_not_eq, Float_prop.F2R_lt_0.
+  now apply Rgt_not_eq, Float_prop.F2R_gt_0. }
+generalize (Bdiv_correct _ _ Hprec Hmax mode_NE (B754_finite sx mx ex Bx) (B754_finite sy my ey By) Hd).
+fold b_mxy.
+case Rlt_bool_spec.
+{ intros _ [-> [-> H1]] H.
+  specialize (H eq_refl).
+  destruct Rlt_bool.
+  2: now destruct Bsucc.
+  destruct H as [H2 [H3 H4]].
+  rewrite !B2R_BtoX, H2 by easy.
   apply Ulp.succ_round_ge_id.
-  { now apply FLT.FLT_exp_valid. }
-  now apply Generic_fmt.valid_rnd_N. }
-set (sxdy' := xorb _ _).
-change (binary_overflow _ _ _ _) with (S754_infinity sxdy').
-intros Hxmy _; revert Hxmy.
-case_eq b_xdy; [intro sxdy..| |intros sxdy mxdy exdy Hexdy];
-  intro Hxdy;
-  try (intro H; discriminate H); [ ].
-intro Hsxdy'.
-assert (Hsxdy : sxdy = sxdy').
-{ revert Hsxdy'.
-  case sxdy, sxdy'; simpl; try reflexivity; intro H; discriminate H. }
-rewrite Hsxdy.
-case_eq sxdy'; [ |now simpl].
-unfold sxdy'; clear sxdy' sxdy Hxdy Hsxdy' Hsxdy.
-revert Hb; rewrite Hrx, Hry; intro Hb.
-set (s_b_x := Bsign b_x).
-set (s_b_y := Bsign b_y).
-assert (Hs_b_x : s_b_x = sx).
-{ now unfold s_b_x, b_x; rewrite Hx. }
-assert (Hs_b_y : s_b_y = sy).
-{ now unfold s_b_y, b_y; rewrite Hy. }
-rewrite Hs_b_x, Hs_b_y; clear s_b_x s_b_y Hs_b_x Hs_b_y.
-intro Hsxy.
+  now apply FLT.FLT_exp_valid.
+  apply Generic_fmt.valid_rnd_N. }
+intros Hb H1 _.
+simpl in H1.
+destruct xorb eqn:Hs.
+2: now destruct b_mxy as [|[|]| |].
+rewrite B2R_BtoX by easy.
 revert Hb.
-unfold le_upper, FtoX, Xmul.
-set (div := (_ / _)%R).
+simpl Rdiv.
 rewrite Rabs_left1.
-2:{ set (fexp := SpecFloat.fexp _ _).
-  set (rnd := round_mode _).
-  rewrite <-(Generic_fmt.round_0 radix2 fexp rnd).
+2: {
+  apply Generic_fmt.round_le_generic.
+  now apply FLT.FLT_exp_valid.
+  apply Generic_fmt.valid_rnd_N.
+  apply Generic_fmt.generic_format_0.
+  destruct sx, sy ; try easy.
+  apply Rdiv_neg_compat.
+  now apply Float_prop.F2R_le_0.
+  now apply Float_prop.F2R_gt_0.
+  apply Rmult_le_pos_neg.
+  now apply Float_prop.F2R_ge_0.
+  apply Rlt_le, Rinv_lt_0_compat.
+  now apply Float_prop.F2R_lt_0.
+}
+intros H.
+apply Ropp_le_contravar in H.
+rewrite Ropp_involutive in H.
+rewrite <- (SF2B_B2SF_valid _ _ b_mxy).
+generalize (valid_binary_B2SF FloatOps.prec emax b_mxy).
+rewrite H1.
+change (BtoX (Bsucc _)) with (Xreal (FtoR radix2 true (shift_pos (Z.to_pos FloatOps.prec) 1 - 1) (emax - FloatOps.prec))).
+intros _.
+apply Rnot_lt_le.
+intros H'.
+apply (Rle_not_lt _ _ H).
+clear -H'.
+rewrite FtoR_split in H'.
+eapply Rlt_le_trans.
+2: {
   apply Generic_fmt.round_le.
-  { now apply FLT.FLT_exp_valid. }
-  { now apply Generic_fmt.valid_rnd_N. }
-  revert Hsxy.
-  case sx, sy; try (intro H; discriminate H); intros _.
-  { pose (Hl := Generic_proof.FtoR_Rneg radix2 mx ex).
-    pose (Hr := Rinv_0_lt_compat _ (Generic_proof.FtoR_Rpos radix2 my ey)).
-    rewrite <-(Rmult_0_l (/ FtoR radix2 false my ey)).
-    apply Rmult_le_compat_r; auto with real. }
-  pose (Hl := Generic_proof.FtoR_Rpos radix2 mx ex).
-  pose (Hr := Rinv_lt_0_compat _ (Generic_proof.FtoR_Rneg radix2 my ey)).
-  rewrite <-(Rmult_0_r (FtoR radix2 false mx ex)).
-  apply Rmult_le_compat_l; auto with real. }
-rewrite <-(Ropp_involutive (bpow _ _)).
-intro H; apply Ropp_le_cancel in H; revert H.
-unfold round_mode.
-set (c := fun _ => _).
-change (SpecFloat.fexp _ _) with (FLT.FLT_exp (3 - emax - FloatOps.prec) FloatOps.prec).
-elim (Relative.error_N_FLT radix2 (3 - emax - FloatOps.prec) _ Hprec c div).
-intros eps [eta [Heps [Heta [Hepseta ->]]]].
-intro Hb.
-case (Req_dec eta 0) => Heta0.
-{ revert Hb.
-  rewrite Heta0, Rplus_0_r.
-  intro Hb.
-  apply Rle_trans with (-bpow radix2 emax / (1 + eps))%R.
-  { apply (Rmult_le_reg_r (1 + eps)).
-    { revert Heps; compute; case Rcase_abs; lra. }
-    unfold Rdiv; rewrite Rmult_assoc, Rinv_l, ?Rmult_1_r; [exact Hb| ].
-    revert Heps; compute; case Rcase_abs; lra. }
-  apply (Rmult_le_reg_r (1 + eps)).
-  { generalize (Rabs_le_inv _ _ Heps); compute; lra. }
-  unfold Rdiv; rewrite Rmult_assoc, Rinv_l, ?Rmult_1_r.
-  2:{ generalize (Rabs_le_inv _ _ Heps); compute; lra. }
-  apply Rle_trans with (FtoR radix2 true (9007199254740992 - 1) 971
-                        * (1 + /2 * bpow radix2 (-FloatOps.prec + 1)))%R.
-  { compute; lra. }
-  apply Rmult_le_compat_neg_l; [compute; lra| ].
-  apply Rplus_le_compat_l.
-  generalize (Rabs_le_inv _ _ Heps); intros [_ H]; exact H. }
-revert Hb.
-elim (Rmult_integral _ _ Hepseta); [ |lra]; intros ->.
-rewrite Rplus_0_r, Rmult_1_r.
-generalize (Rabs_le_inv _ _ Heta); compute; lra.
+  now apply FLT.FLT_exp_valid.
+  apply Generic_fmt.valid_rnd_N.
+  apply Rlt_le.
+  exact H'.
+}
+rewrite Generic_fmt.round_generic.
+2: apply Generic_fmt.valid_rnd_N.
+apply Rcomplements.Rminus_lt_0.
+rewrite <- Float_prop.F2R_bpow.
+rewrite <- Operations.F2R_opp.
+rewrite <- Operations.F2R_minus.
+now apply Float_prop.F2R_gt_0.
+apply FLT.generic_format_FLT.
+now eexists.
 Qed.
 
 Lemma div_DN_correct :

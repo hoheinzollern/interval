@@ -248,14 +248,18 @@ Parameter pow2_UP_correct :
   forall p s, (valid_ub (pow2_UP p s) = true /\
               le_upper (Xscale radix2 (Xreal 1) (StoZ s)) (toX (pow2_UP p s))).
 
+Definition is_real_ub x :=
+  match toX x with Xnan => valid_ub x = true | _ => True end.
+
+Definition is_real_lb x :=
+  match toX x with Xnan => valid_lb x = true | _ => True end.
+
 Parameter div_UP_correct :
   forall p x y,
-    ((is_non_neg x /\ is_pos_real y)
-     \/ (is_non_pos x /\ is_neg_real y)
-     \/ (is_non_neg_real x /\ is_neg_real y)
-     \/ (is_non_pos_real x /\ is_pos_real y))
-    -> (valid_ub (div_UP p x y) = true
-        /\ le_upper (Xdiv (toX x) (toX y)) (toX (div_UP p x y))).
+  ((is_real_ub x /\ is_pos_real y) \/
+   (is_real_lb x /\ is_neg_real y)) ->
+  valid_ub (div_UP p x y) = true /\
+  le_upper (Xdiv (toX x) (toX y)) (toX (div_UP p x y)).
 
 Parameter div_DN_correct :
   forall p x y,
