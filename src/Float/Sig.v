@@ -263,12 +263,10 @@ Parameter div_UP_correct :
 
 Parameter div_DN_correct :
   forall p x y,
-    ((is_non_neg x /\ is_neg_real y)
-     \/ (is_non_pos x /\ is_pos_real y)
-     \/ (is_non_neg_real x /\ is_pos_real y)
-     \/ (is_non_pos_real x /\ is_neg_real y))
-    -> (valid_lb (div_DN p x y) = true
-        /\ le_lower (toX (div_DN p x y)) (Xdiv (toX x) (toX y))).
+  ((is_real_ub x /\ is_neg_real y) \/
+   (is_real_lb x /\ is_pos_real y)) ->
+  valid_lb (div_DN p x y) = true /\
+  le_lower (toX (div_DN p x y)) (Xdiv (toX x) (toX y)).
 
 Parameter sqrt_UP_correct :
   forall p x,

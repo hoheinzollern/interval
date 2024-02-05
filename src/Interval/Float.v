@@ -2428,15 +2428,10 @@ simpl.
 case Rcompare_spec ; intros Hy ; try exact I ;
   simpl; simpl_is_zero.
 { elim (F.div_DN_correct prec xu yf); [intros Vl Hl|]; last first.
-  { unfold F.is_non_neg_real, F.is_non_pos_real, F.is_non_neg, F.is_non_pos.
-    unfold F.is_neg_real, F.is_pos_real.
-    generalize (F.real_correct yf).
-    rewrite X, Vxu.
-    intro Ryf.
-    xreal_tac xu; [now left|].
-    destruct (Rle_or_lt r0 0) as [Hr0|Hr0].
-    { now (do 3 right). }
-    now left; split; [|now simpl]; split; [|left]. }
+  { unfold F.is_real_ub, F.is_real_lb, F.is_neg_real, F.is_pos_real.
+    left. split.
+    now destruct (F.toX xu).
+    now rewrite X. }
   elim (F.div_UP_correct prec xl yf); [intros Vu Hu|]; last first.
   { unfold F.is_real_ub, F.is_real_lb, F.is_neg_real, F.is_pos_real.
     right. split.
@@ -2456,15 +2451,10 @@ case Rcompare_spec ; intros Hy ; try exact I ;
   unfold Xdiv, Xdiv'; simpl_is_zero.
   unfold Rdiv ; eauto with mulauto. }
 elim (F.div_DN_correct prec xl yf); [intros Vl Hl|]; last first.
-{ unfold F.is_non_neg_real, F.is_non_pos_real, F.is_non_neg, F.is_non_pos.
-  unfold F.is_neg_real, F.is_pos_real.
-  generalize (F.real_correct yf).
-  rewrite X, Vxl.
-  intro Ryf.
-  xreal_tac xl; [now right; left|].
-  destruct (Rle_or_lt r0 0) as [Hr0|Hr0].
-  { now right; left. }
-  now right; right; left; split; [left|]. }
+{ unfold F.is_real_ub, F.is_real_lb, F.is_neg_real, F.is_pos_real.
+  right. split.
+  now destruct (F.toX xl).
+  now rewrite X. }
 elim (F.div_UP_correct prec xu yf); [intros Vu Hu|]; last first.
 { unfold F.is_real_ub, F.is_real_lb, F.is_neg_real, F.is_pos_real.
   left. split.
@@ -2536,8 +2526,7 @@ case (sign_strict_ xl xu) ; intros (Hx0, Hx0') ;
   try match goal with
       | |- context [F.valid_lb (F.div_DN ?prec ?x ?y)] =>
         elim (F.div_DN_correct prec x y); [intros Vl Hl; rewrite Vl|
-          unfold F.is_non_neg, F.is_neg_real, F.is_non_pos, F.is_pos_real;
-          unfold F.is_non_neg_real, F.is_non_pos_real ] ;
+          unfold F.is_real_ub, F.is_real_lb, F.is_neg_real, F.is_pos_real ] ;
         rewrite ?F.real_correct
       end ;
   try match goal with
@@ -2632,8 +2621,7 @@ case (sign_strict_ xl xu) ;
   try match goal with
       | |- context [F.valid_lb (F.div_DN ?prec ?x ?y)] =>
         elim (F.div_DN_correct prec x y); [intros Vl Hl; rewrite Vl|
-          unfold F.is_non_neg, F.is_neg_real, F.is_non_pos, F.is_pos_real;
-          unfold F.is_non_neg_real, F.is_non_pos_real ] ;
+          unfold F.is_real_ub, F.is_real_lb, F.is_neg_real, F.is_pos_real ] ;
         rewrite ?F.real_correct
       end ;
   try match goal with
@@ -2776,12 +2764,9 @@ case sign_large_ ; try easy.
     { apply Rlt_le_trans with (2 := Hx).
       now destruct H1 as [H1 | <-]. }
     destruct (F.div_DN_correct prec c1 xu) as [-> H].
-    * right ; right ; left.
-      unfold F.is_non_neg_real, F.is_pos_real.
-      split.
-      { unfold c1.
-        rewrite F.fromZ_correct by easy.
-        apply Rle_0_1. }
+    * unfold F.is_real_lb, F.is_pos_real, c1.
+      right. split.
+      now rewrite F.fromZ_correct.
       now rewrite Hxu.
     * split.
       2: now rewrite F'.nan_correct.
