@@ -70,6 +70,9 @@ Inductive gol : Set :=
   | Gle (b : bool) (v : expr)
   | Gge (b : bool) (u : expr)
   | Glele (u v : expr)
+  | Gltle (u v : expr)
+  | Glelt (u v : expr)
+  | Gltlt (u v : expr)
   | Gabsle (b : bool) (v : expr)
   | Glt (v : expr)
   | Ggt (u : expr)
@@ -82,6 +85,9 @@ Definition eval_goal (g : gol) (x : R) :=
   | Gge true u => (eval u nil <= x)%R
   | Gge false u => (x >= eval u nil)%R
   | Glele u v => (eval u nil <= x <= eval v nil)%R
+  | Gltle u v => (eval u nil < x <= eval v nil)%R
+  | Glelt u v => (eval u nil <= x < eval v nil)%R
+  | Gltlt u v => (eval u nil < x < eval v nil)%R
   | Gabsle true v => (Rabs x <= eval v nil)%R
   | Gabsle false v => (eval v nil >= Rabs x)%R
   | Glt v => (x < eval v nil)%R
@@ -103,6 +109,15 @@ Ltac massage_goal :=
   | |- (?u <= ?x <= ?v)%R =>
     let u := reify u (@nil R) in
     aux v x (Glele u)
+  | |- (?u < ?x <= ?v)%R =>
+    let u := reify u (@nil R) in
+    aux v x (Gltle u)
+  | |- (?u <= ?x < ?v)%R =>
+    let u := reify u (@nil R) in
+    aux v x (Glelt u)
+  | |- (?u < ?x < ?v)%R =>
+    let u := reify u (@nil R) in
+    aux v x (Gltlt u)
   | |- (?u < ?x)%R => aux u x Ggt
   | |- (?x > ?u)%R => aux u x Ggt
   | |- (?x < ?v)%R => aux v x Glt
@@ -315,6 +330,18 @@ Definition eval_goal_bnd (prec : I.precision) (g : gol) : I.type -> bool :=
     let v := I.lower_complement (E.eval_bnd prec v) in
     let j := I.meet u v in
     fun i => I.subset i j
+  | Gltle u v =>
+    let u := E.eval_bnd prec u in
+    let v := I.lower_complement (E.eval_bnd prec v) in
+    fun i => match I.sign_strict (I.sub prec i u) with Xgt => I.subset i v | _ => false end
+  | Glelt u v =>
+    let u := I.upper_complement (E.eval_bnd prec u) in
+    let v := E.eval_bnd prec v in
+    fun i => match I.sign_strict (I.sub prec i v) with Xlt => I.subset i u | _ => false end
+  | Gltlt u v =>
+    let u := E.eval_bnd prec u in
+    let v := E.eval_bnd prec v in
+    fun i => match I.sign_strict (I.sub prec i u) with Xgt => match I.sign_strict (I.sub prec i v) with Xlt => true | _ => false end | _ => false end
   | Gabsle _ v =>
     let v := I.lower_complement (E.eval_bnd prec v) in
     let j := I.meet (I.neg v) v in
@@ -343,7 +370,7 @@ unfold eval_goal_bnd.
 destruct (I.is_empty xi) eqn:Ex.
 { now elim I.is_empty_correct with (1 := Ix). }
 clear Ex.
-destruct g as [b v|b u|u v|b v|v|u|b u] ; simpl ; intros H.
+destruct g as [b v|b u|u v|u v|u v|u v|b v|v|u|b u] ; simpl ; intros H.
 - cut (x <= eval v nil)%R.
     now destruct b ; [|apply Rle_ge].
   assert (H' := I.subset_correct _ _ _ Ix H).
@@ -360,6 +387,43 @@ destruct g as [b v|b u|u v|b v|v|u|b u] ; simpl ; intros H.
   apply I.upper_complement_correct with (2 := proj1 H').
   apply E.eval_bnd_correct.
   apply I.lower_complement_correct with (2 := proj2 H').
+  apply E.eval_bnd_correct.
+- generalize (I.sign_strict_correct (I.sub prec xi (E.eval_bnd prec u))).
+  destruct I.sign_strict ; try easy.
+  intros Hd.
+  split.
+  apply Rminus_gt.
+  apply (Hd (Xreal (x - eval u nil))).
+  apply J.sub_correct with (1 := Ix).
+  apply E.eval_bnd_correct.
+  assert (H' := I.subset_correct _ _ _ Ix H).
+  apply I.lower_complement_correct with (2 := H').
+  apply E.eval_bnd_correct.
+- generalize (I.sign_strict_correct (I.sub prec xi (E.eval_bnd prec v))).
+  destruct I.sign_strict ; try easy.
+  intros Hd.
+  split.
+  assert (H' := I.subset_correct _ _ _ Ix H).
+  apply I.upper_complement_correct with (2 := H').
+  apply E.eval_bnd_correct.
+  apply Rminus_lt.
+  apply (Hd (Xreal (x - eval v nil))).
+  apply J.sub_correct with (1 := Ix).
+  apply E.eval_bnd_correct.
+- generalize (I.sign_strict_correct (I.sub prec xi (E.eval_bnd prec u))).
+  destruct I.sign_strict ; try easy.
+  intros Hd.
+  generalize (I.sign_strict_correct (I.sub prec xi (E.eval_bnd prec v))).
+  destruct I.sign_strict ; try easy.
+  intros He.
+  split.
+  apply Rminus_gt.
+  apply (Hd (Xreal (x - eval u nil))).
+  apply J.sub_correct with (1 := Ix).
+  apply E.eval_bnd_correct.
+  apply Rminus_lt.
+  apply (He (Xreal (x - eval v nil))).
+  apply J.sub_correct with (1 := Ix).
   apply E.eval_bnd_correct.
 - cut (Rabs x <= eval v nil)%R.
     now destruct b ; [|apply Rle_ge].
