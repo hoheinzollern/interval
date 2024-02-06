@@ -6,10 +6,10 @@ Require Import Lang_expr Lang_simpl.
 Open Scope R_scope.
 
 Lemma destructLet : forall Tl T1 T2
-    (P  : evalExprTypeMath T1 -> evalExprTypeMath T2 -> Prop)
-    (Q  : evalExprTypeMath T1 -> Prop)
-    (x  : ArithExprTree Tl T1) (t  : ArithExprTree (T1 :: Tl) T2)
-    (lM : evalExprTypeMath_list Tl) md,
+    (P  : evalExprTypeRounded T1 -> evalExprTypeRounded T2 -> Prop)
+    (Q  : evalExprTypeRounded T1 -> Prop)
+    (x  : ArithExpr Tl T1) (t  : ArithExpr (T1 :: Tl) T2)
+    (lM : evalExprTypeRounded_list Tl) md,
   let xM := evalRounded x lM md in
   wellBehaved x lM md -> (wellBehaved x lM md -> Q (evalRounded x lM md)) ->
  (forall xM', Q xM' -> wellBehaved t (xM', lM) md
@@ -24,10 +24,10 @@ lazymatch goal with
 | |- context [@Let ?Tl ?T1 ?T2 ?x ?t] =>
   let lM := lazymatch goal with
   | |- context [evalRounded (Let x t) ?lM ?md] => lM
-  | |- context [evalRounded t ?lM ?md] => lM end in
+  | |- context [evalRounded t ?lM ?md] => lM end in (* Why t and not x? *)
   let md := lazymatch goal with
   | |- context [evalRounded (Let x t) lM ?md] => md
-  | |- context [evalRounded t lM ?md] => md end in
+  | |- context [evalRounded t lM ?md] => md end in (* Why t and not x? *)
   pattern (evalRounded (Let x t) lM md); pattern (evalRounded x lM md);
   lazymatch goal with
   | |- (fun vM => (fun wM => wellBehaved (Let x t) ?lM ?md /\ ?P) ?yM) ?xM =>
@@ -37,12 +37,44 @@ lazymatch goal with
   end
 end.
 
+Ltac remove_Let_x x xR G := match G with
+| context G' [wellBehaved (Let x ?t) ?lR ?md]
+  => let G'' := context G' [wellBehaved t (xR, lR) md] in remove_Let_x x xR G''
+| context G' [wellBehaved x ?lR ?md]
+  => let G'' := context G' [True] in remove_Let_x x xR G''
+| context G' [evalRounded (Let x ?t) ?lR ?md]
+  => let G'' := context G' [evalRounded t (xR, lR) md] in remove_Let_x x xR G''
+| _ => G
+end.
 
-Tactic Notation "assert_on_let" open_constr(Q) := do_assert_let Q.
+Ltac do_assert_multilet Q :=
+lazymatch goal with
+| |- ?G => lazymatch G with
+  | context [@Let ?Tl ?T1 ?T2 ?x _] =>
+    let lR := lazymatch goal with
+    | |- context [evalRounded (Let x _) ?lR ?md] => lR
+    | |- context [evalRounded x ?lR ?md] => lR end in
+    let md := lazymatch goal with
+    | |- context [evalRounded (Let x _) lR ?md] => md
+    | |- context [evalRounded x lR ?md] => md end in
+    let xR := constr:(evalRounded x lR md) in
+    let WBx := constr:(wellBehaved x lR md) in
+    let G' := constr:(WBx -> Q xR) in
+    let G'' := remove_Let_x x xR constr:(G' -> G) in
+    let H := fresh "__H" in let xR' := fresh "__xR" in
+    cut G'; [cut (WBx /\ G''); [intuition; try easy | split; [|
+      generalize xR; intros xR' H; specialize (H I)]] |]
+  end
+end.
 
-Tactic Notation "assert_on_let" open_constr(Q) "as"
+
+Tactic Notation "assert_let" open_constr(Q) := do_assert_let Q.
+
+Tactic Notation "assert_let" open_constr(Q) "as"
     ident(xM) simple_intropattern(H) :=
   do_assert_let Q; [| | intros xM H].
+
+Tactic Notation "assert_multilet" open_constr(Q) := do_assert_multilet Q.
 
 Ltac compute_vars v := match v with
   | tt        => constr:(@nil R)
@@ -63,9 +95,11 @@ lazymatch goal with
   | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
     cut P;
    [Reify.find_hyps l; change l with (@toList Tl (@M2R_list Tl v));
-    eapply (@generatePProp_correct Tl T t v md);
-    [try easy | vm_compute; reflexivity]
-   |unfold P; clear P; cbn -[bpow (* evalPTree2 *)]]
+    simple refine (@generateCProp_correct Tl T t _ v md _ _ _ _);
+    [try easy.. | let n := eval lazy in (length l) in
+      change (length _) with n; (repeat match reverse goal with
+        | H: _ |- _ => clear H end); vm_compute; reflexivity |]
+   |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
 end.
 
 Ltac simplify_wb_taylor :=
@@ -74,33 +108,10 @@ lazymatch goal with
   | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
     cut P;
    [Reify.find_hyps l; change l with (@toList Tl (@M2R_list Tl v));
-    eapply (@generatePProp_taylor_correct Tl T t v md);
-    [try easy | vm_compute; reflexivity]
-   |unfold P; clear P; cbn -[bpow (* evalPTree2 *)]]
+    eapply (@generateCProp_taylor_correct Tl T t _ v md);
+    [try easy.. | vm_compute; reflexivity |]
+   |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
 end.
-
-
-Ltac decompose_wb := apply @evalFloat_evalRounded;
-  [| simpl C2M_list; simpl M2R_list; simplify_wb |]; try easy.
-
-Lemma and_idem : forall A, A /\ A <-> A.
-Proof. easy. Qed.
-
-Ltac dig_out P := lazymatch goal with
-| |- context [P /\ P] => rewrite !(and_idem P); dig_out P
-| |- context [?P' /\ P] => rewrite !(and_comm P' P); dig_out P
-| |- context [P /\ P /\ ?P0] => rewrite <-(and_assoc P P P0);
-     rewrite (and_idem P); dig_out P
-| |- context [?P1 /\ P /\ ?P0] => rewrite <-(and_assoc P1 P P0);
-     rewrite (and_comm P1 P); rewrite (and_assoc P P1 P0); dig_out P
-| |- context [(P /\ ?P0) /\ ?P1] => rewrite (and_assoc P P0 P1); dig_out P
-| |- P /\ _ => idtac
-| |- P => idtac
-| _ => fail "not found"
-end.
-
-Goal forall (A B C : Prop), A -> B -> C -> ((A /\ B) /\ (C /\ A) /\ C) /\ ((B /\ C /\ B) /\ A) /\ A.
-Proof. intros A B C HA HB HC. dig_out B. dig_out A. Abort.
 
 Ltac remove P G := match G with
 | context G' [P /\ ?P'] => let G'' := context G' [P'] in remove P G''
@@ -108,7 +119,7 @@ Ltac remove P G := match G with
 | context G' [?P' \/ P] => let G'' := context G' [True] in remove P G''
 | context G' [P \/ ?P'] => let G'' := context G' [True] in remove P G''
 | _ => G
-end.
+end. (* is_finite, is_finite_strict, B2R, fp_classsify *)
 
 Ltac replace_term t t' G :=
 lazymatch G with
@@ -116,76 +127,69 @@ lazymatch G with
 | _ => G
 end.
 
-Ltac switch :=
-lazymatch goal with
-| |- ?G0 => match G0 with
-  | context [@evalFloat ?Tl ?T ?t ?lC ?md] =>
-    let G1 := match G0 with
-    | context G' [?g] => context G' [(eqExprType (@evalFloat Tl T t lC md) (@evalRounded Tl T t (@C2M_list Tl lC) md)) /\ g]
-    end in
-    let G  := replace_term (B2R (@evalFloat Tl T t lC md))
-             (@evalRounded Tl T t (@C2M_list Tl lC) md) G1 in
-    cut G; simpl C2M_list
-  end
-end.
-
-Ltac clean xC G :=
+Ltac clean t G :=
 match G with
-| context [is_finite xC = ?b] =>
-  let G' := remove (is_finite xC = b) G in clean xC G'
-| context [C2M xC = ?xM0] =>
-  let G' := remove (C2M xC = xM0) G in clean xC G'
-| context [B2R xC = ?xM1] =>
-  let G' := remove (B2R xC = xM1) G in clean xC G'
-| context [xC = ?xM2] =>
-  let G' := remove (xC = xM2) G in clean xC G'
+| context [is_finite t = ?b] =>
+  let G' := remove (is_finite t = b) G in clean t G'
+| context [is_finite_SF t = ?b] =>
+  let G' := remove (is_finite_SF t = b) G in clean t G'
 | _ => G
 end.
 
-Ltac clean_goal xC G :=
-match G with
-| context [is_finite xC = ?b] =>
-  let G' := remove (is_finite xC = b) G in
-  try dig_out (is_finite xC = b); try clean_goal xC G'
-| context [C2M xC = ?xM0] =>
-  let G' := remove (C2M xC = xM0) G in
-  try dig_out (C2M xC = xM0); try clean_goal xC G'
-| context [B2R xC = ?xM1] =>
-  let G' := remove (B2R xC = xM1) G in
-  try dig_out (B2R xC = xM1); try clean_goal xC G'
-| context [xC = ?xM2] =>
-  let G' := remove (xC = xM2) G in
-  try dig_out (xC = xM2); try clean_goal xC G'
-| _ => try (dig_out True; split; [easy |])
-end.
-
-Ltac do_extract_real x :=
+Ltac do_reify_var x :=
 revert dependent x; intros x; cut (generic_format radix2 (FLT_exp (-1074) 53) (B2R x));
   [| apply generic_format_B2R]; generalize (B2R x); let r := fresh "__r" in intros r;
-  intros; clear dependent x; revert dependent r.
+  intros; clear dependent x; revert dependent r. (* TODO: Add hypothesis -maxval <= B2R x <= maxval *)
 
-Tactic Notation "extract_real" ident(x) "as" ident(xM) ident(Hformat_xM) :=
-  do_extract_real x; intros xM Hformat_xM.
+Tactic Notation "reify_var" ident(x) "as" ident(xM) ident(Hformat_xM) :=
+  do_reify_var x; intros xM Hformat_xM.
 
-Ltac remove_float :=
+Ltac do_reify_var' x :=
+revert dependent x; intros x; rewrite <-(Prim2SF2R_Prim2B2R x);
+  cut (generic_format radix2 (FLT_exp (-1074) 53) (B2R (PrimFloat.Prim2B x)));
+  [| apply generic_format_B2R]; generalize (B2R (PrimFloat.Prim2B x)); let r := fresh "__r" in intros r;
+  intros; clear dependent x; revert dependent r. (* TODO: merge with previous tactic *)
+
+Tactic Notation "reify_var'" ident(x) "as" ident(xM) ident(Hformat_xM) :=
+  do_reify_var' x; intros xM Hformat_xM.
+
+Ltac remove_floats :=
 lazymatch goal with
-| |- ?G0 => lazymatch G0 with
+| |- ?G0 => match G0 with
   | context [@evalFloat ?Tl ?T ?t ?lC ?md] =>
-    clean_goal (evalFloat t lC md) G0;
+ (* clean_goal (evalFloat t lC md) G0; *)
     let G1 := clean (evalFloat t lC md) G0 in
     let G2 := replace_term (B2R (evalFloat t lC md)) (evalRounded t (@C2M_list Tl lC) md) G1 in
-    let G3 := match G2 with
+ (* let G3' := match G2 with
     | context G' [?g] =>
-      context G' [(eqExprType (evalFloat t lC md) (evalRounded t (@C2M_list Tl lC) md)) /\ g]
-    end in let G3' := match G2 with
+      context G' [(eqExprTypeFloat (evalFloat t lC md) (evalRounded t (@C2M_list Tl lC) md)) /\ g]
+    end in *) let G3 := match G2 with
     | context G' [?g] =>
       context G' [wellBehaved t (@C2M_list Tl lC) md /\ g]
     end in
-    let Hfin := fresh "Hfin" in let Heq := fresh "Heq" in let Hgoal := fresh "Hgoal" in
-    let IWB  := fresh "IWB"  in let IWF := fresh "IWF" in cut G3; simpl C2M_list;
-   [(intros [[Hfin Heq] Hgoal] || intros Heq Hgoal); repeat (split; [easy |]); now rewrite Heq
-   | cut G3';
-     [ intros [IWB Hgoal]; split; [apply @evalFloat_evalRounded; [try easy | easy | try easy] | easy]
-     | simpl C2M_list ]]
+    let IWB   := fresh "IWB"   in let Hgoal   := fresh "Hgoal"   in
+    let Iconv := fresh "Iconv" in let IisConv := fresh "IisConv" in cut G3;
+     [intros [IWB Hgoal]; refine (_ (equivFloat t lC md _ IWB _));
+       [intros [Iconv ->]; intuition | try easy | try easy]
+     | simpl C2M_list; remove_floats]
+  | context [@evalPrim ?Tl ?T ?t ?lP] =>
+ (* clean_goal (evalPrim t lC md) G0; *)
+    let G1 := clean (FloatOps.Prim2SF (evalPrim t lP)) G0 in
+    let G2 := replace_term (SF2R radix2 (FloatOps.Prim2SF (evalPrim t lP))) (evalRounded t (@P2M_list Tl lP) mode_NE) G1 in
+    let G3 := match G2 with
+    | context [@evalPrim Tl T t lP] =>
+      constr:(eqExprTypePrim (evalPrim t lP) (evalRounded t (@P2M_list Tl lP) mode_NE) -> G2)
+    | _ => G2
+    end in
+ (* let G3' := match G2 with
+    | context G' [?g] =>
+      context G' [(eqExprTypePrim (evalPrim t lC md) (evalRounded t (@C2M_list Tl lC) md)) /\ g]
+    end in *)
+    let G4 := constr:(wellBehaved t (@P2M_list Tl lP) mode_NE /\ G3) in
+    let IWB   := fresh "IWB"   in let Hgoal   := fresh "Hgoal"   in
+    let Iconv := fresh "Iconv" in let IisConv := fresh "IisConv" in cut G4;
+     [intros [IWB Hgoal]; refine (_ (equivPrim t lP _ IWB _));
+       [let H := fresh "__H" in intros [Iconv H]; rewrite ?H; intuition; apply Hgoal; easy | try easy | try easy]
+     | simpl P2M_list]
   end
 end.

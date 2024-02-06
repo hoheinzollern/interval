@@ -1,5 +1,5 @@
-From Coq Require Import Bool Reals List Lia Lra.
-From Flocq Require Import Core BinarySingleNaN Operations.
+From Coq Require Import Bool Floats Reals List Lia Lra.
+From Flocq Require Import Core PrimFloat BinarySingleNaN Operations.
 
 Require Import Specific_bigint Specific_ops.
 Require Import Interval_helper.
@@ -36,17 +36,17 @@ Proof. now induction t; simpl; intros; [| | rewrite IHt | rewrite IHt1, IHt2]. Q
 
 
 
-(* Computable real number expressions *)
+(* Computable/Compatible arithmetic expressions *)
 
-Inductive ProcessedOp := PADD | PSUB | PMUL | PFLTDIV | PINTDIV.
+Inductive CArithOp := CADD | CSUB | CMUL | CFLTDIV | CINTDIV.
 
-Definition ArithOpToPOp T OP := match OP with
-  | ADD => PADD
-  | SUB => PSUB
-  | MUL => PMUL
+Definition ArithOpToCArithOp T OP := match OP with
+  | ADD => CADD
+  | SUB => CSUB
+  | MUL => CMUL
   | DIV => match T with
-    | Integer  => PINTDIV
-    | BinFloat => PFLTDIV
+    | Integer  => CINTDIV
+    | BinFloat => CFLTDIV
     end
   end.
 
@@ -57,72 +57,72 @@ Definition rounding_mode_of_mode md := match md with
   | mode_UP           => Basic.rnd_UP
 end.
 
-Inductive ProcessedTree :=
-  | PInt: Z -> ProcessedTree
-  | PBinFl: Z -> Z -> ProcessedTree
-  | PVar: nat -> ProcessedTree
-  | POp: ProcessedOp -> ProcessedTree -> ProcessedTree -> ProcessedTree
-  | PRnd: mode -> ProcessedTree -> ProcessedTree
-  | PNearbyint: ProcessedTree -> ProcessedTree
-  | PTrunc: ProcessedTree -> ProcessedTree
-  | PLdexp: ProcessedTree -> ProcessedTree -> ProcessedTree
-  | PSqrt: ProcessedTree -> ProcessedTree.
+Inductive CArithExpr :=
+  | CInt: Z -> CArithExpr
+  | CBinFl: Z -> Z -> CArithExpr
+  | CVar: nat -> CArithExpr
+  | COp: CArithOp -> CArithExpr -> CArithExpr -> CArithExpr
+  | CRnd: mode -> CArithExpr -> CArithExpr
+  | CNearbyint: CArithExpr -> CArithExpr
+  | CTrunc: CArithExpr -> CArithExpr
+  | CLdexp: CArithExpr -> CArithExpr -> CArithExpr
+  | CSqrt: CArithExpr -> CArithExpr.
 
-Fixpoint PTreeToTree t := match t with
-  | PInt n => Tree.Econst (Tree.Int n)
-  | PBinFl n1 n2 => Tree.Ebinary Tree.Mul (Tree.Econst (Tree.Int n1)) (Tree.Econst (Tree.Bpow 2 n2))
-  | PVar n => Tree.Evar n
-  | POp OP t1 t2 => let u1 := PTreeToTree t1 in let u2 := PTreeToTree t2 in match OP with
-    | PADD    => Tree.Ebinary Tree.Add u1 u2
-    | PSUB    => Tree.Ebinary Tree.Sub u1 u2
-    | PMUL    => Tree.Ebinary Tree.Mul u1 u2
-    | PFLTDIV => Tree.Ebinary Tree.Div u1 u2
-    | PINTDIV => Tree.Eunary (Tree.Nearbyint Basic.rnd_ZR) (Tree.Ebinary Tree.Div u1 u2)
+Fixpoint CArithExprToTree t := match t with
+  | CInt n => Tree.Econst (Tree.Int n)
+  | CBinFl n1 n2 => Tree.Ebinary Tree.Mul (Tree.Econst (Tree.Int n1)) (Tree.Econst (Tree.Bpow 2 n2))
+  | CVar n => Tree.Evar n
+  | COp OP t1 t2 => let u1 := CArithExprToTree t1 in let u2 := CArithExprToTree t2 in match OP with
+    | CADD    => Tree.Ebinary Tree.Add u1 u2
+    | CSUB    => Tree.Ebinary Tree.Sub u1 u2
+    | CMUL    => Tree.Ebinary Tree.Mul u1 u2
+    | CFLTDIV => Tree.Ebinary Tree.Div u1 u2
+    | CINTDIV => Tree.Eunary (Tree.Nearbyint Basic.rnd_ZR) (Tree.Ebinary Tree.Div u1 u2)
     end
-  | PRnd md t' => Tree.Eunary (Tree.RoundFlt (rounding_mode_of_mode md) Rrnd.emin Format64.prec) (PTreeToTree t')
-  | PNearbyint t' => Tree.Eunary (Tree.Nearbyint Basic.rnd_NE) (PTreeToTree t')
-  | PTrunc t' => Tree.Eunary (Tree.Nearbyint Basic.rnd_ZR) (PTreeToTree t')
-  | PLdexp t' p => Tree.Econst (Tree.Int 0) (* not compatible *)
-  | PSqrt t' => Tree.Eunary Tree.Sqrt (PTreeToTree t') end.
+  | CRnd md t' => Tree.Eunary (Tree.RoundFlt (rounding_mode_of_mode md) Rrnd.emin Format64.prec) (CArithExprToTree t')
+  | CNearbyint t' => Tree.Eunary (Tree.Nearbyint Basic.rnd_NE) (CArithExprToTree t')
+  | CTrunc t' => Tree.Eunary (Tree.Nearbyint Basic.rnd_ZR) (CArithExprToTree t')
+  | CLdexp t' p => Tree.Econst (Tree.Int 0) (* not compatible *)
+  | CSqrt t' => Tree.Eunary Tree.Sqrt (CArithExprToTree t') end.
 
 Fixpoint Psucc t := match t with
-  | PInt _ | PBinFl _ _ => t
-  | PVar n => PVar (S n)
-  | POp OP t1 t2 => POp OP (Psucc t1) (Psucc t2)
-  | PRnd md t' => PRnd md (Psucc t')
-  | PNearbyint t' => PNearbyint (Psucc t')
-  | PTrunc t' => PTrunc (Psucc t')
-  | PLdexp t' p => PLdexp (Psucc t') (Psucc p)
-  | PSqrt t' => PSqrt (Psucc t') end.
+  | CInt _ | CBinFl _ _ => t
+  | CVar n => CVar (S n)
+  | COp OP t1 t2 => COp OP (Psucc t1) (Psucc t2)
+  | CRnd md t' => CRnd md (Psucc t')
+  | CNearbyint t' => CNearbyint (Psucc t')
+  | CTrunc t' => CTrunc (Psucc t')
+  | CLdexp t' p => CLdexp (Psucc t') (Psucc p)
+  | CSqrt t' => CSqrt (Psucc t') end.
 
-Lemma PTreeToTree_Psucc : forall t, PTreeToTree (Psucc t) = exprsucc (PTreeToTree t).
+Lemma CArithExprToTree_Psucc : forall t, CArithExprToTree (Psucc t) = exprsucc (CArithExprToTree t).
 Proof.
 induction t as [| | | OP | | | | |]; simpl; intros.
 5, 6, 7, 9: now rewrite IHt. 1, 2, 3, 5: easy.
 now destruct OP; rewrite IHt1; rewrite IHt2.
 Qed.
 
-Definition evalPTree1 t l := Tree.eval (PTreeToTree t) l.
+Definition evalCArithExpr1 t l := Tree.eval (CArithExprToTree t) l.
 
-Fixpoint evalPTree2 t l := match t with
-  | PInt n => IZR n
-  | PBinFl n1 n2 => IZR n1 * Rpow2 n2
-  | PVar n => nth n l R0
-  | POp OP t1 t2 => let x1 := evalPTree2 t1 l in let x2 := evalPTree2 t2 l in
+Fixpoint evalCArithExpr2 t l := match t with
+  | CInt n => IZR n
+  | CBinFl n1 n2 => IZR n1 * Rpow2 n2
+  | CVar n => nth n l R0
+  | COp OP t1 t2 => let x1 := evalCArithExpr2 t1 l in let x2 := evalCArithExpr2 t2 l in
     match OP with
-    | PADD    => (evalPTree2 t1 l) + (evalPTree2 t2 l)
-    | PSUB    => (evalPTree2 t1 l) - (evalPTree2 t2 l)
-    | PMUL    => (evalPTree2 t1 l) * (evalPTree2 t2 l)
-    | PFLTDIV => (evalPTree2 t1 l) / (evalPTree2 t2 l)
-    | PINTDIV => @Rrnd.nearbyint mode_ZR ((evalPTree2 t1 l) / (evalPTree2 t2 l))
+    | CADD    => (evalCArithExpr2 t1 l) + (evalCArithExpr2 t2 l)
+    | CSUB    => (evalCArithExpr2 t1 l) - (evalCArithExpr2 t2 l)
+    | CMUL    => (evalCArithExpr2 t1 l) * (evalCArithExpr2 t2 l)
+    | CFLTDIV => (evalCArithExpr2 t1 l) / (evalCArithExpr2 t2 l)
+    | CINTDIV => @Rrnd.nearbyint mode_ZR ((evalCArithExpr2 t1 l) / (evalCArithExpr2 t2 l))
     end
-  | PRnd md t' => Rrnd.Rnd md (evalPTree2 t' l)
-  | PNearbyint t' => @Rrnd.nearbyint mode_NE (evalPTree2 t' l)
-  | PTrunc t' => @Rrnd.nearbyint mode_ZR (evalPTree2 t' l)
-  | PLdexp t' p => ((evalPTree2 t' l) * Rpower 2 (evalPTree2 p l))
-  | PSqrt t' => sqrt (evalPTree2 t' l) end.
+  | CRnd md t' => round radix2 (FLT_exp emin prec) (round_mode md) (evalCArithExpr2 t' l)
+  | CNearbyint t' => @Rrnd.nearbyint mode_NE (evalCArithExpr2 t' l)
+  | CTrunc t' => @Rrnd.nearbyint mode_ZR (evalCArithExpr2 t' l)
+  | CLdexp t' p => ((evalCArithExpr2 t' l) * Rpower 2 (evalCArithExpr2 p l))
+  | CSqrt t' => sqrt (evalCArithExpr2 t' l) end.
 
-Lemma evalPTree2_succ : forall t l x, evalPTree2 (Psucc t) (x :: l) = evalPTree2 t l.
+Lemma evalCArithExpr2_succ : forall t l x, evalCArithExpr2 (Psucc t) (x :: l) = evalCArithExpr2 t l.
 Proof. induction t as [| | | OP | | | | |]; simpl; intros.
 5, 6, 7, 9: now rewrite IHt. 1, 2, 3: easy.
 - now destruct OP; rewrite IHt1, IHt2.
@@ -134,65 +134,69 @@ Qed.
 (* Computable Prop *)
 
 Inductive Atom :=
-(*| Ne: ProcessedTree -> ProcessedTree -> Atom
-  | Lt: ProcessedTree -> ProcessedTree -> Atom
-  | Le: ProcessedTree -> ProcessedTree -> Atom
-  | Ge: ProcessedTree -> ProcessedTree -> Atom
-  | Gt: ProcessedTree -> ProcessedTree -> Atom
-  | Eq: ProcessedTree -> ProcessedTree -> Atom
-  | LeLe: ProcessedTree -> ProcessedTree -> ProcessedTree -> Atom
-  | AbsLe: ProcessedTree -> ProcessedTree -> Atom *)
-  | InInt64: ProcessedTree -> Atom (* - IZR (Int64.N / 2) <= t <= IZR (Int64.N / 2 - 1) *)
-  | InFloat64: ProcessedTree -> Atom (* Rabs t <= Rrnd.maxval *)
-  | InFloat64Int: ProcessedTree -> Atom (* Rabs t <= Rpow2 53 *)
-  | NonZero: ProcessedTree -> Atom (* t <> 0 *)
-  | NonNeg: ProcessedTree -> Atom (* t >= 0 *)
-  | RndExact: mode -> ProcessedTree -> Atom (* Rrnd.rnd t = t *)
-  | LdexpControl: Z -> ProcessedTree -> ProcessedTree -> Atom
-    (* (Rabs (evalRoundedR _ _ t1 vars)) <= IZR (radix2 ^ Rrnd.prec - 1) * Rpow2 (n - Rrnd.prec)
-    /\ IZR n + evalRoundedR _ _ t2 vars <= IZR Rrnd.emax *).
+(*| Ne: CArithExpr -> CArithExpr -> Atom
+  | Lt: CArithExpr -> CArithExpr -> Atom
+  | Le: CArithExpr -> CArithExpr -> Atom
+  | Ge: CArithExpr -> CArithExpr -> Atom
+  | Gt: CArithExpr -> CArithExpr -> Atom
+  | Eq: CArithExpr -> CArithExpr -> Atom
+  | LeLe: CArithExpr -> CArithExpr -> CArithExpr -> Atom
+  | AbsLe: CArithExpr -> CArithExpr -> Atom *)
+  | InInt32: CArithExpr -> Atom (* - IZR (Int32.N / 2) <= t <= IZR (Int32.N / 2 - 1) *)
+  | InInt51: CArithExpr -> Atom
+  | InInt64: CArithExpr -> Atom (* - IZR (Int64.N / 2) <= t <= IZR (Int64.N / 2 - 1) *)
+  | InFloat64: CArithExpr -> Atom (* Rabs t <= Rrnd.maxval *)
+  | InFloat64Int: CArithExpr -> Atom (* Rabs t <= Rpow2 53 *)
+  | NonZero: CArithExpr -> Atom (* t <> 0 *)
+  | NonNeg: CArithExpr -> Atom (* 0 <= t *)
+  | RndExact: mode -> CArithExpr -> Atom (* Rrnd.rnd t = t *)
+  | LdexpControl: Z -> CArithExpr -> CArithExpr -> Atom
+    (* (Rabs (evalReal _ _ t1 vars)) <= IZR (radix2 ^ Rrnd.prec - 1) * Rpow2 (n - Rrnd.prec)
+    /\ IZR n + evalReal _ _ t2 vars <= IZR Rrnd.emax *).
 
 Definition AtomToProp g l := match g with
-  | InInt64 t => - IZR (Int64.N / 2) <= evalPTree2 t l <= IZR (Int64.N / 2 - 1)
-  | InFloat64 t => Rabs (evalPTree2 t l) <= Rrnd.maxval
-  | InFloat64Int t => Rabs (evalPTree2 t l) <= Rpow2 53
-  | NonZero t => evalPTree2 t l <> 0
-  | NonNeg t => evalPTree2 t l >= 0
-  | RndExact md t => let u := evalPTree2 t l in Rrnd.Rnd md u = u
+  | InInt32 t => - IZR (Int32.N / 2) <= evalCArithExpr2 t l <= IZR (Int32.N / 2 - 1)
+  | InInt51 t => -2251799813685248 <= evalCArithExpr2 t l <= 2251799813685247
+  | InInt64 t => - IZR (Int64.N / 2) <= evalCArithExpr2 t l <= IZR (Int64.N / 2 - 1)
+  | InFloat64 t => Rabs (evalCArithExpr2 t l) <= Rrnd.maxval
+  | InFloat64Int t => Rabs (evalCArithExpr2 t l) <= Rpow2 53
+  | NonZero t => evalCArithExpr2 t l <> 0
+  | NonNeg t => 0 <= evalCArithExpr2 t l
+  | RndExact md t => let u := evalCArithExpr2 t l in round radix2 (FLT_exp emin prec) (round_mode md) u = u
   | LdexpControl n t p =>
-    Rabs (evalPTree2 t l) <= IZR (radix2 ^ Rrnd.prec - 1) * Rpow2 (n - Rrnd.prec) /\
-    IZR n + evalPTree2 p l <= IZR Rrnd.emax end.
+    Rabs (evalCArithExpr2 t l) <= IZR (radix2 ^ Rrnd.prec - 1) * Rpow2 (n - Rrnd.prec) /\
+    IZR n + evalCArithExpr2 p l <= IZR Rrnd.emax end.
 
-Inductive ProcessedProp :=
-  | PTrue | PFalse
-  | PAtom: Atom -> ProcessedProp
-(*| PNot: ProcessedProp -> ProcessedProp
-  | POr: ProcessedProp -> ProcessedProp -> ProcessedProp *)
-  | PAnd: ProcessedProp -> ProcessedProp -> ProcessedProp.
+Inductive CProp :=
+  | CTrue | CFalse
+  | CAtom: Atom -> CProp
+(*| CNot: CProp -> CProp
+  | COr: CProp -> CProp -> CProp *)
+  | CAnd: CProp -> CProp -> CProp.
 
-Fixpoint PPropToProp p l := match p with
-  | PFalse => False
-  | PTrue => True
-  | PAtom i => AtomToProp i l
-  | PAnd p1 p2 => PPropToProp p1 l /\ PPropToProp p2 l end.
+Fixpoint CPropToProp p l := match p with
+  | CFalse => False
+  | CTrue => True
+  | CAtom i => AtomToProp i l
+  | CAnd p1 p2 => CPropToProp p1 l /\ CPropToProp p2 l end.
 
-Fixpoint simplifyPProp p := match p with
-  | PFalse => PFalse
-  | PTrue => PTrue
-  | PAtom i => PAtom i
-  | PAnd p1 p2 => match simplifyPProp p1, simplifyPProp p2 with
-    | PTrue, p' | p', PTrue => p'
-    | p1', p2' => PAnd p1' p2' end
+Fixpoint simplifyCProp p := match p with
+  | CFalse => CFalse
+  | CTrue => CTrue
+  | CAtom i => CAtom i
+  | CAnd p1 p2 => match simplifyCProp p1, simplifyCProp p2 with
+    | CTrue, p' | p', CTrue => p'
+    | p1', p2' => CAnd p1' p2' end
   end.
 
-Lemma simplifyPProp_correct :
-  forall p l, PPropToProp (simplifyPProp p) l <-> PPropToProp p l.
+Lemma simplifyCProp_correct :
+  forall p l, CPropToProp (simplifyCProp p) l <-> CPropToProp p l.
 Proof. split.
 - induction p; simpl; [easy.. |].
-  now destruct (simplifyPProp p1), (simplifyPProp p2);
+  now destruct (simplifyCProp p1), (simplifyCProp p2);
   simpl; intros; (split; [apply IHp1 | apply IHp2]).
 - induction p; simpl; [easy.. |]. intros [H1 H2].
-  now destruct (simplifyPProp p1), (simplifyPProp p2); simpl in *;
+  now destruct (simplifyCProp p1), (simplifyCProp p2); simpl in *;
   apply IHp1 in H1; apply IHp2 in H2; [easy | ..]; repeat split.
 Qed.
 
@@ -202,7 +206,7 @@ Qed.
 
 Fixpoint list_var_aux n init := match n with
   | O => nil
-  | S n' => PVar init :: list_var_aux n' (S init) end.
+  | S n' => CVar init :: list_var_aux n' (S init) end.
 
 Lemma length_list_var_aux : forall n i, length (list_var_aux n i) = n.
 Proof. now induction n; [| intros i; simpl; rewrite (IHn (S i))]. Qed.
@@ -216,32 +220,32 @@ Qed.
 Definition list_var n := list_var_aux n O.
 
 Lemma list_var_correct1 : forall Tl (l : evalExprTypeReal_list Tl) n,
-evalPTree1 (nth n (list_var (length Tl)) (PInt 0)) (toList l) = nthExprTypeReal n l 0.
-Proof. unfold evalPTree1.
+evalCArithExpr1 (nth n (list_var (length Tl)) (CInt 0)) (toList l) = nthExprTypeReal n l 0.
+Proof. unfold evalCArithExpr1.
 induction Tl as [| T' Tl]; destruct n; [easy | easy | easy |]. simpl length.
-simpl toList. change (PInt 0) with (Psucc (PInt 0)). unfold list_var in *.
-rewrite nth_list_var_aux_S. rewrite PTreeToTree_Psucc, eval_exprsucc.
+simpl toList. change (CInt 0) with (Psucc (CInt 0)). unfold list_var in *.
+rewrite nth_list_var_aux_S. rewrite CArithExprToTree_Psucc, eval_exprsucc.
 now rewrite IHTl.
 Qed.
 
 Lemma list_var_correct2 : forall Tl (l : evalExprTypeReal_list Tl) n,
-evalPTree2 (nth n (list_var (length Tl)) (PInt 0)) (toList l) = nthExprTypeReal n l 0.
+evalCArithExpr2 (nth n (list_var (length Tl)) (CInt 0)) (toList l) = nthExprTypeReal n l 0.
 Proof.
 induction Tl as [| T' Tl]; destruct n; [easy | easy | easy |]. simpl length.
-simpl toList. change (PInt 0) with (Psucc (PInt 0)). unfold list_var in *.
-rewrite nth_list_var_aux_S. rewrite evalPTree2_succ. now rewrite IHTl.
+simpl toList. change (CInt 0) with (Psucc (CInt 0)). unfold list_var in *.
+rewrite nth_list_var_aux_S. rewrite evalCArithExpr2_succ. now rewrite IHTl.
 Qed.
 
 Fixpoint compatible t := match t with
-  | PInt _ | PBinFl _ _ | PVar _ => true
-  | POp _ t1 t2 => compatible t1 && compatible t2
-  | PNearbyint t | PTrunc t | PSqrt t => compatible t
-  | PRnd md t => match md with mode_NA => false | _ => compatible t end
-  | PLdexp _ _ => false end.
+  | CInt _ | CBinFl _ _ | CVar _ => true
+  | COp _ t1 t2 => andb (compatible t1) (compatible t2)
+  | CNearbyint t | CTrunc t | CSqrt t => compatible t
+  | CRnd md t => match md with mode_NA => false | _ => compatible t end
+  | CLdexp _ _ => false end.
 
 Lemma compatible_correct :
-  forall t l, compatible t = true -> evalPTree1 t l = evalPTree2 t l.
-Proof. unfold evalPTree1. induction t as [| | | OP | | | | |]; simpl; intros.
+  forall t l, compatible t = true -> evalCArithExpr1 t l = evalCArithExpr2 t l.
+Proof. unfold evalCArithExpr1. induction t as [| | | OP | | | | |]; simpl; intros.
 6, 7: now rewrite IHt, Rrnd.nearbyint_IZR. 1, 2, 3, 6: easy.
 - apply andb_prop in H. destruct H as [H1 H2].
   destruct OP; simpl; (rewrite IHt1, IHt2; [| easy | easy]);
@@ -251,9 +255,9 @@ Proof. unfold evalPTree1. induction t as [| | | OP | | | | |]; simpl; intros.
 Qed.
 
 Definition compatible_atom a := match a with
-  | InInt64 t | InFloat64 t | InFloat64Int t
-  | NonZero t | NonNeg t                     => compatible t
-  | _                                        => false
+  | InInt32 t | InInt51 t | InInt64 t | InFloat64 t
+  | InFloat64Int t | NonZero t | NonNeg t => compatible t
+  | _                                     => false
   end.
 
 Definition add_compatibility t := (t, compatible t).
@@ -285,11 +289,11 @@ Qed.
 
 Fixpoint merge l p := match l with
   | nil => p
-  | i :: l' => merge l' (PAnd p (PAtom i))
+  | i :: l' => merge l' (CAnd p (CAtom i))
   end.
 
 Lemma merge_decomp : forall l1 p l,
-  PPropToProp (merge l1 p) l <-> PPropToProp (merge l1 PTrue) l /\ PPropToProp p l.
+  CPropToProp (merge l1 p) l <-> CPropToProp (merge l1 CTrue) l /\ CPropToProp p l.
 Proof. induction l1 as [| t l1]; [easy |]. simpl. intros p l.
 destruct_tuple_obj t. split; intros H.
 - apply IHl1 in H. destruct H as [H1 H]. simpl in H. destruct H as [h H].
@@ -301,8 +305,8 @@ destruct_tuple_obj t. split; intros H.
 Qed.
 
 Lemma merge_app : forall l1 l2 p l,
-  PPropToProp (merge (l1 ++ l2) p) l <->
- (PPropToProp (merge l1 p) l /\ PPropToProp (merge l2 p) l).
+  CPropToProp (merge (l1 ++ l2) p) l <->
+ (CPropToProp (merge l1 p) l /\ CPropToProp (merge l2 p) l).
 Proof. intros l1 l2 p l. rewrite (merge_decomp (l1 ++ l2)).
   rewrite (merge_decomp l1). rewrite (merge_decomp l2).
   induction l1 as [| t l1]; simpl; [easy |].
@@ -320,7 +324,7 @@ Fixpoint well_formed {Tl} : evalExprTypeReal_list Tl -> _ :=
     match vars with
     | nil             => False
     | (t, b) :: vars' => (b = true -> compatible t = true) /\
-                         (evalPTree2 t l) = x /\ well_formed lR' vars' l
+                         (evalCArithExpr2 t l) = x /\ well_formed lR' vars' l
     end
   end.
 
@@ -338,165 +342,226 @@ Proof. intros lR. rewrite <-(app_nil_l (toList lR)). unfold list_var.
 fold (@length R nil). apply well_formed_list_var_aux.
 Qed.
 
-Fixpoint decomposeToPProp {Tl T} (t : ArithExprTree Tl T) vars md := match t with
+Fixpoint ArrayFree {Tl T} (t : ArithExpr Tl T) := match t with
 
-  | Int       _                    n     => (PInt n, true, Void, PTrue)
+  | Int                _             _
+  | BinFl              _             _
+  | Var                _     _                => True
 
-  | BinFl     _                 n1 n2    => (PBinFl n1 n2, true, Void, PTrue)
+  | Op                 _ _     _     t1 t2
+  | OpExact            _       _     t1 t2
+(*| Ldexp              _         _   t1 t2  *)=> ArrayFree t1 /\ ArrayFree t2
 
-  | Var       _                    n     =>
-    let (u, b) := nth n vars (PInt 0%Z, false) in (u, b, Void, PTrue)
+  | Fma                _             t1 t2 t3
+  | FmaExact           _             t1 t2 t3 => ArrayFree t1 /\ ArrayFree t2 /\ ArrayFree t3
 
-  | Op        _    T''   OP     t1 t2    =>
-    let '(u1, b1, bt1, p1) := decomposeToPProp t1 vars md in
-    let '(u2, b2, bt2, p2) := decomposeToPProp t2 vars md in
-    let b  := b1 && b2 in
+  | Let                _ _ _         t1 t2    => ArrayFree t1 /\ ArrayFree t2
+
+  | ArrayAcc           _           _ _        => False
+
+  | Nearbyint          _             t
+  | FastNearbyint      _             t
+  | FastNearbyintToInt _             t
+  | TruncToInt         _             t
+  | FloatInj           _             t
+  | Sqrt               _ _           t
+  | Assert             _ _         _ t
+  | Postcond           _ _         _ t        => ArrayFree t
+  end.
+
+Fixpoint decomposeToCProp {Tl T} (t : ArithExpr Tl T) vars md := match t with
+
+  | Int                _                n        => (CInt n, true, Void, CTrue)
+
+  | BinFl              _                x        =>
+    let f := Prim2B x in
+    match f with
+    | B754_zero   _       => (CBinFl 0 0, true, Void, CTrue)
+    | B754_finite s m e _ => (CBinFl (if s then Z.neg m else Z.pos m) e, true, Void, CTrue)
+    | _                   => (CInt 0%Z, false, Void, CTrue)
+    end
+
+  | Var                _                n        =>
+    let (u, b) := nth n vars (CInt 0%Z, false) in (u, b, Void, CTrue)
+
+  | Op                 _ T''   OP       t1 t2    =>
+    let '(u1, b1, bt1, p1) := decomposeToCProp t1 vars md in
+    let '(u2, b2, bt2, p2) := decomposeToCProp t2 vars md in
+    let b  := andb b1 b2 in
     let bt := Node (if b2 then match OP with
                     | DIV => Leaf (NonZero u2)
                     | _     => Void end else Void) (Node bt1 bt2) in
-    let p  := PAnd (if b2 then PTrue else match OP with
-                    | DIV => PAtom (NonZero u2)
-                    | _     => PTrue end) (PAnd p1 p2) in
+    let p  := CAnd (if b2 then CTrue else match OP with
+                    | DIV => CAtom (NonZero u2)
+                    | _     => CTrue end) (CAnd p1 p2) in
     match T'' with
     | Integer  =>
-      let t  := POp (ArithOpToPOp T'' OP) u1 u2 in
-      let bt' := Node (if b then Leaf (InInt64 t) else Void) bt in
-      let p'  := PAnd (if b then PTrue else PAtom (InInt64 t)) p in
+      let t   := COp (ArithOpToCArithOp T'' OP) u1 u2 in
+      let bt' := Node (if b then Leaf (InInt32 t) else Void) bt in
+      let p'  := CAnd (if b then CTrue else CAtom (InInt32 t)) p in
       (t, b, bt', p')
     | BinFloat =>
-      let t  := PRnd md (POp (ArithOpToPOp T'' OP) u1 u2) in
+      let t   := CRnd md (COp (ArithOpToCArithOp T'' OP) u1 u2) in
       let bt' := Node (if b then Leaf (InFloat64 t) else Void) bt in
-      let p'  := PAnd (if b then PTrue else PAtom (InFloat64 t)) p in
+      let p'  := CAnd (if b then CTrue else CAtom (InFloat64 t)) p in
       (t, b, bt', p')
     end
 
-  | OpExact   _          OP     t1 t2    =>
-    let '(u1, b1, bt1, p1) := decomposeToPProp t1 vars md in
-    let '(u2, b2, bt2, p2) := decomposeToPProp t2 vars md in
-    let t  := POp (ArithOpToPOp BinFloat OP) u1 u2 in
-    let b  := b1 && b2 in
+  | OpExact            _       OP       t1 t2    =>
+    let '(u1, b1, bt1, p1) := decomposeToCProp t1 vars md in
+    let '(u2, b2, bt2, p2) := decomposeToCProp t2 vars md in
+    let t  := COp (ArithOpToCArithOp BinFloat OP) u1 u2 in
+    let b  := andb b1 b2 in
     let bt := Node (if b then match OP with
                     | DIV => Node (Leaf (NonZero u2)) (Leaf (InFloat64 t))
                     | _     => Leaf (InFloat64 t)
                     end else Void) (Node bt1 bt2) in
-    let p  := PAnd 
-             (PAnd (if b then PTrue else match OP with
-                    | DIV => PAnd (PAtom (NonZero u2)) (PAtom (InFloat64 t))
-                    | _     => PAtom (InFloat64 t)
-                    end) (PAtom (RndExact md t))) (PAnd p1 p2) in
+    let p  := CAnd
+             (CAnd (if b then CTrue else match OP with
+                    | DIV => CAnd (CAtom (NonZero u2)) (CAtom (InFloat64 t))
+                    | _     => CAtom (InFloat64 t)
+                    end) (CAtom (RndExact md t))) (CAnd p1 p2) in
     (t, b, bt, p)
 
-  | Fma       _                 t1 t2 t3 =>
-    let '(u1, b1, bt1, p1) := decomposeToPProp t1 vars md in
-    let '(u2, b2, bt2, p2) := decomposeToPProp t2 vars md in
-    let '(u3, b3, bt3, p3) := decomposeToPProp t3 vars md in
-    let t  := PRnd md (POp PADD (POp PMUL u1 u2) u3) in
-    let b  := b1 && b2 && b3 in
+  | Fma                _                t1 t2 t3 =>
+    let '(u1, b1, bt1, p1) := decomposeToCProp t1 vars md in
+    let '(u2, b2, bt2, p2) := decomposeToCProp t2 vars md in
+    let '(u3, b3, bt3, p3) := decomposeToCProp t3 vars md in
+    let t  := CRnd md (COp CADD (COp CMUL u1 u2) u3) in
+    let b  := andb (andb b1 b2) b3 in
     let bt := Node (if b then Leaf (InFloat64 t) else Void) (Node (Node bt1 bt2) bt3) in
-    let p  := PAnd (if b then PTrue else PAtom (InFloat64 t)) (PAnd (PAnd p1 p2) p3) in
+    let p  := CAnd (if b then CTrue else CAtom (InFloat64 t)) (CAnd (CAnd p1 p2) p3) in
     (t, b, bt, p)
 
-  | FmaExact  _                 t1 t2 t3 =>
-    let '(u1, b1, bt1, p1) := decomposeToPProp t1 vars md in
-    let '(u2, b2, bt2, p2) := decomposeToPProp t2 vars md in
-    let '(u3, b3, bt3, p3) := decomposeToPProp t3 vars md in
-    let t  := POp PADD (POp PMUL u1 u2) u3 in
-    let b  := b1 && b2 && b3 in
+  | FmaExact           _                t1 t2 t3 =>
+    let '(u1, b1, bt1, p1) := decomposeToCProp t1 vars md in
+    let '(u2, b2, bt2, p2) := decomposeToCProp t2 vars md in
+    let '(u3, b3, bt3, p3) := decomposeToCProp t3 vars md in
+    let t  := COp CADD (COp CMUL u1 u2) u3 in
+    let b  := andb (andb b1 b2) b3 in
     let bt := Node (if b then Leaf (InFloat64 t) else Void) (Node (Node bt1 bt2) bt3) in
-    let p  := PAnd (if b then PTrue else PAtom (InFloat64 t)) (PAnd (PAnd p1 p2) p3) in
-    (t, b, bt, PAnd p (PAtom (RndExact md t)))
+    let p  := CAnd (if b then CTrue else CAtom (InFloat64 t)) (CAnd (CAnd p1 p2) p3) in
+    (t, b, bt, CAnd p (CAtom (RndExact md t)))
 
-  | NearbyInt _                 t        =>
-    let '(u, b, bt, p) := decomposeToPProp t vars md in
-    (PNearbyint u, b, bt, p)
+  | Nearbyint          _                t        =>
+    let '(u, b, bt, p) := decomposeToCProp t vars md in
+    (CNearbyint u, b, bt, p)
 
-  | Trunc     _                 t        =>
-    let '(u, b, bt, p) := decomposeToPProp t vars md in
-    (PTrunc u, b, bt, p)
+  | FastNearbyint      _                t        =>
+    let '(u, b, bt, p) := decomposeToCProp t vars md in
+    let t   := CNearbyint u in
+    let bt' := Node (if b then Leaf (InInt51 u) else Void) bt in
+    let p'  := CAnd (if b then CTrue else CAtom (InInt51 u)) p in
+    (t, b, bt', p')
 
-  | FloatInj  _                 t        =>
-    let '(u, b, bt, p) := decomposeToPProp t vars md in
+  | FastNearbyintToInt _                t        =>
+    let '(u, b, bt, p) := decomposeToCProp t vars md in
+    let t   := CNearbyint u in
+    let bt' := Node (if b then Leaf (InInt32 u) else Void) bt in
+    let p'  := CAnd (if b then CTrue else CAtom (InInt32 u)) p in
+    (t, b, bt', p')
+
+  | TruncToInt         _                t        =>
+    let '(u, b, bt, p) := decomposeToCProp t vars md in
+    let t   := CTrunc u in
+    let bt' := Node (if b then Leaf (InInt32 t) else Void) bt in
+    let p'  := CAnd (if b then CTrue else CAtom (InInt32 t)) p in
+    (t, b, bt', p')
+
+  | FloatInj           _                t        =>
+    let '(u, b, bt, p) := decomposeToCProp t vars md in
     let bt' := Node (if b then Leaf (InFloat64Int u) else Void) bt in
-    let p'  := PAnd (if b then PTrue else PAtom (InFloat64Int u)) p in
+    let p'  := CAnd (if b then CTrue else CAtom (InFloat64Int u)) p in
     (u, b, bt', p')
 
-  | Ldexp     _             n   t1 t2    =>
-    let '(u1, _, bt1, p1) := decomposeToPProp t1 vars md in
-    let '(u2, _, bt2, p2) := decomposeToPProp t2 vars md in
-    let t  := PRnd md (PLdexp u1 u2) in
+(*| Ldexp              _            n   t1 t2    =>
+    let '(u1, _, bt1, p1) := decomposeToCProp t1 vars md in
+    let '(u2, _, bt2, p2) := decomposeToCProp t2 vars md in
+    let t  := CRnd md (CLdexp u1 u2) in
     let bt := Node bt1 bt2 in
-    let p  := PAnd (PAtom (LdexpControl n u1 u2)) (PAnd p1 p2) in
-    (t, false, bt, p)
+    let p  := CAnd (CAtom (LdexpControl n u1 u2)) (CAnd p1 p2) in
+    (t, false, bt, p) *)
 
-  | Sqrt      _    T''          t        =>
-    let '(u, b, bt, p) := decomposeToPProp t vars md in
-    let t   := PSqrt u in
+  | Sqrt               _ T''            t        =>
+    let '(u, b, bt, p) := decomposeToCProp t vars md in
+    let t   := CSqrt u in
     let bt' := Node (if b then Leaf (NonNeg u) else Void) bt in
-    let p'  := PAnd (if b then PTrue else PAtom (NonNeg u)) p in
+    let p'  := CAnd (if b then CTrue else CAtom (NonNeg u)) p in
     match T'' with
-    | Integer  => (PTrunc t, b, bt', p')
-    | BinFloat => (PRnd md t, b, bt', p')
+    | Integer  => (CTrunc t, b, bt', p')
+    | BinFloat => (CRnd md t, b, bt', p')
     end
 
-  | Let       _    _ _          t1 t2    =>
-    let '(u, b1, bt1, p1) := decomposeToPProp t1 vars              md in
-    let '(t, b2, bt2, p2) := decomposeToPProp t2 ((u, b1) :: vars) md in
+  | ArrayAcc           _              _ _        => (CInt 0%Z, false, Void, CTrue)
+
+  | Let                _ _ _            t1 t2    =>
+    let '(u, b1, bt1, p1) := decomposeToCProp t1 vars              md in
+    let '(t, b2, bt2, p2) := decomposeToCProp t2 ((u, b1) :: vars) md in
     let b := b2 in
     let bt := Node bt2 bt1 (* Preserving some sort of order *) in
-    let p := PAnd p1 p2 in
+    let p := CAnd p1 p2 in
     (t, b, bt, p)
 
-  | Assert    _    _          _ t
-  | Postcond  _    _          _ t        => decomposeToPProp t vars md
+  | Assert             _ _          _   t
+  | Postcond           _ _          _   t        => decomposeToCProp t vars md
   end.
 
-Lemma decomposeToPProp_correct {Tl T} :
-  forall (t : ArithExprTree Tl T) (lM : evalExprTypeMath_list Tl) vars l md,
+Lemma decomposeToCProp_correct {Tl T} :
+  forall (t : ArithExpr Tl T), ArrayFree t ->
+  forall (lM : evalExprTypeRounded_list Tl) vars l md,
   md <> mode_NA -> let lR := M2R_list lM in well_formed lR vars l ->
-  let '(t', b, bt, p) := decomposeToPProp t vars md in
+  let '(t', b, bt, p) := decomposeToCProp t vars md in
   let l' := BTreeToList bt in (
 ((b = true -> compatible t' = true) /\
- (evalPTree2 t' l = evalRoundedR t lR md)) /\
-  forall k, compatible_atom (nth k l' (InInt64 (PInt 0))) = true) /\
- (PPropToProp (merge l' p) l -> wellBehaved t lM md).
+ (evalCArithExpr2 t' l = evalReal t lR md)) /\
+  forall k, compatible_atom (nth k l' (InInt32 (CInt 0))) = true) /\
+ (CPropToProp (merge l' p) l -> wellBehaved t lM md).
 Proof.
 assert (Haux : forall l',
- (forall k, compatible_atom (nth k l' (InInt64 (PInt 0))) = true) <->
+ (forall k, compatible_atom (nth k l' (InInt32 (CInt 0))) = true) <->
   map (fun p => compatible_atom p) l' = repeat true (length l')).
 { induction l'; [now split; [| intros _ [|]] |].
   destruct IHl' as [IHl'_0 IHl'_1]. simpl. split; intros H.
   - rewrite (H O). now rewrite IHl'_0; [| intros k; specialize (H (S k))].
   - inversion H as [[H0 H1]]. clear H. intros [| k]; [easy |].
     rewrite H0 in H1. rewrite H0. now apply IHl'_1. }
-induction t as [| | Tl n | Tl T OP | Tl OP | | | | | | | Tl T | | |];
-intros lM vars l md Hmd lR Truewf.
-14, 15: now apply IHt.
-1,  2:  repeat split; now intros [|].
+induction t as [| | Tl n | Tl T OP | Tl OP | | | | | | | | Tl T | | | |];
+intros IAF lM vars l md Hmd lR Iwf.
+16, 17: now apply IHt.
+15: easy.
+{ repeat split. now intros [|]. }
+(* { repeat split. now intros [|]. } (* BinFl *) *)
 
 all: simpl.
 
-- set (d := nth n vars (PInt 0, false)). destruct_tuple_obj d.
+- now destruct Prim2B; (split; [| easy]);
+   [simpl; rewrite Rmult_1_r | | | unfold B2R, F2R; destruct s; simpl];
+   (split; [| destruct k]).
+
+
+- set (d := nth n vars (CInt 0, false)). destruct_tuple_obj d.
   unfold d. clear d. split; [| easy]. split; [| now intros [|]].
-  revert n vars l Truewf. induction Tl as [| T Tl];
+  clear IAF. revert n vars l Iwf. induction Tl as [| T Tl];
   [now intros [|] [|] | intros [|] [| tb vars] l Hl; destruct_tuple_obj tb; simpl];
   [easy | now destruct Hl | easy |]. destruct lM as (xM, lM). apply (IHTl lM _ _ l).
   now simpl in Hl.
 
 
-- specialize (IHt1 lM vars l md Hmd Truewf).
-  specialize (IHt2 lM vars l md Hmd Truewf).
+- destruct IAF as [IAF1 IAF2].
+  specialize (IHt1 IAF1 lM vars l md Hmd Iwf).
+  specialize (IHt2 IAF2 lM vars l md Hmd Iwf).
   revert IHt1 IHt2. fold lR.
 
-  set (q1 := decomposeToPProp t1 vars md).
+  set (q1 := decomposeToCProp t1 vars md).
   destruct_tuple_obj q1.
   set (pq1 := snd q1). set (lq1 := snd (fst q1)). set (bq1 := snd (fst (fst q1))).
   set (tq1 := fst (fst (fst q1))).
-  set (q2 := decomposeToPProp t2 vars md).
+  set (q2 := decomposeToCProp t2 vars md).
   destruct_tuple_obj q2.
   set (pq2 := snd q2). set (lq2 := snd (fst q2)). set (bq2 := snd (fst (fst q2))).
   set (tq2 := fst (fst (fst q2))).
 
-  unfold evalPTree1.
+  unfold evalCArithExpr1.
   intros [[[IHt1_1 IHt1_2] IHt1_3] IHt1_4]
          [[[IHt2_1 IHt2_2] IHt2_3] IHt2_4].
   rewrite merge_decomp in IHt1_4, IHt2_4. rewrite Haux in IHt1_3, IHt2_3.
@@ -526,19 +591,19 @@ all: simpl.
     destruct OP; [.. | split]; (destruct bq1, bq2; simpl in HOP;
      [destruct HOP as [H HOP] | | |]). all: simpl in *.
     17-20: now apply neq_IZR; fold (M2R (evalRounded t2 lM md));
-      rewrite <- evalRoundedR_evalRounded; fold lR; rewrite <-IHt2_2; destruct Hm1.
+      rewrite <-evalReal_evalRounded; fold lR; rewrite <-IHt2_2; destruct Hm1.
     1-4: rewrite plus_IZR; fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded;
       fold lR; now rewrite <-IHt1_2, <-IHt2_2.
     1-4: rewrite minus_IZR; fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded;
       fold lR; now rewrite <-IHt1_2, <-IHt2_2.
     1-4: rewrite mult_IZR; fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded;
       fold lR; now rewrite <-IHt1_2, <-IHt2_2.
     1-4: rewrite <-Ztrunc_div_; change Ztrunc with (round_mode mode_ZR);
       rewrite <-Rrnd.nearbyint_IZR; fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded; fold lR;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded; fold lR;
       now rewrite <-IHt1_2, <-IHt2_2.
   + split.
     { destruct bq1, bq2; (split; [split | unfold BTreeToList; simpl BTreeToList_aux]);
@@ -564,35 +629,36 @@ all: simpl.
     destruct OP; [.. | split]; (destruct bq1, bq2; simpl in HOP;
      [destruct HOP as [H HOP] | | |]). all: simpl in *.
     17-20: now fold (M2R (evalRounded t2 lM md));
-      rewrite <-evalRoundedR_evalRounded; fold lR; rewrite <-IHt2_2; destruct Hm1.
+      rewrite <-evalReal_evalRounded; fold lR; rewrite <-IHt2_2; destruct Hm1.
     1-4: fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded;
       fold lR; now rewrite <-IHt1_2, <-IHt2_2.
     1-4: fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded;
       fold lR; now rewrite <-IHt1_2, <-IHt2_2.
     1-4: fold (M2R (evalRounded t1 lM md));
-      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalRoundedR_evalRounded;
+      fold (M2R (evalRounded t2 lM md)); rewrite <-2evalReal_evalRounded;
       fold lR; now rewrite <-IHt1_2, <-IHt2_2.
     1-4: fold (M2R (evalRounded t1 lM md)); fold (M2R (evalRounded t2 lM md));
-      rewrite <-2evalRoundedR_evalRounded; fold lR;
+      rewrite <-2evalReal_evalRounded; fold lR;
       now rewrite <-IHt1_2, <-IHt2_2.
 
 
-- specialize (IHt1 lM vars l md Hmd Truewf).
-  specialize (IHt2 lM vars l md Hmd Truewf).
+- destruct IAF as [IAF1 IAF2].
+  specialize (IHt1 IAF1 lM vars l md Hmd Iwf).
+  specialize (IHt2 IAF2 lM vars l md Hmd Iwf).
   revert IHt1 IHt2. fold lR.
 
-  set (q1 := decomposeToPProp t1 vars md).
+  set (q1 := decomposeToCProp t1 vars md).
   destruct_tuple_obj q1.
   set (pq1 := snd q1). set (lq1 := snd (fst q1)). set (bq1 := snd (fst (fst q1))).
   set (tq1 := fst (fst (fst q1))).
-  set (q2 := decomposeToPProp t2 vars md).
+  set (q2 := decomposeToCProp t2 vars md).
   destruct_tuple_obj q2.
   set (pq2 := snd q2). set (lq2 := snd (fst q2)). set (bq2 := snd (fst (fst q2))).
   set (tq2 := fst (fst (fst q2))).
 
-  unfold evalPTree1.
+  unfold evalCArithExpr1.
   intros [[[IHt1_1 IHt1_2] IHt1_3] IHt1_4]
          [[[IHt2_1 IHt2_2] IHt2_3] IHt2_4].
   rewrite merge_decomp in IHt1_4, IHt2_4. rewrite Haux in IHt1_3, IHt2_3.
@@ -616,36 +682,37 @@ all: simpl.
   rewrite 3BTreeToList_aux_concat.
   rewrite 3merge_app. intros [[HOP [Hm1 Hm2]] [[HP HP3] [HP1 HP2]]].
   fold (BTreeToList lq2) in Hm2. destruct OP; [| | | split].
-  5: { fold (M2R (evalRounded t2 lM md)). rewrite <-evalRoundedR_evalRounded. fold lR.
+  5: { fold (M2R (evalRounded t2 lM md)). rewrite <-evalReal_evalRounded. fold lR.
        rewrite <-IHt2_2. destruct bq1, bq2; simpl in HOP;
         [destruct HOP as [[_ H] HOP] | | |]; now simpl in HP. }
   1-4: split; [now apply IHt1_4; split | split; [now apply IHt2_4; split | split]].
   1-8: fold (M2R (evalRounded t1 lM md)). 1-8: fold (M2R (evalRounded t2 lM md)).
-  1-8: rewrite <-2evalRoundedR_evalRounded. 1-8: fold lR.
+  1-8: rewrite <-2evalReal_evalRounded. 1-8: fold lR.
   1-8: rewrite <-IHt1_2, <-IHt2_2.
   1, 3, 5, 7: destruct bq1, bq2; simpl in *; now destruct HOP.
   1-4: now simpl in HP3.
 
 
-- specialize (IHt1 lM vars l md Hmd Truewf).
-  specialize (IHt2 lM vars l md Hmd Truewf).
-  specialize (IHt3 lM vars l md Hmd Truewf).
+- destruct IAF as [IAF1 [IAF2 IAF3]].
+  specialize (IHt1 IAF1 lM vars l md Hmd Iwf).
+  specialize (IHt2 IAF2 lM vars l md Hmd Iwf).
+  specialize (IHt3 IAF3 lM vars l md Hmd Iwf).
   revert IHt1 IHt2 IHt3.
 
-  set (q1 := decomposeToPProp t1 vars md).
+  set (q1 := decomposeToCProp t1 vars md).
   destruct_tuple_obj q1.
   set (pq1 := snd q1). set (lq1 := snd (fst q1)). set (bq1 := snd (fst (fst q1))).
   set (tq1 := fst (fst (fst q1))).
-  set (q2 := decomposeToPProp t2 vars md).
+  set (q2 := decomposeToCProp t2 vars md).
   destruct_tuple_obj q2.
   set (pq2 := snd q2). set (lq2 := snd (fst q2)). set (bq2 := snd (fst (fst q2))).
   set (tq2 := fst (fst (fst q2))).
-  set (q3 := decomposeToPProp t3 vars md).
+  set (q3 := decomposeToCProp t3 vars md).
   destruct_tuple_obj q3.
   set (pq3 := snd q3). set (lq3 := snd (fst q3)). set (bq3 := snd (fst (fst q3))).
   set (tq3 := fst (fst (fst q3))).
 
-  unfold evalPTree1.
+  unfold evalCArithExpr1.
   intros [[[IHt1_1 IHt1_2] IHt1_3] IHt1_4]
          [[[IHt2_1 IHt2_2] IHt2_3] IHt2_4]
          [[[IHt3_1 IHt3_2] IHt3_3] IHt3_4].
@@ -674,29 +741,30 @@ all: simpl.
   destruct bq1, bq2, bq3; simpl in HOP; [destruct HOP as [_ HOP] | | | | | | |].
   1-8: simpl in HP. 1-8: fold (M2R (evalRounded t1 lM md)).
   1-8: fold (M2R (evalRounded t2 lM md)). 1-8: fold (M2R (evalRounded t3 lM md)).
-  1-8: rewrite <-3evalRoundedR_evalRounded.
+  1-8: rewrite <-3evalReal_evalRounded.
   1-8: now rewrite <-IHt1_2, <-IHt2_2, <-IHt3_2.
 
 
-- specialize (IHt1 lM vars l md Hmd Truewf).
-  specialize (IHt2 lM vars l md Hmd Truewf).
-  specialize (IHt3 lM vars l md Hmd Truewf).
+- destruct IAF as [IAF1 [IAF2 IAF3]].
+  specialize (IHt1 IAF1 lM vars l md Hmd Iwf).
+  specialize (IHt2 IAF2 lM vars l md Hmd Iwf).
+  specialize (IHt3 IAF3 lM vars l md Hmd Iwf).
   revert IHt1 IHt2 IHt3.
 
-  set (q1 := decomposeToPProp t1 vars md).
+  set (q1 := decomposeToCProp t1 vars md).
   destruct_tuple_obj q1.
   set (pq1 := snd q1). set (lq1 := snd (fst q1)). set (bq1 := snd (fst (fst q1))).
   set (tq1 := fst (fst (fst q1))).
-  set (q2 := decomposeToPProp t2 vars md).
+  set (q2 := decomposeToCProp t2 vars md).
   destruct_tuple_obj q2.
   set (pq2 := snd q2). set (lq2 := snd (fst q2)). set (bq2 := snd (fst (fst q2))).
   set (tq2 := fst (fst (fst q2))).
-  set (q3 := decomposeToPProp t3 vars md).
+  set (q3 := decomposeToCProp t3 vars md).
   destruct_tuple_obj q3.
   set (pq3 := snd q3). set (lq3 := snd (fst q3)). set (bq3 := snd (fst (fst q3))).
   set (tq3 := fst (fst (fst q3))).
 
-  unfold evalPTree1.
+  unfold evalCArithExpr1.
   intros [[[IHt1_1 IHt1_2] IHt1_3] IHt1_4]
          [[[IHt2_1 IHt2_2] IHt2_3] IHt2_4]
          [[[IHt3_1 IHt3_2] IHt3_3] IHt3_4].
@@ -723,15 +791,15 @@ all: simpl.
          [now apply IHt2_4; split | split;
          [now apply IHt3_4; split |]]].
   fold (M2R (evalRounded t1 lM md)). fold (M2R (evalRounded t2 lM md)).
-  fold (M2R (evalRounded t3 lM md)). rewrite <-3evalRoundedR_evalRounded.
+  fold (M2R (evalRounded t3 lM md)). rewrite <-3evalReal_evalRounded.
   unfold Rrnd.fma. rewrite <-IHt1_2, <-IHt2_2, <-IHt3_2.
   split; [| easy].
   now destruct bq1, bq2, bq3; simpl in HOP; [destruct HOP as [_ HOP] | | | | | | |].
 
 
-- specialize (IHt lM vars l md Hmd Truewf). revert IHt.
+- specialize (IHt IAF lM vars l md Hmd Iwf). revert IHt.
 
-  set (q := decomposeToPProp t vars md).
+  set (q := decomposeToCProp t vars md).
   destruct_tuple_obj q.
   set (pq := snd q). set (lq := snd (fst q)). set (bq := snd (fst (fst q))).
   set (tq := fst (fst (fst q))).
@@ -742,22 +810,59 @@ all: simpl.
   rewrite IHt_2.
 
 
-- specialize (IHt lM vars l md Hmd Truewf). simpl in IHt. revert IHt.
+- specialize (IHt IAF lM vars l md Hmd Iwf). simpl in IHt. revert IHt.
 
-  set (q := decomposeToPProp t vars md).
+  set (q := decomposeToCProp t vars md).
   destruct_tuple_obj q.
   set (pq := snd q). set (lq := snd (fst q)). set (bq := snd (fst (fst q))).
   set (tq := fst (fst (fst q))).
 
   intros [[[IHt_1 IHt_2] IHt_3] IHt_4].
-  rewrite Haux in IHt_3. rewrite Haux. split; [| assumption].
-  now destruct bq; simpl; (split; [split | assumption]); [assumption | | easy |];
-  rewrite IHt_2.
+  rewrite Haux in IHt_3. rewrite Haux.
+  destruct bq; simpl; (split; [split; [split; [assumption | now rewrite IHt_2] |] |]);
+   [rewrite IHt_1 by easy; now apply f_equal | | assumption | unfold BTreeToList];
+    rewrite merge_decomp; cbn; rewrite IHt_2, evalReal_evalRounded; simpl;
+   [intros [H0 [[_ H1] [H2 H3]]] | intros [H0 [[H2 H3] H1]]];
+    (split; [| easy]); apply IHt_4; rewrite merge_decomp; split; assumption.
 
 
-- specialize (IHt lM vars l md Hmd Truewf). simpl in IHt. revert IHt.
+- specialize (IHt IAF lM vars l md Hmd Iwf). simpl in IHt. revert IHt.
 
-  set (q := decomposeToPProp t vars md).
+  set (q := decomposeToCProp t vars md).
+  destruct_tuple_obj q.
+  set (pq := snd q). set (lq := snd (fst q)). set (bq := snd (fst (fst q))).
+  set (tq := fst (fst (fst q))).
+
+  intros [[[IHt_1 IHt_2] IHt_3] IHt_4].
+  rewrite Haux in IHt_3. rewrite Haux.
+  destruct bq; simpl; (split; [split; [split; [assumption | now rewrite IHt_2] |] |]);
+   [rewrite IHt_1 by easy; now apply f_equal | | assumption | unfold BTreeToList];
+    rewrite merge_decomp; cbn; rewrite IHt_2, evalReal_evalRounded; simpl;
+   [intros [H0 [[_ H1] [H2 H3]]] | intros [H0 [[H2 H3] H1]]];
+    (split; [| easy]); apply IHt_4; rewrite merge_decomp; split; assumption.
+
+
+
+- specialize (IHt IAF lM vars l md Hmd Iwf). simpl in IHt. revert IHt.
+
+  set (q := decomposeToCProp t vars md).
+  destruct_tuple_obj q.
+  set (pq := snd q). set (lq := snd (fst q)). set (bq := snd (fst (fst q))).
+  set (tq := fst (fst (fst q))).
+
+  intros [[[IHt_1 IHt_2] IHt_3] IHt_4].
+  rewrite Haux in IHt_3. rewrite Haux.
+  destruct bq; simpl; (split; [split; [split; [assumption | now rewrite IHt_2] |] |]);
+   [rewrite IHt_1 by easy; now apply f_equal | | assumption | unfold BTreeToList];
+    rewrite merge_decomp; cbn; unfold Rrnd.trunc;
+    rewrite IHt_2, round_FIX_IZR, evalReal_evalRounded; simpl;
+   [intros [H0 [[_ H1] [H2 H3]]] | intros [H0 [[H2 H3] H1]]]; rewrite <-opp_IZR in H2;
+    apply le_IZR in H2, H3; (split; [| easy]); apply IHt_4; rewrite merge_decomp; split; assumption.
+
+
+- specialize (IHt IAF lM vars l md Hmd Iwf). simpl in IHt. revert IHt.
+
+  set (q := decomposeToCProp t vars md).
   destruct_tuple_obj q.
   set (pq := snd q). set (lq := snd (fst q)). set (bq := snd (fst (fst q))).
   set (tq := fst (fst (fst q))).
@@ -770,45 +875,11 @@ all: simpl.
     destruct H as [H1 [H3 H4]]; rewrite merge_decomp in H1;
     destruct H1 as [H1 H2]; simpl in H1, H2; destruct H2;
     (split; [now apply IHt_4; unfold BTreeToList; rewrite merge_decomp |]);
-    fold (M2R (evalRounded t lM md)); rewrite <-evalRoundedR_evalRounded; now rewrite <-IHt_2.
+    fold (M2R (evalRounded t lM md)); rewrite <-evalReal_evalRounded; now rewrite <-IHt_2.
 
+- specialize (IHt IAF lM vars l md Hmd Iwf). simpl in IHt. revert IHt.
 
-- specialize (IHt1 lM vars l md Hmd Truewf).
-  specialize (IHt2 lM vars l md Hmd Truewf).
-  revert IHt1 IHt2.
-
-  set (q1 := decomposeToPProp t1 vars md).
-  destruct_tuple_obj q1.
-  set (pq1 := snd q1). set (lq1 := snd (fst q1)). set (bq1 := snd (fst (fst q1))).
-  set (tq1 := fst (fst (fst q1))).
-  set (q2 := decomposeToPProp t2 vars md).
-  destruct_tuple_obj q2.
-  set (pq2 := snd q2). set (lq2 := snd (fst q2)). set (bq2 := snd (fst (fst q2))).
-  set (tq2 := fst (fst (fst q2))).
-
-  unfold evalPTree1.
-  intros [[[IHt1_1 IHt1_2] IHt1_3] IHt1_4]
-         [[[IHt2_1 IHt2_2] IHt2_3] IHt2_4].
-  rewrite merge_decomp in IHt1_4, IHt2_4. rewrite Haux in IHt1_3, IHt2_3.
-
-  rewrite Haux. split.
-  { split; [split; [easy |] |].
-    { simpl. now rewrite IHt1_2, IHt2_2. }
-    unfold BTreeToList. simpl.
-    rewrite (BTreeToList_aux_concat lq1).
-    rewrite (BTreeToList_aux_concat lq2).
-    rewrite 2app_length, 2repeat_app, 2map_app.
-    now rewrite IHt1_3, IHt2_3. }
-  rewrite merge_decomp. unfold BTreeToList. simpl. rewrite 2BTreeToList_aux_concat.
-  rewrite 2merge_app. intros [[Hm1 [Hm2 _]] [HP [HP1 HP2]]].
-  split; [now apply IHt1_4; split | split; [now apply IHt2_4; split |]].
-  fold (M2R (evalRounded t1 lM md)). rewrite plus_IZR. fold (M2R (evalRounded t2 lM md)).
-  rewrite <-2evalRoundedR_evalRounded. now rewrite <-IHt1_2, <-IHt2_2.
-
-
-- specialize (IHt lM vars l md Hmd Truewf). simpl in IHt. revert IHt.
-
-  set (q := decomposeToPProp t vars md).
+  set (q := decomposeToCProp t vars md).
   destruct_tuple_obj q.
   set (pq := snd q). set (lq := snd (fst q)). set (bq := snd (fst (fst q))).
   set (tq := fst (fst (fst q))).
@@ -823,7 +894,7 @@ all: simpl.
       destruct H as [H1 [H3 H4]]; rewrite merge_decomp in H1;
       destruct H1 as [H1 H2]; simpl in H1, H2; destruct H2;
       (split; [now apply IHt_4; unfold BTreeToList; rewrite merge_decomp |]);
-      fold (M2R (evalRounded t lM md)); rewrite <-evalRoundedR_evalRounded; now rewrite <-IHt_2.
+      fold (M2R (evalRounded t lM md)); rewrite <-evalReal_evalRounded; rewrite <-IHt_2; lra.
   + split; [split; [split; [now destruct md | now simpl; unfold lR; rewrite IHt_2] |] |].
     * destruct bq; simpl; unfold BTreeToList in IHt_3; [now rewrite IHt_1, IHt_3 |].
       now unfold BTreeToList.
@@ -831,29 +902,30 @@ all: simpl.
       destruct H as [H1 [H3 H4]]; rewrite merge_decomp in H1;
       destruct H1 as [H1 H2]; simpl in H1, H2; destruct H2;
       (split; [now apply IHt_4; unfold BTreeToList; rewrite merge_decomp |]);
-      fold (M2R (evalRounded t lM md)); rewrite <-evalRoundedR_evalRounded; now rewrite <-IHt_2.
+      fold (M2R (evalRounded t lM md)); rewrite <-evalReal_evalRounded; rewrite <-IHt_2; lra.
 
 
-- set (xM := evalRounded t1 lM md). set (xR := evalRoundedR t1 lR md).
-  specialize (IHt1 lM vars l md Hmd Truewf). revert IHt1.
+- set (xM := evalRounded t1 lM md). set (xR := evalReal t1 lR md).
+  destruct IAF as [IAF1 IAF2].
+  specialize (IHt1 IAF1 lM vars l md Hmd Iwf). revert IHt1.
 
-  set (q1 := decomposeToPProp t1 vars md).
+  set (q1 := decomposeToCProp t1 vars md).
   destruct_tuple_obj q1.
   set (pq1 := snd q1). set (lq1 := snd (fst q1)). set (bq1 := snd (fst (fst q1))).
   set (tq1 := fst (fst (fst q1))).
 
-  unfold evalPTree1.
+  unfold evalCArithExpr1.
   intros [[[IHt1_1 IHt1_2] IHt1_3] IHt1_4].
 
-  specialize (IHt2 (xM, lM) ((tq1, bq1) :: vars) l md Hmd). simpl in IHt2.
+  specialize (IHt2 IAF2 (xM, lM) ((tq1, bq1) :: vars) l md Hmd). simpl in IHt2.
   assert (H : (bq1 = true -> compatible tq1 = true)
-           /\ evalPTree2 tq1 l = xR
+           /\ evalCArithExpr2 tq1 l = xR
            /\ well_formed lR vars l).
   { now repeat split. }
-  unfold xR, lR in H. rewrite evalRoundedR_evalRounded in H.
+  unfold xR, lR in H. rewrite evalReal_evalRounded in H.
   fold xM in H. specialize (IHt2 H). revert IHt2.
 
-  set (q2 := decomposeToPProp t2 ((tq1, bq1) :: vars) md).
+  set (q2 := decomposeToCProp t2 ((tq1, bq1) :: vars) md).
   destruct_tuple_obj q2.
   set (pq2 := snd q2). set (lq2 := snd (fst q2)). set (bq2 := snd (fst (fst q2))).
   set (tq2 := fst (fst (fst q2))).
@@ -862,7 +934,7 @@ all: simpl.
   rewrite merge_decomp in IHt1_4, IHt2_4. rewrite Haux in IHt1_3, IHt2_3.
 
   rewrite Haux. split.
-  { split; [split; [easy |]; rewrite IHt2_2; unfold xM, xR, lR; now rewrite evalRoundedR_evalRounded |].
+  { split; [split; [easy |]; rewrite IHt2_2; unfold xM, xR, lR; now rewrite evalReal_evalRounded |].
     unfold BTreeToList. simpl.
     rewrite (BTreeToList_aux_concat lq1).
     rewrite (BTreeToList_aux_concat lq2).
@@ -874,23 +946,24 @@ all: simpl.
 Qed.
 
 
-Definition extractPProp {Tl T} (t : ArithExprTree Tl T) md :=
+Definition extractCProp {Tl T} (t : ArithExpr Tl T) md :=
   let '(_, _, l, p) :=
-    decomposeToPProp t (map add_compatibility (list_var (length Tl))) md
-  in (l, simplifyPProp p).
+    decomposeToCProp t (map add_compatibility (list_var (length Tl))) md
+  in (l, simplifyCProp p).
 
-Corollary extractPProp_correct {Tl T} :
-  forall (t : ArithExprTree Tl T) (lM : evalExprTypeMath_list Tl) md,
+Corollary extractCProp_correct {Tl T} :
+  forall (t : ArithExpr Tl T), ArrayFree t ->
+  forall (lM : evalExprTypeRounded_list Tl) md,
   md <> mode_NA -> let lR := M2R_list lM in
-  let '(bt, p) := extractPProp t md in let l' := BTreeToList bt in
- (forall k, compatible_atom (nth k l' (InInt64 (PInt 0))) = true) /\
- (PPropToProp (merge l' p) (toList lR) -> wellBehaved t lM md).
-Proof. intros t lM md Hmd lR. unfold extractPProp. set (l := toList lR).
+  let '(bt, p) := extractCProp t md in let l' := BTreeToList bt in
+ (forall k, compatible_atom (nth k l' (InInt32 (CInt 0))) = true) /\
+ (CPropToProp (merge l' p) (toList lR) -> wellBehaved t lM md).
+Proof. intros t IAF lM md Hmd lR. unfold extractCProp. set (l := toList lR).
 set (vars := (map add_compatibility (list_var (length Tl)))).
-generalize (decomposeToPProp_correct t lM vars l md Hmd).
-set (q := decomposeToPProp _ _ _). destruct_tuple_obj q.
+generalize (decomposeToCProp_correct t IAF lM vars l md Hmd).
+set (q := decomposeToCProp _ _ _). destruct_tuple_obj q.
 unfold vars. unfold l at 1. intros H. specialize (H (well_formed_list_var lR)).
-rewrite merge_decomp in H. rewrite merge_decomp. rewrite simplifyPProp_correct.
+rewrite merge_decomp in H. rewrite merge_decomp. rewrite simplifyCProp_correct.
 split; apply H.
 Qed.
 
@@ -906,22 +979,25 @@ Definition prec := Faux.PtoP 80.
 Definition degree := 10%nat.
 
 Definition AtomToGoal g := match g with
-  | InInt64 t => Reify.Glele (Tree.Econst (Tree.Int (- Int64.N / 2))) (Tree.Econst (Tree.Int (Int64.N / 2 - 1)))
-  | InFloat64 _ => Reify.Gabsle true (* (Tree.Econst (Tree.Int ((2 ^ 53 - 1) * 2 ^ 971))) *) (Tree.Ebinary Tree.Mul
+  | InInt32      _ => Reify.Glele (Tree.Econst (Tree.Int (- Int32.N / 2))) (Tree.Econst (Tree.Int (Int32.N / 2 - 1)))
+  | InInt51      _ => Reify.Glele (Tree.Econst (Tree.Int (-2251799813685248))) (Tree.Econst (Tree.Int 2251799813685247))
+  | InInt64      _ => Reify.Glele (Tree.Econst (Tree.Int (- Int64.N / 2))) (Tree.Econst (Tree.Int (Int64.N / 2 - 1)))
+  | InFloat64    _ => Reify.Gabsle true (* (Tree.Econst (Tree.Int ((2 ^ 53 - 1) * 2 ^ 971))) *) (Tree.Ebinary Tree.Mul
    (Tree.Ebinary Tree.Sub (Tree.Econst (Tree.Bpow 2 53)) (Tree.Econst (Tree.Int 1)))
    (Tree.Econst (Tree.Bpow 2 971)))
-  | NonZero t => Reify.Gne true (Tree.Econst (Tree.Int 0))
+  | InFloat64Int _ => Reify.Gabsle true (Tree.Econst (Tree.Bpow 2 53))
+  | NonZero      _ => Reify.Gne true (Tree.Econst (Tree.Int 0))
+  | NonNeg       _ => Reify.Gge true (Tree.Econst (Tree.Int 0))
   | _ => Reify.Glt (Tree.Evar O) (*
     goals that we will not solve using interval.
     TODO: think harder about the case LdExpControl as we may be able to use interval to solve this one
     *)
   end.
 
-Definition getPTree g := match g with
-  | InInt64 t => t
-  | InFloat64 t => t
-  | NonZero t => t
-  | _ => PInt 0 (*
+Definition getCArithExpr g := match g with
+  | InInt32 t | InInt64 t | InInt51 t | InFloat64 t
+  | InFloat64Int t | NonZero t | NonNeg t => t
+  | _                                     => CInt 0 (*
     goals that we will not solve using interval.
     TODO: think harder about the case LdExpControl as we may be able to use interval to solve this one
     *)
@@ -930,16 +1006,13 @@ Definition getPTree g := match g with
 Lemma AtomToGoal_correct : forall i a l,
    compatible_atom a = true ->
    Interval.contains (Iaux.convert i)
-    (Xreal.Xreal (Tree.eval (PTreeToTree (getPTree a)) l)) ->
+    (Xreal.Xreal (Tree.eval (CArithExprToTree (getCArithExpr a)) l)) ->
    IH.R.eval_goal_bnd prec (AtomToGoal a) i = true ->
    AtomToProp a l.
 Proof. intros i a l Ha Hcont Heg. generalize IH.R.eval_goal_bnd_correct. intros H.
-specialize (H prec (AtomToGoal a) i (Tree.eval (PTreeToTree (getPTree a)) l) Hcont Heg).
-clear Hcont Heg. destruct a; simpl in *; [| | lra | | lra | easy..].
-- apply (compatible_correct _ l) in Ha. now rewrite <- Ha.
-- apply (compatible_correct _ l) in Ha. rewrite <- Ha. unfold Rrnd.maxval.
-  now rewrite minus_IZR.
-- apply (compatible_correct _ l) in Ha. now rewrite <- Ha.
+specialize (H prec (AtomToGoal a) i (Tree.eval (CArithExprToTree (getCArithExpr a)) l) Hcont Heg).
+clear Hcont Heg. destruct a; simpl in *; [| | | unfold Rrnd.maxval;rewrite minus_IZR | | | | easy..];
+  apply (compatible_correct _ l) in Ha; now rewrite <-Ha.
 Qed.
 
 Fixpoint compareResults goals results := match goals with
@@ -951,44 +1024,44 @@ Fixpoint compareResults goals results := match goals with
   end.
 
 Fixpoint par_construct Al (bl : list bool) := match Al with
-  | nil      => PTrue
+  | nil      => CTrue
   | p :: Al' => match bl with
-    | nil      => PTrue
+    | nil      => CTrue
     | b :: bl' => let P := par_construct Al' bl' in
-      if b then (PAnd P (PAtom p)) else P
+      if b then (CAnd P (CAtom p)) else P
     end
   end.
 
 Fixpoint par_mergerest Al (bl : list bool) P := match Al with
   | nil      => P
   | p :: Al' => match bl with
-    | nil      => merge Al' (PAnd P (PAtom p))
-    | b :: bl' => let P' := if b then P else (PAnd P (PAtom p)) in
+    | nil      => merge Al' (CAnd P (CAtom p))
+    | b :: bl' => let P' := if b then P else (CAnd P (CAtom p)) in
       par_mergerest Al' bl' P'
     end
   end.
 
 Lemma par_mergerest_decomp : forall Al bl P l,
-  PPropToProp (par_mergerest Al bl P) l <->
-  PPropToProp (par_mergerest Al bl PTrue) l /\ PPropToProp P l.
+  CPropToProp (par_mergerest Al bl P) l <->
+  CPropToProp (par_mergerest Al bl CTrue) l /\ CPropToProp P l.
 Proof. induction Al; [easy |].
 intros [| [|] bl] P l; simpl; [| apply IHAl |].
-- rewrite merge_decomp. rewrite (merge_decomp _ (PAnd _ _) _). now simpl.
-- rewrite IHAl. rewrite (IHAl _ (PAnd _ _) _). now simpl.
+- rewrite merge_decomp. rewrite (merge_decomp _ (CAnd _ _) _). now simpl.
+- rewrite IHAl. rewrite (IHAl _ (CAnd _ _) _). now simpl.
 Qed.
 
 Lemma par_construct_mergerest : forall Al bl P l,
-  PPropToProp (par_construct Al bl) l /\ PPropToProp (par_mergerest Al bl P) l <->
-  PPropToProp (merge Al P) l.
+  CPropToProp (par_construct Al bl) l /\ CPropToProp (par_mergerest Al bl P) l <->
+  CPropToProp (merge Al P) l.
 Proof. induction Al; intros bl P l; simpl; destruct bl; [easy.. |].
 rewrite par_mergerest_decomp, merge_decomp.
 now case b; simpl; rewrite <-(IHAl bl).
 Qed.
 
-Definition generatePProp {Tl T}  (t : ArithExprTree Tl T) md vars hyps :=
-  let (tointerval, unsolvable) := extractPProp t md in
+Definition generateCProp {Tl T}  (t : ArithExpr Tl T) md vars hyps :=
+  let (tointerval, unsolvable) := extractCProp t md in
   let tointerval := BTreeToList tointerval in
-  let lexpr := map (fun p => PTreeToTree (getPTree p)) tointerval in
+  let lexpr := map (fun p => CArithExprToTree (getCArithExpr p)) tointerval in
   match extract_list lexpr vars with
   | Eabort => merge tointerval unsolvable
   | Eprog prog consts =>
@@ -999,20 +1072,21 @@ Definition generatePProp {Tl T}  (t : ArithExprTree Tl T) md vars hyps :=
     let compared := compareResults goals results in
     par_mergerest tointerval compared unsolvable end.
 
-Theorem generatePProp_correct {Tl T} :
-  forall (t : ArithExprTree Tl T) (lM : evalExprTypeMath_list Tl) md hyps P,
+Theorem generateCProp_correct {Tl T} :
+  forall (t : ArithExpr Tl T), ArrayFree t ->
+  forall (lM : evalExprTypeRounded_list Tl) md hyps P,
   md <> mode_NA -> let lR := M2R_list lM in let l := toList lR in
-    generatePProp t md (length l) hyps = P ->
-    Reify.eval_hyps hyps l (PPropToProp P l -> wellBehaved t lM md).
-Proof. intros t lM md hyps P Hmd lR l <-.
+    generateCProp t md (length l) hyps = P ->
+    Reify.eval_hyps hyps l (CPropToProp P l -> wellBehaved t lM md).
+Proof. intros t IAF lM md hyps P Hmd lR l <-.
 apply (IH.R.eval_hyps_bnd_correct prec).
-generalize (extractPProp_correct t lM md). unfold generatePProp.
-set (p0 := extractPProp _ _). destruct_tuple_obj p0.
+generalize (extractCProp_correct t IAF lM md). unfold generateCProp.
+set (p0 := extractCProp _ _). destruct_tuple_obj p0.
 set (unsolved := snd p0).
 intros [Hm Hm'] Hh Hg; [easy |]. apply Hm'. revert Hm Hg.
 set (tointerval := BTreeToList (fst p0)).
 set (goals := map (fun p => AtomToGoal p) tointerval).
-set (lexpr := map (fun p => PTreeToTree (getPTree p)) tointerval).
+set (lexpr := map (fun p => CArithExprToTree (getCArithExpr p)) tointerval).
 generalize (extract_list_correct lexpr l).
 destruct extract_list as [|prog consts]; [easy |].
 intros H Hm Hg. eapply par_construct_mergerest. revert Hm Hg.
@@ -1026,14 +1100,14 @@ fold l' in Hh. clear Hm' Hg.
 generalize (IH.A.BndValuator.eval_correct' prec prog bounds l' Hh).
 destruct Hh as [Hl Hh]. intros H'.
 clearbody tointerval. clear p0 unsolved results compared.
-unfold goals. clear goals. unfold ieval. clear ieval. clear T t.
+unfold goals. clear goals. unfold ieval. clear ieval. clear T t IAF.
 fold lR l. clearbody l. clear Tl lM lR. clearbody bounds.
 unfold eval_real_nth in H. fold l' in H. revert H'.
 generalize (IH.A.BndValuator.eval prec prog bounds).
 intros l0 H'.
 cut (forall k,
   nth k (compareResults (map (fun p : Atom => AtomToGoal p) tointerval) l0) false = true ->
-  AtomToProp (nth k tointerval (InInt64 (PInt 0))) l).
+  AtomToProp (nth k tointerval (InInt32 (CInt 0))) l).
 { clear. revert l0. induction tointerval; [easy |].
 intros l0 H''. simpl. destruct l0 as [| i l0]; [easy |].
 simpl in H''. generalize (H'' O). destruct IH.R.eval_goal_bnd; intros Ha.
@@ -1048,7 +1122,7 @@ intros k Hk. destruct (Nat.lt_ge_cases k (length tointerval)) as [Hkl | Hkl].
   [easy |]. apply le_n_S, (IHtointerval l0 k). now apply le_S_n in Hkl. }
 apply AtomToGoal_correct with (i := (nth k l0 Iaux.nai)) (1 := (Hm k)).
 - specialize (H' k). rewrite H in H' by (unfold lexpr; now rewrite map_length).
-  unfold lexpr in H'. rewrite (Eval.nth_map_lt (InInt64 (PInt 0))) in H' by easy.
+  unfold lexpr in H'. rewrite (Eval.nth_map_lt (InInt32 (CInt 0))) in H' by easy.
   apply H'.
 - clear -Hk Hkl. revert l0 k Hk Hkl. induction tointerval; [easy |]. simpl.
   intros [| i l0]; [now intros [|] |]. simpl.
@@ -1056,10 +1130,10 @@ apply AtomToGoal_correct with (i := (nth k l0 Iaux.nai)) (1 := (Hm k)).
   now apply Nat.succ_lt_mono.
 Qed.
 
-Definition generatePProp_taylor {Tl T}  (t : ArithExprTree Tl T) md vars hyps :=
-  let (tointerval, unsolvable) := extractPProp t md in
+Definition generateCProp_taylor {Tl T}  (t : ArithExpr Tl T) md vars hyps :=
+  let (tointerval, unsolvable) := extractCProp t md in
   let tointerval := BTreeToList tointerval in
-  let lexpr := map (fun p => PTreeToTree (getPTree p)) tointerval in
+  let lexpr := map (fun p => CArithExprToTree (getCArithExpr p)) tointerval in
   match extract_list lexpr vars with
   | Eabort => merge tointerval unsolvable
   | Eprog prog consts =>
@@ -1075,20 +1149,21 @@ Definition generatePProp_taylor {Tl T}  (t : ArithExprTree Tl T) md vars hyps :=
     par_mergerest tointerval compared unsolvable
     end end.
 
-Theorem generatePProp_taylor_correct {Tl T} :
-  forall (t : ArithExprTree Tl T) (lM : evalExprTypeMath_list Tl) md hyps P,
+Theorem generateCProp_taylor_correct {Tl T} :
+  forall (t : ArithExpr Tl T), ArrayFree t ->
+  forall (lM : evalExprTypeRounded_list Tl) md hyps P,
   md <> mode_NA -> let lR := M2R_list lM in let l := toList lR in
-    generatePProp_taylor t md (length l) hyps = P ->
-    Reify.eval_hyps hyps l (PPropToProp P l -> wellBehaved t lM md).
-Proof. intros t lM md hyps P Hmd lR l <-.
+    generateCProp_taylor t md (length l) hyps = P ->
+    Reify.eval_hyps hyps l (CPropToProp P l -> wellBehaved t lM md).
+Proof. intros t IAF lM md hyps P Hmd lR l <-.
 apply (IH.R.eval_hyps_bnd_correct prec).
-generalize (extractPProp_correct t lM md). unfold generatePProp_taylor.
-set (p0 := extractPProp _ _). destruct_tuple_obj p0.
+generalize (extractCProp_correct t IAF lM md). unfold generateCProp_taylor.
+set (p0 := extractCProp _ _). destruct_tuple_obj p0.
 set (unsolved := snd p0).
 intros [Hm Hm'] Hh Hg; [easy |]. apply Hm'. revert Hm Hg.
 set (tointerval := BTreeToList (fst p0)).
 set (goals := map (fun p => AtomToGoal p) tointerval).
-set (lexpr := map (fun p => PTreeToTree (getPTree p)) tointerval).
+set (lexpr := map (fun p => CArithExprToTree (getCArithExpr p)) tointerval).
 generalize (extract_list_correct lexpr l).
 destruct extract_list as [|prog consts]; [easy |]. intros H.
 unfold eval_real_nth in H.
@@ -1106,7 +1181,7 @@ assert (Hh' : IH.A.contains_all li l').
   - intros n. apply (Hh (S n)). }
 generalize (fun n => IH.A.TaylorValuator.eval_correct prec degree prog li l' Hh' n xi xi x (Hh 0%nat)).
 intros H'. clearbody tointerval. clear p0 unsolved.
-unfold goals. clear goals. clear T t.
+unfold goals. clear goals. clear T t IAF.
 fold lR l. clearbody l. clear Tl lM lR. clearbody bounds.
 revert H'.
 generalize ((IH.A.TaylorValuator.eval prec degree xi prog
@@ -1118,7 +1193,7 @@ set (l0' := (map
             IH.A.TaylorValuator.TM.eval (prec, degree) p xi xi) l0)).
 cut (forall k,
   nth k (compareResults (map (fun p : Atom => AtomToGoal p) tointerval) l0') false = true ->
-  AtomToProp (nth k tointerval (InInt64 (PInt 0))) l).
+  AtomToProp (nth k tointerval (InInt32 (CInt 0))) l).
 { generalize l0'. clear. induction tointerval; [easy |].
 intros l0' H''. simpl. destruct l0' as [| i l0']; [easy |].
 simpl in H''. generalize (H'' O). destruct IH.R.eval_goal_bnd; intros Ha.
@@ -1133,7 +1208,7 @@ intros k Hk. destruct (Nat.lt_ge_cases k (length tointerval)) as [Hkl | Hkl].
   [easy |]. apply le_n_S, (IHtointerval l0' k). now apply le_S_n in Hkl. }
 apply AtomToGoal_correct with (i := (nth k l0' Iaux.nai)) (1 := (Hm k)).
 - specialize (H' k). rewrite H in H' by (unfold lexpr; now rewrite map_length).
-  unfold lexpr in H'. rewrite (Eval.nth_map_lt (InInt64 (PInt 0))) in H' by easy.
+  unfold lexpr in H'. rewrite (Eval.nth_map_lt (InInt32 (CInt 0))) in H' by easy.
   revert Hk Hkl. unfold l0'. clear -H'. revert tointerval l0 H'. induction k.
   + intros [| a tointerval] [| x0 l0]; easy.
   + intros [| a tointerval] [| x0 l0]; try easy. simpl. intros H' Hk Hkl.
