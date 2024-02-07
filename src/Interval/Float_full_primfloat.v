@@ -231,14 +231,12 @@ Definition cos := cos.
 Definition sin := sin.
 Definition tan := tan.
 Definition atan := atan.
-Definition exp := exp.
 Definition ln := ln.
 
 Definition cos_correct := cos_correct.
 Definition sin_correct := sin_correct.
 Definition tan_correct := tan_correct.
 Definition atan_correct := atan_correct.
-Definition exp_correct := exp_correct.
 Definition ln_correct := ln_correct.
 
 Module ExpImpl.
@@ -565,13 +563,14 @@ Definition exp_aux (x : F.type) :=
 
 Lemma exp_aux_correct :
   forall x, is_finite (Prim2B x) = true ->
-  let '(lb, ub) := exp_aux x in
- (F.valid_lb lb = true /\
+ (let lb := fst (exp_aux x) in
+  F.valid_lb lb = true /\
   match F.toX lb with
   | Xreal.Xnan => True
   | Xreal.Xreal r => r <= Rtrigo_def.exp (B2R (Prim2B x))
   end) /\
- (F.valid_ub ub = true /\
+ (let ub := snd (exp_aux x) in
+  F.valid_ub ub = true /\
   match F.toX ub with
   | Xreal.Xnan => True
   | Xreal.Xreal r => Rtrigo_def.exp (B2R (Prim2B x)) <= r
@@ -958,5 +957,129 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
 Qed.
 
 End ExpImpl.
+
+Import ExpImpl.
+
+Definition exp (prec : F.precision) xi :=
+  let aux x :=
+    let k0 := (x * PInvLog2_64 + 0x1.8p52)%float in let kf := (k0 - 0x1.8p52)%float in
+    let tf := (x - kf * PLog2div64h - kf * PLog2div64l)%float in
+    let ki := PrimInt63.sub (normfr_mantissa (fst (frshiftexp k0))) 6755399440921280%int63 in
+    let C := consts.[PrimInt63.land ki 63] in
+    let kq := PrimInt63.asr ki 6 in let y := (C * Papprox tf)%float in
+    (C, y, kq) in
+  match xi with
+  | Ibnd xl xu =>
+    Ibnd
+     (if F.real xl then
+        if PrimFloat.ltb xl (-0x1.74385446d71c4p9)%float then 0%float else
+        if PrimFloat.ltb 0x1.62e42fefa39efp9%float xl then 0x1.fffffffffff2ap1023%float else
+        let '(C, y, kq) := aux xl in
+        next_down (ldshiftexp (C + (y + -0x1.8p-57))%float kq)
+      else 0%float)
+     (if F.real xu then
+        if PrimFloat.ltb xu (-0x1.74385446d71c4p9)%float then 0x1p-1074%float else
+        if PrimFloat.ltb 0x1.62e42fefa39efp9%float xu then infinity else
+        let '(C, y, kq) := aux xu in
+        next_up (ldshiftexp (C + (y + 0x1.8p-57))%float kq)
+      else nan)
+  | Inan => Inan
+  end.
+
+Theorem exp_correct :
+  forall prec, extension Xexp (exp prec).
+Proof.
+intros prec [|xl xu].
+easy.
+intros [|x].
+now simpl; case (_ && _)%bool.
+unfold convert at 1.
+case_eq (F.valid_lb xl); [|intros _ [H0 H1]; lra].
+case_eq (F.valid_ub xu); [|intros _ _ [H0 H1]; lra].
+intros Vxu Vxl [Hxl Hxu].
+simpl.
+assert (Hl := fun H => proj1 (exp_aux_correct xl H)).
+assert (Hu := fun H => proj2 (exp_aux_correct xu H)).
+rewrite <- PrimitiveFloat.real_is_finite, F.real_correct, B2Prim_Prim2B in Hl.
+rewrite <- PrimitiveFloat.real_is_finite, F.real_correct, B2Prim_Prim2B in Hu.
+set (l := if F.real xl then _ else _).
+set (u := if F.real xu then _ else _).
+assert (Vl : F.valid_lb l = true).
+{ unfold l. clear l u.
+  rewrite F.real_correct.
+  destruct (F.toX xl) as [|rxl].
+  easy.
+  specialize (Hl eq_refl).
+  revert Hl.
+  unfold exp_aux.
+  destruct PrimFloat.ltb.
+  easy.
+  now destruct PrimFloat.ltb. }
+assert (Vu : F.valid_ub u = true).
+{ unfold u. clear l u Vl.
+  rewrite F.real_correct.
+  destruct (F.toX xu) as [|rxu].
+  easy.
+  specialize (Hu eq_refl).
+  revert Hu.
+  unfold exp_aux.
+  destruct PrimFloat.ltb.
+  easy.
+  now destruct PrimFloat.ltb. }
+rewrite Vl, Vu; unfold l, u.
+split.
+- clear u Hxu Hu Vu.
+  rewrite F.real_correct.
+  assert (Hxl' := PrimitiveFloat.toX_Prim2B xl).
+  destruct (F.toX xl) as [|rxl].
+  apply Rlt_le, exp_pos.
+  apply eq_sym, PrimitiveFloat.BtoX_B2R in Hxl'.
+  specialize (Hl eq_refl).
+  revert Hl.
+  unfold exp_aux.
+  intros [_ H].
+  destruct PrimFloat.ltb.
+  apply Rle_trans with (1 := H).
+  apply Raux.exp_le.
+  now rewrite <- Hxl'.
+  destruct PrimFloat.ltb.
+  apply Rle_trans with (1 := H).
+  apply Raux.exp_le.
+  now rewrite <- Hxl'.
+  revert H.
+  set (yl := next_down _).
+  simpl.
+  destruct F.toX as [|ryl].
+  easy.
+  intros H.
+  apply Rle_trans with (1 := H).
+  apply Raux.exp_le.
+  now rewrite <- Hxl'.
+- clear l Hxl Hl Vl.
+  rewrite F.real_correct.
+  assert (Hxu' := PrimitiveFloat.toX_Prim2B xu).
+  destruct (F.toX xu) as [|rxu].
+  easy.
+  apply eq_sym, PrimitiveFloat.BtoX_B2R in Hxu'.
+  specialize (Hu eq_refl).
+  revert Hu.
+  unfold exp_aux.
+  intros [_ H].
+  destruct PrimFloat.ltb.
+  apply Rle_trans with (2 := H).
+  apply Raux.exp_le.
+  now rewrite <- Hxu'.
+  destruct PrimFloat.ltb.
+  easy.
+  revert H.
+  set (yl := next_up _).
+  simpl.
+  destruct F.toX as [|ryu].
+  easy.
+  intros H.
+  apply Rle_trans with (2 := H).
+  apply Raux.exp_le.
+  now rewrite <- Hxu'.
+Qed.
 
 End PrimFloatIntervalFull.
