@@ -189,7 +189,9 @@ lazymatch goal with
     let IWB   := fresh "IWB"   in let Hgoal   := fresh "Hgoal"   in
     let Iconv := fresh "Iconv" in let IisConv := fresh "IisConv" in cut G4;
      [intros [IWB Hgoal]; refine (_ (equivPrim t lP _ IWB _));
-       [let H := fresh "__H" in intros [Iconv H]; rewrite ?H; intuition; apply Hgoal; easy | try easy | try easy]
+       [let H := fresh "__H" in
+        intros [Iconv H]; unfold isConversionPrim in H;
+        rewrite ?H; intuition; apply Hgoal; easy | try easy | try easy]
      | simpl P2M_list]
   end
 end.
