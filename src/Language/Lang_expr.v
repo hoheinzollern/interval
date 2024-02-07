@@ -5,7 +5,7 @@ From Flocq Require Import Core PrimFloat BinarySingleNaN Operations.
 
 Require Generic_proof.
 
-Open Scope R_scope.
+Local Open Scope R_scope.
 
 (** Signed computer integers: operations and constants **)
 

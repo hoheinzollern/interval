@@ -7,7 +7,7 @@ Require Import Float_full.
 Require Import Prog.
 Require Import Lang_expr.
 
-Open Scope R_scope.
+Local Open Scope R_scope.
 
 Ltac destruct_tuple := try match goal with
   | |- match ?t with _ => _ end => match type of t with

@@ -456,6 +456,9 @@ Ltac do_interval_intro_ t extend params :=
     do_interval_intro t extend fvar bvars prec degree depth false false itm false
   end.
 
+Tactic Notation "interval" :=
+  do_interval_ (@nil interval_tac_parameters).
+
 Tactic Notation "interval" "with" constr(params) :=
   do_interval_ ltac:(tuple_to_list params (@nil interval_tac_parameters)).
 

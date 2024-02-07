@@ -3,7 +3,7 @@ From Flocq Require Import Core BinarySingleNaN Operations.
 
 Require Import Lang_expr Lang_simpl.
 
-Open Scope R_scope.
+Local Open Scope R_scope.
 
 Lemma destructLet : forall Tl T1 T2
     (P  : evalExprTypeRounded T1 -> evalExprTypeRounded T2 -> Prop)
