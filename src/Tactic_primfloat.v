@@ -1,5 +1,5 @@
 Require Import Primitive_ops.
-Require Import Float_full_primfloat.
+Require Import Float_full.
 
 Module Float := PrimitiveFloat.
-Module Interval := PrimFloatIntervalFull.
+Module Interval := FloatIntervalFull PrimitiveFloat.

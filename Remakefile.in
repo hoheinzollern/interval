@@ -66,7 +66,7 @@ configure config.status: configure.in
 	autoconf
 	./config.status --recheck
 
-src/Tactic_float.v: src/Tactic_bignum.v src/Tactic_primfloat.v Remakefile
+src/Tactic_float.v: @PRIM_FLOAT_TAC@ Remakefile
 	cp @PRIM_FLOAT_TAC@ src/Tactic_float.v
 
 %.vo: %.v | src/Tactic_float.v src/Plot.v src/Missing/Int63Compat.v src/Missing/MathComp1or2.v

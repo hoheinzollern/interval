@@ -234,16 +234,6 @@ fi
 AC_SUBST(COQINTERVALLIB)
 AC_SUBST(PLOTPLUGIN)
 
-if test "$prim_float" = "yes"; then
-   PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops Interval/Float_full_primfloat"
-   PRIM_FLOAT_TAC=src/Tactic_primfloat.v
-else
-   PRIM_FLOAT=
-   PRIM_FLOAT_TAC=src/Tactic_bignum.v
-fi
-AC_SUBST(PRIM_FLOAT)
-AC_SUBST(PRIM_FLOAT_TAC)
-
 if test "$COQVERSION" -lt 81600; then
    lang_tac=no
 fi
@@ -253,6 +243,21 @@ else
    LANG_FILES=
 fi
 AC_SUBST([LANG_FILES])
+
+if test "$prim_float" = "yes"; then
+   if test "$lang_tac" = "yes"; then
+      PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops Interval/Float_full_primfloat"
+      PRIM_FLOAT_TAC=src/Tactic_primfloat_opt.v
+   else
+      PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops"
+      PRIM_FLOAT_TAC=src/Tactic_primfloat.v
+   fi
+else
+   PRIM_FLOAT=
+   PRIM_FLOAT_TAC=src/Tactic_bignum.v
+fi
+AC_SUBST(PRIM_FLOAT)
+AC_SUBST(PRIM_FLOAT_TAC)
 
 AC_ARG_VAR(REMAKE, [Remake [vendored version]])
 
