@@ -162,7 +162,7 @@ induction i as [|n IH].
 { simpl. intros _ _ _ _ l. now rewrite Rmult_0_r, Rplus_0_r. }
 intros zi2 gxi mz rz acc Hacc.
 cbn beta iota zeta delta [sample_plot_aux].
-rewrite <- Nat2Z.inj_pred by apply lt_O_Sn.
+rewrite <- Nat2Z.inj_pred by apply Nat.lt_0_succ.
 simpl (Nat.pred (S n)).
 set (xi1 := I.add prec oxi (I.mul prec dxi (I.fromZ prec (Z.of_nat n)))).
 set (xi2 := I.add prec oxi (I.mul prec dxi (I.fromZ prec (Z.of_nat (S n))))).

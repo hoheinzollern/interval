@@ -687,10 +687,10 @@ intros p H.
 apply f_equal.
 apply f_equal.
 apply inj_eq_rev.
-rewrite pred_of_minus.
+rewrite <-Nat.sub_1_r.
 rewrite inj_minus1.
 now rewrite <- 2!Zpos_eq_Z_of_nat_o_nat_of_P.
-apply lt_le_S.
+rewrite Nat.le_succ_l.
 apply lt_O_nat_of_P.
 now case n.
 (* *)
@@ -729,9 +729,9 @@ rewrite pow_add.
 field.
 refine (conj _ Y).
 now apply pow_nonzero.
-rewrite pred_of_minus.
-apply le_plus_minus_r.
-apply lt_le_S.
+rewrite <-Nat.sub_1_r.
+rewrite Nat.add_comm, Nat.sub_add; [reflexivity|].
+rewrite Nat.le_succ_l.
 apply lt_O_nat_of_P.
 case (f x).
 easy.

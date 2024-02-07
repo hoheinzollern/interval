@@ -279,8 +279,8 @@ change 3%Z with (Z.of_nat (2 * (0 + 1) + 1)).
 rewrite <- INR_IZR_INZ.
 replace (Ai x 0%nat - atanc x)%R with ((-1) * 1 * (atanc x - Ai x 0%nat))%R by ring.
 change (-1 * 1)%R with (pow (-1) (0 + 1)).
-rewrite <- (minus_diag n) at 2 4 7 9.
-generalize (le_refl n).
+rewrite <- (Nat.sub_diag n) at 2 4 7 9.
+generalize (Nat.le_refl n).
 generalize n at 1 4 6 7 9 11.
 intros m.
 revert powi divi.
@@ -311,16 +311,16 @@ apply J.sub_correct.
   rewrite <- pow_add.
   replace (n - S m + 1 + S (n - S m)) with (2 * (n - S m + 1)) by (clear -Hm ; lia).
   rewrite pow_1_even, Rmult_1_l.
-  replace (S (n - S m)) with (n - S m + 1) by now rewrite plus_comm.
+  replace (S (n - S m)) with (n - S m + 1) by now rewrite Nat.add_comm.
   apply J.div_correct.
   exact Hpow'.
   exact Hdiv.
 evar_last.
 apply IHm.
-now apply le_Sn_le.
-rewrite <- (plus_0_r (n - m)), <- H.
+now apply Nat.lt_le_incl.
+rewrite <- (Nat.add_0_r (n - m)), <- H.
 exact Hpow'.
-rewrite H, plus_0_r in Hdiv.
+rewrite H, Nat.add_0_r in Hdiv.
 replace (2 * (n - m + 1) + 1) with (2 * (n - m) + 1 + 2) by ring.
 rewrite plus_INR.
 apply J.add_correct with (1 := Hdiv).
@@ -329,7 +329,7 @@ change (Ai x (n - S m)%nat + (-1) ^ S (n - S m) * / INR (2 * S (n - S m) + 1) * 
   with (Ai x (S (n - S m))).
 change (-1 * (-1) ^ (n - S m + 1))%R with ((-1) ^ (S (n - S m + 1)))%R.
 rewrite <- plus_Sn_m.
-now rewrite -> minus_Sn_m.
+now rewrite <-Nat.sub_succ_l.
 Qed.
 
 Lemma pi4_correct :
@@ -626,8 +626,8 @@ change 2%Z with (Z_of_nat ((0 + 1) + 1)).
 rewrite <- INR_IZR_INZ.
 replace (Ai x 0%nat - ln1pc x)%R with ((-1) * 1 * (ln1pc x - Ai x 0%nat))%R by ring.
 change (-1 * 1)%R with (pow (-1) (0 + 1)).
-rewrite <- (minus_diag n) at 1 2 5 7.
-generalize (le_refl n).
+rewrite <- (Nat.sub_diag n) at 1 2 5 7.
+generalize (Nat.le_refl n).
 generalize n at 1 4 6 7 9 11.
 intros m.
 revert powi divi.
@@ -654,7 +654,7 @@ replace ((-1) ^ (n - S m + 1) * (ln1pc x - Ai x (n - S m)%nat))%R
 apply J.sub_correct.
   rewrite <- pow_add.
   replace (n - S m + 1 + S (n - S m)) with (2 * (n - S m + 1)) by (clear -Hm ; lia).
-  replace (S (n - S m)) with (n - S m + 1) by now rewrite plus_comm.
+  replace (S (n - S m)) with (n - S m + 1) by now rewrite Nat.add_comm.
   apply J.div_correct with (2 := Hdiv).
   rewrite pow_1_even, Rmult_1_l.
   rewrite pow_add, pow_1.
@@ -662,7 +662,7 @@ apply J.sub_correct.
 evar_last.
 apply IHm.
 clear -Hm ; lia.
-rewrite <- (plus_0_r (n - m)), <- H.
+rewrite <- (Nat.add_0_r (n - m)), <- H.
 rewrite pow_add, pow_1.
 now apply J.mul_correct.
 rewrite <- H.
@@ -674,7 +674,7 @@ change (Ai x (n - S m)%nat + (-1) ^ S (n - S m) * / INR (S (n - S m) + 1) * x ^ 
   with (Ai x (S (n - S m))).
 change (-1 * (-1) ^ (n - S m + 1))%R with ((-1) ^ (S (n - S m + 1)))%R.
 rewrite <- plus_Sn_m.
-now rewrite -> minus_Sn_m.
+now rewrite <-Nat.sub_succ_l.
 Qed.
 
 Lemma ln_fast1P_correct :
@@ -1014,8 +1014,8 @@ change 2%Z with (Z_of_nat (fact (2 * (0 + 1)))).
 rewrite <- 2!INR_IZR_INZ.
 replace (A1 (toR x) 0 - cos (toR x))%R with ((-1) * 1 * (cos (toR x) - A1 (toR x) 0))%R by ring.
 change (-1 * 1)%R with (pow (-1) (0 + 1)).
-rewrite <- (minus_diag n) at 2 4 7 10 12.
-generalize (le_refl n).
+rewrite <- (Nat.sub_diag n) at 2 4 7 10 12.
+generalize (Nat.le_refl n).
 generalize n at 1 4 6 8 9 11 13.
 intros m.
 revert powi divi facti.
@@ -1050,12 +1050,12 @@ apply J.sub_correct.
   rewrite <- pow_add.
   replace (n - S m + 1 + S (n - S m)) with (2 * (n - S m + 1)) by (clear -Hm ; lia).
   rewrite pow_1_even, Rmult_1_l.
-  replace (S (n - S m)) with (n - S m + 1) by now rewrite plus_comm.
+  replace (S (n - S m)) with (n - S m + 1) by now rewrite Nat.add_comm.
   now apply J.div_correct.
 evar_last.
 apply IHm.
 clear -Hm ; lia.
-now rewrite <- (plus_0_r (n - m)), <- H.
+now rewrite <- (Nat.add_0_r (n - m)), <- H.
 rewrite <- H.
 replace (2 * (n - S m + 2)) with (S (S (2 * (n - S m + 1)))) by ring.
 rewrite 2!fact_simpl.
@@ -1078,7 +1078,7 @@ change (A1 (toR x) (n - S m) + (-1) ^ S (n - S m) * / INR (fact (2 * S (n - S m)
   with (A1 (toR x) (S (n - S m))).
 change (-1 * (-1) ^ (n - S m + 1))%R with ((-1) ^ (S (n - S m + 1)))%R.
 rewrite <- plus_Sn_m.
-now rewrite -> minus_Sn_m.
+now rewrite <-Nat.sub_succ_l.
 Qed.
 
 Lemma sin_cos_reduce_correct :
@@ -1419,8 +1419,8 @@ change 6%Z with (Z_of_nat (fact (2 * (0 + 1) + 1))).
 rewrite <- 2!INR_IZR_INZ.
 replace (Si (toR x) 0%nat - sinc (toR x))%R with ((-1) * 1 * (sinc (toR x) - Si (toR x) 0%nat))%R by ring.
 change (-1 * 1)%R with (pow (-1) (0 + 1)).
-rewrite <- (minus_diag n) at 2 4 8 11 13.
-generalize (le_refl n).
+rewrite <- (Nat.sub_diag n) at 2 4 8 11 13.
+generalize (Nat.le_refl n).
 generalize n at 1 4 6 8 9 11 13.
 intros m.
 revert powi divi facti.
@@ -1454,12 +1454,12 @@ apply J.sub_correct.
   rewrite <- pow_add.
   replace (n - S m + 1 + S (n - S m)) with (2 * (n - S m + 1)) by (clear -Hm ; lia).
   rewrite pow_1_even, Rmult_1_l.
-  replace (S (n - S m)) with (n - S m + 1) by now rewrite plus_comm.
+  replace (S (n - S m)) with (n - S m + 1) by now rewrite Nat.add_comm.
   now apply J.div_correct.
 evar_last.
 apply IHm.
 clear -Hm ; lia.
-now rewrite <- (plus_0_r (n - m)), <- H.
+now rewrite <- (Nat.add_0_r (n - m)), <- H.
 rewrite <- H.
 replace (2 * (n - S m + 2) + 1) with (S (S (2 * (n - S m + 1) + 1))) by ring.
 rewrite 2!fact_simpl.
@@ -1467,7 +1467,7 @@ rewrite 2!mult_INR, <- Rmult_assoc, Rmult_comm.
 apply J.mul_correct with (1 := Hdiv).
 rewrite Rmult_comm.
 apply J.mul_correct.
-now rewrite <- Nat.add_1_r, <- plus_assoc.
+now rewrite <- Nat.add_1_r, <- Nat.add_assoc.
 replace (S (S (2 * (n - S m + 1) + 1))) with (2 * (n - S m + 1) + 2 + 1) by ring.
 rewrite plus_INR.
 apply J.add_correct with (1 := Hfact).
@@ -1482,7 +1482,7 @@ change (Si (toR x) (n - S m)%nat + (-1) ^ S (n - S m) * / INR (fact (2 * S (n - 
   with (Si (toR x) (S (n - S m))).
 change (-1 * (-1) ^ (n - S m + 1))%R with ((-1) ^ (S (n - S m + 1)))%R.
 rewrite <- plus_Sn_m.
-now rewrite -> minus_Sn_m.
+now rewrite <-Nat.sub_succ_l.
 Qed.
 
 (* 0 <= input *)
@@ -2012,8 +2012,8 @@ change 2%Z with (Z_of_nat (fact (0 + 2))).
 rewrite <- 2!INR_IZR_INZ.
 rewrite <- (Rmult_1_l (_ + _)).
 change 1%R with ((-1)^0)%R.
-rewrite <- (minus_diag n) at 1 3 5 7 8.
-generalize (le_refl n).
+rewrite <- (Nat.sub_diag n) at 1 3 5 7 8.
+generalize (Nat.le_refl n).
 generalize n at 1 4 6 8 9 11 13.
 intros m.
 revert powi divi facti.
@@ -2039,7 +2039,7 @@ cut (contains (I.convert (I.sub prec (I.div prec powi' divi) (expn_fast0_aux pre
 replace ((-1) ^ (n - S m) * (exp (- toR x) + - E1 (- toR x) (n - S m + 1)))%R
   with ((toR x) ^ (n - m + 1) * / INR (fact (n - m + 1)) - (((-1) * (-1) ^ (n - S m)) * (exp (- toR x) + - E1 (- toR x) (n - S m + 1)) + / INR (fact (n - m + 1)) * (toR x) ^ (n - m + 1)))%R by ring.
 change (-1 * (-1) ^ (n - S m))%R with ((-1) ^ (S (n - S m)))%R.
-rewrite -> minus_Sn_m with (1 := Hm).
+rewrite <-Nat.sub_succ_l with (1 := Hm).
 simpl (S n - S m).
 assert (Hpow': contains (I.convert powi') (Xreal (toR x ^ (n - m + 1)))).
   rewrite H.
@@ -2047,14 +2047,14 @@ assert (Hpow': contains (I.convert powi') (Xreal (toR x ^ (n - m + 1)))).
   now apply J.mul_correct.
 apply J.sub_correct.
   apply J.div_correct with (1 := Hpow').
-  now rewrite H, <- plus_assoc.
+  now rewrite H, <-Nat.add_assoc.
 evar_last.
 apply IHm.
 clear -Hm ; lia.
 exact Hpow'.
 rewrite H.
-rewrite plus_comm, fact_simpl.
-rewrite mult_comm, mult_INR.
+rewrite Nat.add_comm, fact_simpl.
+rewrite Nat.mul_comm, mult_INR.
 apply J.mul_correct with (1 := Hdiv).
 now rewrite plus_n_Sm.
 rewrite H.
@@ -2069,7 +2069,7 @@ rewrite <- plus_n_Sm at 1.
 unfold E1.
 change (sum_f_R0 (fun k : nat => / INR (fact k) * (- toR x) ^ k) (S (n - m + 0)))%R
   with (sum_f_R0 (fun k : nat => / INR (fact k) * (- toR x) ^ k) (n - m + 0) + / INR (fact (S (n - m + 0))) * (- toR x) ^ (S (n - m + 0)))%R.
-rewrite H, <- plus_assoc at 1.
+rewrite H, <-Nat.add_assoc at 1.
 rewrite Ropp_plus_distr, Rmult_plus_distr_l.
 apply f_equal.
 rewrite <- Ropp_mult_distr_r_reverse.

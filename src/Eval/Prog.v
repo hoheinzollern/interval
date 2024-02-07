@@ -273,8 +273,8 @@ assert (H2:
   lia.
 destruct e as [n|o|o n1|o n1 n2] ; simpl ; try easy.
 destruct (Nat.ltb_spec n vars) as [H|H] ; try easy.
-rewrite app_nth2 by apply le_plus_l.
-rewrite minus_plus.
+rewrite app_nth2 by apply Nat.le_add_r.
+rewrite Nat.add_comm, Nat.add_sub.
 rewrite app_nth1.
 rewrite nth_indep with (d' := Evar 0).
 now rewrite map_nth, seq_nth.
@@ -345,7 +345,7 @@ assert (H: forall n e,
   rewrite app_nth1 by now rewrite map_length, seq_length.
   rewrite app_nth1 by apply H2.
   rewrite nth_indep with (d' := Evar 0) by now rewrite map_length, seq_length.
-  rewrite map_nth, seq_nth, plus_0_l by apply H2.
+  rewrite map_nth, seq_nth, Nat.add_0_l by apply H2.
   intros <-.
   simpl.
   now rewrite app_nth1 by apply H2.
@@ -459,7 +459,7 @@ apply andb_prop in H.
 destruct H as [Ha Hle].
 destruct k as [|k] ; try easy.
 apply IHle with (1 := Hle).
-now apply lt_S_n in Hk.
+now simpl in Hk; rewrite <-Nat.succ_lt_mono in Hk.
 Qed.
 
 Definition extract_list (le : list expr) (vars : nat) :=
@@ -519,7 +519,7 @@ destruct split_expr as [|lp1 lc1] ; injection Hf as <- <- ; split.
   { now apply max_arity_correct. }
   destruct (rcons_unique_correct a lc0) as [l' ->].
   simpl in Hk.
-  apply lt_S_n in Hk.
+  rewrite <-Nat.succ_lt_mono in Hk.
   rewrite app_nth1.
   2: { rewrite map_length, app_length. lia. }
   rewrite map_nth with (d := Econst (Int 0)).
@@ -531,7 +531,7 @@ destruct split_expr as [|lp1 lc1] ; injection Hf as <- <- ; split.
 - intros [|k] Hk ; simpl.
   { now apply max_arity_correct. }
   simpl in Hk.
-  apply lt_S_n in Hk.
+  rewrite <-Nat.succ_lt_mono in Hk.
   rewrite app_nth1.
   2: { rewrite map_length, app_length. lia. }
   rewrite map_nth with (d := Econst (Int 0)).
@@ -557,5 +557,5 @@ change (eval e vars) with (eval (nth O (e :: nil) (Econst (Int 0))) vars).
 unfold eval_real', extract.
 generalize (extract_list_correct (e :: nil) vars).
 destruct extract_list; [easy | ]. intros H.
-now specialize (H O (lt_O_Sn _)).
+now specialize (H O (Nat.lt_0_succ _)).
 Qed.

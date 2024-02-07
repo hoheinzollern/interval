@@ -516,7 +516,7 @@ apply Rmult_le_compat.
 apply Rlt_le.
 apply Rinv_0_lt_compat.
 apply (lt_INR 0).
-apply lt_O_Sn.
+apply Nat.lt_0_succ.
 apply Hx.
 rewrite <- Rinv_1.
 apply Rle_Rinv_pos.
@@ -542,7 +542,7 @@ rewrite pow_sqr.
 apply pow_le.
 apply Rle_0_sqr.
 change (fact (2 + 2 * n)) with ((2 + 2 * n) * ((1 + 2 * n) * fact (2 * n))).
-rewrite  mult_assoc, mult_comm.
+rewrite Nat.mul_assoc, Nat.mul_comm.
 rewrite mult_INR.
 rewrite <- (Rmult_1_r (/ INR (fact _))).
 rewrite Rinv_mult_distr.
@@ -557,7 +557,7 @@ apply Rmult_le_compat.
 apply Rlt_le.
 apply Rinv_0_lt_compat.
 apply (lt_INR 0).
-apply lt_O_Sn.
+apply Nat.lt_0_succ.
 unfold pow.
 rewrite Rmult_1_r.
 apply Rle_0_sqr.
@@ -582,7 +582,7 @@ destruct (Cu eps He) as [N HN].
 exists N.
 intros n Hn.
 apply HN.
-apply le_trans with (1 := Hn).
+apply Nat.le_trans with (1 := Hn).
 clear -Hf.
 induction n.
 apply le_0_n.
@@ -624,7 +624,7 @@ clear.
 intros m _.
 rewrite Rsqr_0, pow_i.
 apply Rmult_0_r.
-apply lt_0_Sn.
+apply Nat.lt_0_succ.
 Qed.
 
 Lemma Un_decreasing_sinc :
@@ -641,7 +641,7 @@ rewrite pow_sqr.
 apply pow_le.
 apply Rle_0_sqr.
 change (fact (2 + 2 * n + 1)) with ((2 + 2 * n + 1) * ((1 + 2 * n + 1) * fact (2 * n + 1))).
-rewrite mult_assoc, mult_comm.
+rewrite Nat.mul_assoc, Nat.mul_comm.
 rewrite mult_INR.
 rewrite <- (Rmult_1_r (/ INR (fact _))).
 rewrite Rinv_mult_distr.
@@ -656,7 +656,7 @@ apply Rmult_le_compat.
 apply Rlt_le.
 apply Rinv_0_lt_compat.
 apply (lt_INR 0).
-apply lt_O_Sn.
+apply Nat.lt_0_succ.
 unfold pow.
 rewrite Rmult_1_r.
 apply Rle_0_sqr.
@@ -786,19 +786,20 @@ apply Rmult_le_compat.
 apply Rlt_le.
 apply Rinv_0_lt_compat.
 apply (lt_INR 0).
-apply lt_O_Sn.
+apply Nat.lt_0_succ.
 unfold pow.
 rewrite Rmult_1_r.
 apply Rle_0_sqr.
 apply Rlt_le.
 apply Rinv_lt.
 apply (lt_INR 0).
-rewrite plus_comm.
-apply lt_O_Sn.
+rewrite Nat.add_comm.
+apply Nat.lt_0_succ.
 apply lt_INR.
-rewrite <- plus_assoc.
-apply (plus_lt_compat_r 0).
-apply lt_O_Sn.
+rewrite <- Nat.add_assoc.
+rewrite <-Nat.add_0_l at 1.
+rewrite <-Nat.add_lt_mono_r.
+apply Nat.lt_0_succ.
 rewrite <- (pow1 2).
 apply pow_maj_Rabs with (1 := Hx).
 Qed.
@@ -816,8 +817,8 @@ intros n Hn.
 assert (H: (0 < / INR (2 * n + 1))%R).
   apply Rinv_0_lt_compat.
   apply (lt_INR 0).
-  rewrite plus_comm.
-  apply lt_O_Sn.
+  rewrite Nat.add_comm.
+  apply Nat.lt_0_succ.
 rewrite Rminus_0_r, Rabs_pos_eq.
 apply Rle_lt_trans with (/ INR (2 * n + 1) * 1)%R.
 apply Rmult_le_compat_l.
@@ -829,7 +830,7 @@ apply Rlt_trans with (2 := HN1).
 apply Rinv_lt.
 now apply (lt_INR 0).
 apply lt_INR.
-apply le_lt_trans with (1 := Hn).
+apply Nat.le_lt_trans with (1 := Hn).
 clear ; lia.
 apply Rmult_le_pos.
 now apply Rlt_le.
@@ -1001,14 +1002,14 @@ apply Rmult_le_compat ; try easy.
 apply Rlt_le.
 apply Rinv_0_lt_compat.
 apply (lt_INR 0).
-apply lt_O_Sn.
+apply Nat.lt_0_succ.
 apply Rlt_le.
 apply Rinv_lt.
 apply (lt_INR 0).
-rewrite plus_comm.
-apply lt_O_Sn.
+rewrite Nat.add_comm.
+apply Nat.lt_0_succ.
 apply lt_INR.
-apply lt_n_Sn.
+apply Nat.lt_succ_diag_r.
 Qed.
 
 Lemma Un_cv_ln1pc :
@@ -1024,8 +1025,8 @@ intros n Hn.
 assert (H: (0 < / INR (n + 1))%R).
   apply Rinv_0_lt_compat.
   apply (lt_INR 0).
-  rewrite plus_comm.
-  apply lt_O_Sn.
+  rewrite Nat.add_comm.
+  apply Nat.lt_0_succ.
 rewrite Rminus_0_r.
 rewrite Rabs_mult, Rabs_pos_eq.
 apply Rle_lt_trans with (/ INR (n + 1) * 1)%R.
@@ -1040,9 +1041,9 @@ apply Rlt_trans with (2 := HN1).
 apply Rinv_lt.
 now apply (lt_INR 0).
 apply lt_INR.
-apply le_lt_trans with (1 := Hn).
-rewrite plus_comm.
-apply lt_n_Sn.
+apply Nat.le_lt_trans with (1 := Hn).
+rewrite Nat.add_comm.
+apply Nat.lt_succ_diag_r.
 now apply Rlt_le.
 Qed.
 
@@ -1132,7 +1133,7 @@ apply Rpow_mult_distr.
 intros [|n].
 easy.
 unfold PS_incr_1.
-now rewrite Plus.plus_comm.
+now rewrite Nat.add_comm.
 apply is_RInt_unique.
 assert (H: forall t, -1 < t -> is_derive (fun t : R => ln (1 + t)) t (/ (1 + t))).
   intros t Ht.

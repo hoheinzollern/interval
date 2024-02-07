@@ -369,14 +369,14 @@ induction l as [|h l IH].
 intros [|n] [|m] ; simpl.
 - left.
   repeat split.
-  apply lt_O_Sn.
+  apply Nat.lt_0_succ.
 - now right.
 - now right.
 - destruct (IH n m) as [[H1 [H2 H3]]|H].
   2: now right.
   left.
   repeat split.
-  now apply lt_n_S.
+  now rewrite <-Nat.succ_lt_mono.
   now rewrite <- H2.
   exact H3.
 Qed.

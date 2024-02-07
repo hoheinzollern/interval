@@ -44,7 +44,7 @@ case Hn : n => [|p|p] /= .
   rewrite INR_IZR_INZ positive_nat_Z.
   rewrite pow_powerRZ.
   congr (is_derive _ _ (_ * powerRZ _ _)).
-  rewrite -> Nat2Z.inj_sub by apply lt_le_S, Pos2Nat.is_pos.
+  rewrite -> Nat2Z.inj_sub by now rewrite Nat.le_succ_l; apply Pos2Nat.is_pos.
   now rewrite positive_nat_Z.
 - rewrite big_ord_recl /= big_ord0 /= addn0 Rmult_1_r.
   rewrite INR_IZR_INZ positive_nat_Z.
