@@ -169,7 +169,9 @@ let display_plot p f ~pstate =
 let __coq_plugin_name = PLOTPLUGIN
 let _ = Mltop.add_known_module __coq_plugin_name
 
-#if COQVERSION >= 81500
+#if COQVERSION >= 81900
+let vtreadproofopt = Vernactypes.vtreadproofopt
+#elif COQVERSION >= 81500
 let vtreadproofopt = Vernacextend.vtreadproofopt
 #else
 let vtreadproofopt x = Vernacextend.VtReadProofOpt x
