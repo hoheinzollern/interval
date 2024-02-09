@@ -20,10 +20,11 @@ Ltac destruct_tuple_hyp H := try match type of H with
 Ltac destruct_tuple_obj t := try match type of t with
   | prod _ _ => rewrite (surjective_pairing t) in *; destruct_tuple_obj (fst t) end.
 
-
-Fixpoint toList {Tl} := match Tl return evalExprTypeReal_list Tl -> _ with
+Fixpoint toList {Tl} : evalExprTypeReal_list Tl -> list R :=
+  match Tl with
   | nil => fun _ => nil
-  | _ :: Tl' => fun l => let x := fst l in let l' := snd l in x :: toList l' end.
+  | _ :: Tl' => fun l => let x := fst l in let l' := snd l in x :: toList l'
+  end.
 
 Fixpoint exprsucc t := match t with
   | Tree.Evar n => Tree.Evar (S n)

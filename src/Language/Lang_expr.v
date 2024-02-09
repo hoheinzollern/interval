@@ -519,44 +519,32 @@ Fixpoint nthExprTypeReal {Tl} n (l : evalExprTypeReal_list Tl) (default : R) :=
 
 (* Conversions between the different evaluation types *)
 
-Definition P2C {T} :=
-  match T return evalExprTypePrim T -> evalExprTypeFloat T with
+Definition P2C {T} : evalExprTypePrim T -> evalExprTypeFloat T :=
+  match T with
   | Integer  => fun x => Sint63.to_Z x
   | BinFloat => fun x => Prim2B x
   end.
 
-Fixpoint P2C_list {Tl} :=
-  match Tl return evalExprTypePrim_list Tl -> evalExprTypeFloat_list Tl with
+Fixpoint P2C_list {Tl} : evalExprTypePrim_list Tl -> evalExprTypeFloat_list Tl :=
+  match Tl with
   | nil    => fun l => tt
   | _ :: _ => fun l => (P2C (fst l), P2C_list (snd l))
   end.
 
-Definition C2P {T} :=
-  match T return evalExprTypeFloat T -> evalExprTypePrim T with
-  | Integer  => fun x => Uint63.of_Z x
-  | BinFloat => fun x => B2Prim x
-  end.
-
-Fixpoint C2P_list {Tl} :=
-  match Tl return evalExprTypeFloat_list Tl -> evalExprTypePrim_list Tl with
-  | nil    => fun l => tt
-  | _ :: _ => fun l => (C2P (fst l), C2P_list (snd l))
-  end.
-
-Definition C2M {T} :=
-  match T return evalExprTypeFloat T -> evalExprTypeRounded T with
+Definition C2M {T} : evalExprTypeFloat T -> evalExprTypeRounded T :=
+  match T with
   | Integer  => fun x => x
   | BinFloat => fun x => B2R x
   end.
 
-Fixpoint C2M_list {Tl} :=
-  match Tl return evalExprTypeFloat_list Tl -> evalExprTypeRounded_list Tl with
+Fixpoint C2M_list {Tl} : evalExprTypeFloat_list Tl -> evalExprTypeRounded_list Tl :=
+  match Tl with
   | nil    => fun l => tt
   | _ :: _ => fun l => (C2M (fst l), C2M_list (snd l))
   end.
 
-Definition M2R {T} :=
-  match T return evalExprTypeRounded T -> _ with
+Definition M2R {T} : evalExprTypeRounded T -> R :=
+  match T with
   | Integer  => fun x => IZR x
   | BinFloat => fun x => x
   end.
@@ -567,18 +555,14 @@ Fixpoint M2R_list {Tl} : evalExprTypeRounded_list Tl -> evalExprTypeReal_list Tl
   | _ :: _ => fun l => (M2R (fst l), M2R_list (snd l))
   end.
 
-Definition P2M_ {T} (x : evalExprTypePrim T) := C2M (P2C x).
-
-Definition P2M_list_ {Tl} (l : evalExprTypePrim_list Tl) := C2M_list (P2C_list l).
-
-Definition P2M {T} :=
-  match T return evalExprTypePrim T -> evalExprTypeRounded T with
+Definition P2M {T} : evalExprTypePrim T -> evalExprTypeRounded T :=
+  match T with
   | Integer  => fun x => Sint63.to_Z x
   | BinFloat => fun x => SF2R radix2 (Prim2SF x)
   end.
 
-Fixpoint P2M_list {Tl} :=
-  match Tl return evalExprTypePrim_list Tl -> evalExprTypeRounded_list Tl with
+Fixpoint P2M_list {Tl} : evalExprTypePrim_list Tl -> evalExprTypeRounded_list Tl :=
+  match Tl with
   | nil    => fun l => tt
   | _ :: _ => fun l => (P2M (fst l), P2M_list (snd l))
   end.
@@ -882,37 +866,41 @@ Fixpoint evalReal {Tl T} (t: ArithExpr Tl T) {struct t}
   end.
 
 
-Definition convertibleFloat {T} := match T return evalExprTypeFloat T -> _ with
+Definition convertibleFloat {T} : evalExprTypeFloat T -> Prop :=
+  match T with
   | Integer  => fun n => Int32.in_bounds n (* When Integer translates to 32-bit integers *)
   | BinFloat => fun f => @is_finite Rrnd.prec Rrnd.emax f = true
-end.
+  end.
 
-Definition convertiblePrim {T} := match T return evalExprTypePrim T -> _ with
+Definition convertiblePrim {T} : evalExprTypePrim T -> Prop :=
+  match T with
   | Integer  => fun n => Int32.in_bounds (to_Z n) (* When Integer translates to 32-bit integers *)
   | BinFloat => fun f => @is_finite_SF (Prim2SF f) = true
-end.
+  end.
 
-Fixpoint convertibleFloat_list {Tl} :=
-  match Tl return evalExprTypeFloat_list Tl -> _ with
+Fixpoint convertibleFloat_list {Tl} : evalExprTypeFloat_list Tl -> Prop :=
+  match Tl with
   | nil    => fun lC => True
   | T :: _ => fun lC => convertibleFloat (fst lC) /\ convertibleFloat_list (snd lC)
   end.
 
-Fixpoint convertiblePrim_list {Tl} :=
-  match Tl return evalExprTypePrim_list Tl -> _ with
+Fixpoint convertiblePrim_list {Tl} : evalExprTypePrim_list Tl -> Prop :=
+  match Tl with
   | nil    => fun lC => True
   | T :: _ => fun lC => convertiblePrim (fst lC) /\ convertiblePrim_list (snd lC)
   end.
 
-Definition isConversionFloat {T} := match T return evalExprTypeFloat T -> evalExprTypeRounded T -> _ with
+Definition isConversionFloat {T} : evalExprTypeFloat T -> evalExprTypeRounded T -> Prop :=
+  match T with
   | Integer  => fun n1 n2 => n1 = n2
   | BinFloat => fun  f  r => @B2R Rrnd.prec Rrnd.emax f = r
-end.
+  end.
 
-Definition isConversionPrim {T} := match T return evalExprTypePrim T -> evalExprTypeRounded T -> _ with
+Definition isConversionPrim {T} : evalExprTypePrim T -> evalExprTypeRounded T -> Prop :=
+  match T with
   | Integer  => fun n1 n2 => Sint63.to_Z n1 = n2
   | BinFloat => fun  f  r => @SF2R radix2 (Prim2SF f) = r
-end.
+  end.
 
 Definition eqExprTypeFloat {T} (e1 : evalExprTypeFloat T) (e2 : evalExprTypeRounded T) :=
   convertibleFloat e1 /\ isConversionFloat e1 e2.
@@ -2263,9 +2251,6 @@ unfold P in Haux. revert H' Haux. destruct N.iter as [i b] eqn:Hô.
 simpl. intros -> Hè. rewrite <-B2SF_Prim2B, is_finite_SF_B2SF.
 now apply Hè; [lia | | lia].
 Qed.
-
-Theorem C2P_P2C : forall T (x : evalExprTypePrim T), C2P (P2C x) = x.
-Proof. destruct T; [apply of_to_Z | apply B2Prim_Prim2B]. Qed.
 
 Theorem equivFloat {Tl T} :
   forall (t: ArithExpr Tl T) (lC : evalExprTypeFloat_list Tl) md,
