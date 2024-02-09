@@ -450,7 +450,16 @@ assert (Hkr' : (0 <= to_Z kr <= 63)%Z).
 remove_floats.
 { split; [easy | split; [simpl; unfold Int32.in_bounds | easy]]. cbn -[to_Z kr]. lia. }
 
-assert_let (fun k => k = evalRounded (@k_64 nil) (SF2R radix2 (Prim2SF x), tt) mode_NE /\
+simpl in Hki2.
+fold xR in b_x, Hki2 |- *.
+clearbody xR.
+clear x fin_x k0.
+set (dR := SF2R radix2 (Prim2SF d)).
+fold dR in b_d |- *.
+clearbody dR.
+clear d fin_d.
+
+assert_let (fun k => k = evalRounded (@k_64 nil) (xR, tt) mode_NE /\
   -68881 <= k <= 65557).
 { now simplify_wb. }
 { intros _. split; [easy |]. cbn -[bpow]. unfold F2R.
@@ -461,7 +470,7 @@ intros k [-> b_k].
 set (te := xR - IZR (to_Z ki) * (Rpower.ln 2 / 64)).
 assert_let (fun t => Rabs t <= 355 / 65536 /\ Rabs (t - te) <= 65537 * Rpow2 (-77)).
 { simplify_wb. unfold F2R. cbn -[bpow]. unfold Rrnd.nearbyint, Rrnd.rnd, round_mode, Rrnd.Rnd.
-  rewrite round_FIX_IZR. fold xR.
+  rewrite round_FIX_IZR.
   set (k' := ZnearestE (Generic_fmt.round radix2 (FLT_exp Rrnd.emin Rrnd.prec) ZnearestE (xR * _))).
   replace (6243314768150528 * Rpow2 (-59)) with (47632711549 * Rpow2 (-42)) by (simpl; lra).
   rewrite <-Rmult_assoc, <-mult_IZR. split.
@@ -692,7 +701,7 @@ assert_let (fun c => 0.984375 <= c <= 1.984375 /\
   generalize (SF2R radix2 (Prim2SF consts.[of_Z (to_Z kr)]) - Rtrigo_def.exp (IZR (to_Z kr) * (Rpower.ln 2 / 64))).
   intros; interval. }
 intros C [bnd_C [HC1 HC2]].
-split; [now simplify_wb |]. intros [Hconv Hisconv].
+split; [now simplify_wb |]. intros [Hconv _].
 assert (Hlb : Rabs
   (Generic_fmt.round radix2 (fexp prec emax) (round_mode mode_NE)
      (@evalRounded (BinFloat :: BinFloat :: Integer :: nil) _ (Op ADD (Var 0) (Var 1))
@@ -746,12 +755,10 @@ revert H. rewrite Rlt_bool_true.
 intros [Heqpred [Hfinpred _]].
 
 replace (Beqb _ _) with false.
-2: { simpl. unfold Beqb, SFeqb, SFcompare. simpl. simpl in Hfin, Hfinpred.
-  simpl in Hconv. rewrite <-B2SF_Prim2B, is_finite_SF_B2SF in Hconv.
-  rewrite Hconv in Hfin. clear -Hfin Hfinpred. now destruct (Bpred f). }
+2: { simpl. unfold Beqb, SFeqb, SFcompare. now destruct Bpred. }
 
 rewrite PrimitiveFloat.B2R_BtoX, Heqpred by easy.
-split; [easy |]. clear Hlb Hconv Hisconv. clear dependent f. simpl evalRounded.
+split; [easy |]. clear Hlb Hconv. clear dependent f. simpl evalRounded.
 eapply Rle_trans. apply pred_FLT_shift_le. easy. apply valid_rnd_round_mode.
 apply generic_format_round. now apply FLT_exp_valid. apply valid_rnd_round_mode.
 unfold Rrnd.rnd, round_mode. interval.
@@ -803,11 +810,10 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
   revert Haux_. generalize (C + SF2R radix2 (Prim2SF (Pexp_no_const x kr dlb))). intros r0 Hr0.
   unfold pred, succ. rewrite Rle_bool_false by interval.
   rewrite 2Ropp_involutive. unfold pred_pos. unfold ulp, cexp.
-  rewrite (mag_unique _ _ 1) by (split; interval).
+  rewrite (mag_unique _ _ 1) by interval.
   rewrite Req_bool_false by interval. rewrite Req_bool_false by interval.
   cut (Generic_fmt.round radix2 (FLT_exp Rrnd.emin Rrnd.prec) ZnearestE r0 - r0 <= Rpow2 (FLT_exp emin prec 1) - Rpow2 (-53)). lra.
   interval. }
-
 
 clear dlb Hdlb.
 
@@ -950,7 +956,7 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
   revert Haux_. generalize (C + SF2R radix2 (Prim2SF (Pexp_no_const x kr dub))). intros r0 Hr0.
   unfold pred, succ. rewrite Rle_bool_true by interval.
   unfold ulp, cexp.
-  rewrite (mag_unique _ _ 1) by (split; interval).
+  rewrite (mag_unique _ _ 1) by interval.
   rewrite Req_bool_false by interval.
   cut (- (Generic_fmt.round radix2 (FLT_exp Rrnd.emin Rrnd.prec) ZnearestE r0 - r0) <= Rpow2 (FLT_exp emin prec 1) - Rpow2 (-53)). lra.
   interval.
