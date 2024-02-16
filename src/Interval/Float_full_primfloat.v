@@ -308,61 +308,27 @@ Definition consts := [|
   0x1.fa7c1819e90d8p0%float|
   0%float|].
 
-Definition PInvLog2_64 := 0x1.71547652b82fep6%float.
-Definition PLog2div64h := 0x1.62e42fefap-7%float.
-Definition PLog2div64l := 0x1.cf79abc9e3b3ap-46%float.
+Definition InvLog2_64 := 0x1.71547652b82fep6%float.
+Definition Log2div64h := 0x1.62e42fefap-7%float.
+Definition Log2div64l := 0x1.cf79abc9e3b3ap-46%float.
 
-Definition RInvLog2_64 := Eval cbv -[Rinv IZR Rmult] in SF2R radix2 (FloatOps.Prim2SF PInvLog2_64).
-Definition RLog2div64h := Eval cbv -[Rinv IZR Rmult] in SF2R radix2 (FloatOps.Prim2SF PLog2div64h).
-Definition RLog2div64l := Eval cbv -[Rinv IZR Rmult] in SF2R radix2 (FloatOps.Prim2SF PLog2div64l).
-
-Definition InvLog2_64 {Tl} : ArithExpr Tl BinFloat := BinFl PInvLog2_64.
-Definition Log2div64h {Tl} : ArithExpr Tl BinFloat := BinFl PLog2div64h.
-Definition Log2div64l {Tl} : ArithExpr Tl BinFloat := BinFl PLog2div64l.
-
-Definition Pq0 := 0x1p0%float.
-Definition Pq1 := 0x1p0%float.
-Definition Pq2 := 0x1.fffffffffdb3bp-2%float.
-Definition Pq3 := 0x1.555555555653ep-3%float.
-Definition Pq4 := 0x1.555573f218b93p-5%float.
-Definition Pq5 := 0x1.111112d9f54c8p-7%float.
-
-Definition q0 {Tl} : ArithExpr Tl BinFloat := BinFl Pq0.
-Definition q1 {Tl} : ArithExpr Tl BinFloat := BinFl Pq1.
-Definition q2 {Tl} : ArithExpr Tl BinFloat := BinFl Pq2.
-Definition q3 {Tl} : ArithExpr Tl BinFloat := BinFl Pq3.
-Definition q4 {Tl} : ArithExpr Tl BinFloat := BinFl Pq4.
-Definition q5 {Tl} : ArithExpr Tl BinFloat := BinFl Pq5.
+Definition q1 := 0x1p0%float.
+Definition q2 := 0x1.fffffffffdb3bp-2%float.
+Definition q3 := 0x1.555555555653ep-3%float.
+Definition q4 := 0x1.555573f218b93p-5%float.
+Definition q5 := 0x1.111112d9f54c8p-7%float.
 
 Definition k_64  {Tl} : ArithExpr (BinFloat :: Tl) BinFloat :=
-  FastNearbyint (Op MUL (Var 0) InvLog2_64).
+  FastNearbyint (Op MUL (Var 0) (BinFl InvLog2_64)).
 
 Definition k_64' {Tl} : ArithExpr (BinFloat :: Tl) Integer  :=
-  FastNearbyintToInt (Op MUL (Var 0) InvLog2_64).
+  FastNearbyintToInt (Op MUL (Var 0) (BinFl InvLog2_64)).
 
 Definition t_64  {Tl} : ArithExpr (BinFloat :: BinFloat :: Tl) BinFloat :=
-  (Op SUB (OpExact SUB (Var 1) (OpExact MUL (Var 0) Log2div64h)) (Op MUL (Var 0) Log2div64l)).
-
-Definition kshift {Tl} : ArithExpr (Integer :: Tl) Integer :=
-  Op ADD (Var 0) (Int 68800).
-
-Definition krem_64 {Tl} : ArithExpr (Integer :: Tl) Integer :=
-  Op SUB (Var 0) (Op MUL (Int 64) (Op DIV (Var 0) (Int 64))).
-
-Definition g4 {Tl} : ArithExpr (BinFloat :: Tl) BinFloat :=
-  Op ADD q4 (Op MUL (Var 0) q5).
-
-Definition g3 {Tl} : ArithExpr (BinFloat :: Tl) BinFloat :=
-  Op ADD q3 (Op MUL (Var 0) g4).
-
-Definition g2 {Tl} : ArithExpr (BinFloat :: Tl) BinFloat :=
-  Op ADD q2 (Op MUL (Var 0) g3).
-
-Definition g1 {Tl} : ArithExpr (BinFloat :: Tl) BinFloat :=
-  Op ADD q1 (Op MUL (Var 0) g2).
+  (Op SUB (OpExact SUB (Var 1) (OpExact MUL (Var 0) (BinFl Log2div64h))) (Op MUL (Var 0) (BinFl Log2div64l))).
 
 Definition g0 {Tl} : ArithExpr (BinFloat :: Tl) BinFloat :=
-  Op MUL (Var 0) g1.
+  Op MUL (Var 0) (Op ADD (BinFl q1) (Op MUL (Var 0) (Op ADD (BinFl q2) (Op MUL (Var 0) (Op ADD (BinFl q3) (Op MUL (Var 0) (Op ADD (BinFl q4) (Op MUL (Var 0) (BinFl q5))))))))).
 
 Definition Papprox t := Eval cbv in evalPrim (@g0 nil) (t, tt).
 
@@ -372,37 +338,14 @@ Definition exp_no_const : ArithExpr (BinFloat :: Integer :: BinFloat :: nil) Bin
 
 Definition Pexp_no_const t k d := evalPrim exp_no_const (t, (k, (d, tt))).
 
-Lemma exp_argred :
-  forall x : R,
-  generic_format radix2 (FLT_exp (-1074) 53) x ->
-  -746 <= x <= 710 ->
-  let k  := @Rrnd.nearbyint mode_NE (Rrnd.rnd (x * RInvLog2_64)) in
-  let tf := Rrnd.rnd (x - (k * RLog2div64h) - Rrnd.rnd (k * RLog2div64l)) in
-  let te := x - k * (Rpower.ln 2 / 64) in
-  Rabs tf <= 355 / 65536 /\
-  Rabs (tf - te) <= 65537 * Rpow2 (-77).
-Proof. intros x Fx Bx.
-  unfold Rrnd.nearbyint, round_mode.
-  set (k := Generic_fmt.round radix2 (FIX_exp 0) ZnearestE (Rrnd.rnd (x * RInvLog2_64))).
-  split. { unfold k, Rrnd.rnd, round_mode. interval with (i_taylor x). }
-  set (u := (x - k * RLog2div64h - _)).
-  set (delt1 := Rrnd.rnd u - u).
-  set (delt2 := Rrnd.rnd (k * RLog2div64l) - k * RLog2div64l).
-  replace (Rrnd.rnd u - (x - k * (Rpower.ln 2 / 64)))
-    with (delt1 - delt2 - k * (RLog2div64h + RLog2div64l - Rpower.ln 2 / 64))
-     by (unfold delt1, delt2, u; ring).
-  unfold Rrnd.rnd, round_mode in delt1, delt2, k, u.
-  interval with (i_taylor x, i_prec 120).
-Qed.
-
 Lemma exp_consts_correct :
   forall i, (0 <= i <= 63)%Z ->
   Rabs (SF2R radix2 (Prim2SF consts.[of_Z i]) - Rtrigo_def.exp (IZR i * (Rpower.ln 2 / 64))) <= Rpow2 (-53).
 Proof.
 intros i Hi_.
 assert (Hi : snd (N.iter 64 (fun '(n, P) => (Z.succ n, i = n \/ P)) (0%Z, False))) by (cbn; lia).
-clear Hi_. cbn in Hi. repeat destruct Hi as [H | Hi]. 65: easy.
-all: rewrite H. all: cbn -[bpow]; unfold F2R; cbn -[bpow].
+clear Hi_. cbn in Hi. repeat destruct Hi as [-> | Hi]. 65: easy.
+all: cbn -[bpow]; unfold F2R; cbn -[bpow].
 all: interval with (i_prec 61).
 Qed.
 
@@ -410,7 +353,7 @@ Lemma exp_no_const_correct :
   forall x d : PrimFloat.float,
   is_finite_SF (Prim2SF x) = true -> -746 <= SF2R radix2 (Prim2SF x) <= 710 ->
   is_finite_SF (Prim2SF d) = true -> Rabs (SF2R radix2 (Prim2SF d)) <= Rpow2 (-52) ->
-  let k0 := (x * PInvLog2_64 + 0x1.8p52)%float in
+  let k0 := (x * InvLog2_64 + 0x1.8p52)%float in
   let ki := (normfr_mantissa (fst (frshiftexp k0)) - 6755399441055744)%uint63 in
   let kr := PrimInt63.land ki 63 in
   let x' := SF2R radix2 (Prim2SF x) - IZR (to_Z (asr ki 6)) * Rpower.ln 2 in
@@ -462,8 +405,9 @@ clear d fin_d.
 assert_let (fun k => k = evalRounded (@k_64 nil) (xR, tt) mode_NE /\
   -68881 <= k <= 65557).
 { now simplify_wb. }
-{ intros _. split; [easy |]. cbn -[bpow]. unfold F2R.
-  cbn -[bpow]. unfold Rrnd.nearbyint, Rrnd.rnd, round_mode.
+{ intros _. split; [easy |].
+  cbn -[bpow]; unfold F2R; cbn -[bpow].
+  unfold Rrnd.nearbyint, Rrnd.rnd, round_mode.
   interval. }
 intros k [-> b_k].
 
@@ -476,20 +420,20 @@ assert_let (fun t => Rabs t <= 355 / 65536 /\ Rabs (t - te) <= 65537 * Rpow2 (-7
   rewrite <-Rmult_assoc, <-mult_IZR. split.
   2: { apply round_generic; [apply valid_rnd_N |]. apply generic_format_FLT.
     exists (Defs.Float radix2 (k' * 47632711549) (-42));
-      unfold F2R; simpl; [easy | | easy]. apply lt_IZR.
+      unfold F2R; cbn; [easy | | easy]. apply lt_IZR.
     rewrite abs_IZR, mult_IZR. unfold k'. interval. }
   apply round_generic; [apply valid_rnd_N |].
   assert (Rabs xR <= 746) by interval.
   assert (Rabs xR <= /256 \/ /256 <= Rabs xR) as [H8 | H8] by lra.
   - replace k' with 0%Z by (apply eq_IZR, Rle_le_eq; unfold k'; interval).
-    simpl.
     rewrite Rmult_0_l, Rminus_0_r. easy.
   - apply generic_format_FLT.
     exists (Defs.Float radix2 (Ztrunc (xR * Rpow2 60) - k' * 47632711549 * 262144) (-60)).
-    3: easy. 2: { simpl. apply lt_IZR. rewrite abs_IZR, minus_IZR, 2mult_IZR.
+    3: easy.
+    2: { cbn. apply lt_IZR. rewrite abs_IZR, minus_IZR, 2mult_IZR.
       cbn -[Rabs IZR Ztrunc Rmult Rminus Rlt].
       unfold k'. interval with (i_taylor xR). }
-    unfold F2R; simpl.
+    unfold F2R; cbn.
     rewrite minus_IZR, Rmult_minus_distr_r. apply f_equal2.
     2: rewrite !mult_IZR; lra.
     change (generic_format radix2 (FIX_exp (-60)) xR). revert HxR.
@@ -497,7 +441,20 @@ assert_let (fun t => Rabs t <= 355 / 65536 /\ Rabs (t - te) <= 65537 * Rpow2 (-7
     unfold FIX_exp, FLT_exp. lia. }
 { intros _. unfold te. rewrite Hki2. simpl evalRounded.
   rewrite <-round_FIX_IZR with (f := ZnearestE).
-  now apply exp_argred. }
+  unfold Rrnd.nearbyint, round_mode.
+  cbn -[bpow]; unfold F2R; cbn -[bpow].
+  set (k := Generic_fmt.round radix2 (FIX_exp 0) ZnearestE (Rrnd.rnd (xR * _))).
+  split. { unfold k, Rrnd.rnd, round_mode. interval with (i_taylor xR). }
+  set (RLog2div64l := 8153543309409082 * Rpow2 (-98)).
+  set (RLog2div64h := 6243314768150528 * Rpow2 (-59)).
+  set (u := xR - k * _ - _).
+  set (delt1 := Rrnd.rnd u - u).
+  set (delt2 := Rrnd.rnd (k * RLog2div64l) - k * RLog2div64l).
+  replace (Rrnd.rnd u - (xR - k * (Rpower.ln 2 / 64)))
+    with (delt1 - delt2 - k * (RLog2div64h + RLog2div64l - Rpower.ln 2 / 64))
+    by (unfold delt1, delt2, u; ring).
+  unfold Rrnd.rnd, round_mode in delt1, delt2, k, u.
+  interval with (i_taylor xR, i_prec 120). }
 intros t [b_t err_t].
 
 assert_let (fun y => Rabs y <= 0.0055 /\ Rabs (1 + y - Rtrigo_def.exp t) <= Rpow2 (-58)).
@@ -562,8 +519,8 @@ Qed.
 Definition exp_aux (x : F.type) :=
   if PrimFloat.ltb x (-0x1.74385446d71c4p9)%float then (0%float, 0x1p-1074%float) else
   if PrimFloat.ltb 0x1.62e42fefa39efp9%float x then (0x1.fffffffffff2ap1023%float, infinity) else
-  let k0 := (x * PInvLog2_64 + 0x1.8p52)%float in let kf := (k0 - 0x1.8p52)%float in
-  let tf := (x - kf * PLog2div64h - kf * PLog2div64l)%float in
+  let k0 := (x * InvLog2_64 + 0x1.8p52)%float in let kf := (k0 - 0x1.8p52)%float in
+  let tf := (x - kf * Log2div64h - kf * Log2div64l)%float in
   let ki := PrimInt63.sub (normfr_mantissa (fst (frshiftexp k0))) 6755399440921280%int63 in
   let C := consts.[PrimInt63.land ki 63] in
   let kq := PrimInt63.asr ki 6 in let y := (C * Papprox tf)%float in
@@ -629,9 +586,8 @@ unfold I.F.valid_lb, I.F.valid_ub.
 rewrite 2eqb_equiv, next_down_equiv, next_up_equiv, 2ldshiftexp_equiv.
 
 assert (Hki0 : -68736 <= IZR (to_Z ki) <= 65536).
-{ set (ki_expr := @FastNearbyintToInt (BinFloat :: nil) (Op MUL (Var 0) InvLog2_64)).
-  change ki with (evalPrim ki_expr (x, tt)).
-  generalize (equivPrim ki_expr (x, tt) ltac:(easy)).
+{ change ki with (evalPrim (@k_64' nil) (x, tt)).
+  generalize (equivPrim (@k_64' nil) (x, tt) ltac:(easy)).
   intros [_ ->]; [simpl P2M_list; now simplify_wb | easy |].
   cbn -[bpow]. unfold F2R. cbn -[bpow]. unfold Rrnd.rnd, round_mode. interval. }
 
@@ -670,7 +626,7 @@ assert (Hkr2 : (-2147483648 <= to_Z kr <= 2147483647)%Z) by lia.
 
 assert (Hkr3 : (0 <= IZR (to_Z kr) <= 63)) by (now split; apply IZR_le).
 
-set (k0 := (x * PInvLog2_64 + 6755399441055744)%float%float). fold k0 in ki.
+set (k0 := (x * InvLog2_64 + 6755399441055744)%float). fold k0 in ki.
 
 split.
 
@@ -968,8 +924,8 @@ Import ExpImpl.
 
 Definition exp (prec : F.precision) xi :=
   let aux x :=
-    let k0 := (x * PInvLog2_64 + 0x1.8p52)%float in let kf := (k0 - 0x1.8p52)%float in
-    let tf := (x - kf * PLog2div64h - kf * PLog2div64l)%float in
+    let k0 := (x * InvLog2_64 + 0x1.8p52)%float in let kf := (k0 - 0x1.8p52)%float in
+    let tf := (x - kf * Log2div64h - kf * Log2div64l)%float in
     let ki := PrimInt63.sub (normfr_mantissa (fst (frshiftexp k0))) 6755399440921280%int63 in
     let C := consts.[PrimInt63.land ki 63] in
     let kq := PrimInt63.asr ki 6 in let y := (C * Papprox tf)%float in
