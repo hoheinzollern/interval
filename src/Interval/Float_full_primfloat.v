@@ -370,12 +370,11 @@ assert (HxR : generic_format radix2 (FLT_exp (-1074) 53) xR).
 { unfold xR. rewrite Prim2SF2R_Prim2B2R. apply generic_format_B2R. }
 
 intros k0. change (_ - _)%sint63 with (@evalPrim (BinFloat :: nil) _ k_64' (x, tt)).
-intros ki kr x'.
-
-refine (_ (equivPrim (@k_64' nil) (x, tt) _ _ _)); try easy.
-2: { simpl P2M_list. now simplify_wb. }
-
-fold ki. intros [_ Hki2]. clearbody ki.
+remove_floats.
+split. { now simplify_wb. }
+intros [_ Hki2] ki kr x'.
+fold ki in Hki2.
+clearbody ki.
 unfold Pexp_no_const, exp_no_const.
 
 assert (Hkr : (Uint63.to_Z kr <= 63)%Z).
@@ -587,9 +586,9 @@ rewrite 2eqb_equiv, next_down_equiv, next_up_equiv, 2ldshiftexp_equiv.
 
 assert (Hki0 : -68736 <= IZR (to_Z ki) <= 65536).
 { change ki with (evalPrim (@k_64' nil) (x, tt)).
-  generalize (equivPrim (@k_64' nil) (x, tt) ltac:(easy)).
-  intros [_ ->]; [simpl P2M_list; now simplify_wb | easy |].
-  cbn -[bpow]. unfold F2R. cbn -[bpow]. unfold Rrnd.rnd, round_mode. interval. }
+  remove_floats.
+  split. { now simplify_wb. }
+  cbn -[bpow]; unfold F2R; cbn -[bpow]. unfold Rrnd.rnd, round_mode. interval. }
 
 assert (Hki1 : (-68736 <= to_Z ki <= 65536)%Z).
 { destruct Hki0 as [Hki00 Hki01]. now apply le_IZR in Hki00, Hki01. }
@@ -640,7 +639,7 @@ generalize (Bldexp_correct _ _ Hprec Hmax mode_NE
   (Prim2B (consts.[kr] + Pexp_no_const x kr dlb))
   (to_Z (ki >> 6))).
 change (consts.[kr] + Pexp_no_const x kr dlb)%float with
- (@evalPrim (BinFloat :: Integer :: nil) _ (Let (ArrayAcc consts (Var 1)) (Op ADD (Var 0) (Var 1)))
+ (@evalPrim (BinFloat :: Integer :: nil) BinFloat (Let (ArrayAcc consts (Var 1)) (Op ADD (Var 0) (Var 1)))
    (Pexp_no_const x kr dlb, (kr, tt))).
 rewrite <-Prim2SF2R_Prim2B2R. remove_floats.
 assert_let (fun c => 0.984375 <= c <= 1.984375 /\
@@ -783,7 +782,7 @@ generalize (Bldexp_correct _ _ Hprec Hmax mode_NE
   (Prim2B (consts.[kr] + Pexp_no_const x kr dub))
   (to_Z (ki >> 6))).
 change (consts.[kr] + Pexp_no_const x kr dub)%float with
- (@evalPrim (BinFloat :: Integer :: nil) _ (Let (ArrayAcc consts (Var 1)) (Op ADD (Var 0) (Var 1)))
+ (@evalPrim (BinFloat :: Integer :: nil) BinFloat (Let (ArrayAcc consts (Var 1)) (Op ADD (Var 0) (Var 1)))
    (Pexp_no_const x kr dub, (kr, tt))).
 rewrite <-Prim2SF2R_Prim2B2R. remove_floats.
 assert_let (fun c => 0.984375 <= c <= 1.984375 /\
