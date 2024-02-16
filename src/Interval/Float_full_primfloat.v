@@ -391,7 +391,7 @@ assert (Hkr' : (0 <= to_Z kr <= 63)%Z).
 { rewrite Hkr1. split; [apply Uint63.to_Z_bounded | easy]. }
 
 remove_floats.
-{ split; [easy | split; [simpl; unfold Int32.in_bounds | easy]]. cbn -[to_Z kr]. lia. }
+{ cbn -[to_Z kr]. unfold Int32.in_bounds. cbn -[to_Z kr]. lia. }
 
 simpl in Hki2.
 fold xR in b_x, Hki2 |- *.

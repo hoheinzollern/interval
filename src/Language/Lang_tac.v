@@ -159,39 +159,36 @@ lazymatch goal with
   | context [@evalFloat ?Tl ?T ?t ?lC ?md] =>
  (* clean_goal (evalFloat t lC md) G0; *)
     let G1 := clean (evalFloat t lC md) G0 in
-    let G2 := replace_term (B2R (evalFloat t lC md)) (evalRounded t (@C2M_list Tl lC) md) G1 in
- (* let G3' := match G2 with
+    let G2 := replace_term (B2R (@evalFloat Tl T t lC md)) (@evalRounded Tl T t (@C2M_list Tl lC) md) G1 in
+    let G3 := match G2 with
     | context G' [?g] =>
-      context G' [(eqExprTypeFloat (evalFloat t lC md) (evalRounded t (@C2M_list Tl lC) md)) /\ g]
-    end in *) let G3 := match G2 with
-    | context G' [?g] =>
-      context G' [wellBehaved t (@C2M_list Tl lC) md /\ g]
+      context G' [@wellBehaved Tl T t (@C2M_list Tl lC) md /\ g]
     end in
     let IWB   := fresh "IWB"   in let Hgoal   := fresh "Hgoal"   in
     let Iconv := fresh "Iconv" in let IisConv := fresh "IisConv" in cut G3;
-     [intros [IWB Hgoal]; refine (_ (equivFloat t lC md _ IWB _));
-       [intros [Iconv ->]; intuition | try easy | try easy]
-     | simpl C2M_list; remove_floats]
+     [intros [IWB Hgoal]; refine (_ (@equivFloat Tl T t lC md _ IWB _));
+       [intros [Iconv ->]; intuition |
+        repeat lazymatch goal with |- convertibleFloat_list _ => split ; try easy end |
+        try easy]
+     | simpl C2M_list]
   | context [@evalPrim ?Tl ?T ?t ?lP] =>
  (* clean_goal (evalPrim t lC md) G0; *)
-    let G1 := clean (FloatOps.Prim2SF (evalPrim t lP)) G0 in
-    let G2 := replace_term (SF2R radix2 (FloatOps.Prim2SF (evalPrim t lP))) (evalRounded t (@P2M_list Tl lP) mode_NE) G1 in
+    let G1 := clean (FloatOps.Prim2SF (@evalPrim Tl T t lP)) G0 in
+    let G2 := replace_term (SF2R radix2 (FloatOps.Prim2SF (@evalPrim Tl T t lP))) (evalRounded t (@P2M_list Tl lP) mode_NE) G1 in
     let G3 := match G2 with
     | context [@evalPrim Tl T t lP] =>
-      constr:(eqExprTypePrim (evalPrim t lP) (evalRounded t (@P2M_list Tl lP) mode_NE) -> G2)
+      constr:(eqExprTypePrim (@evalPrim Tl T t lP) (@evalRounded Tl T t (@P2M_list Tl lP) mode_NE) -> G2)
     | _ => G2
     end in
- (* let G3' := match G2 with
-    | context G' [?g] =>
-      context G' [(eqExprTypePrim (evalPrim t lC md) (evalRounded t (@C2M_list Tl lC) md)) /\ g]
-    end in *)
     let G4 := constr:(wellBehaved t (@P2M_list Tl lP) mode_NE /\ G3) in
     let IWB   := fresh "IWB"   in let Hgoal   := fresh "Hgoal"   in
     let Iconv := fresh "Iconv" in let IisConv := fresh "IisConv" in cut G4;
-     [intros [IWB Hgoal]; refine (_ (equivPrim t lP _ IWB _));
+     [intros [IWB Hgoal]; refine (_ (@equivPrim Tl T t lP _ IWB _));
        [let H := fresh "__H" in
         intros [Iconv H]; unfold isConversionPrim in H;
-        rewrite ?H; intuition; apply Hgoal; easy | try easy | try easy]
+        rewrite ?H; intuition; apply Hgoal; easy |
+        clear IWB Hgoal; repeat lazymatch goal with |- convertiblePrim_list _ => split ; try easy end |
+        try easy]
      | simpl P2M_list]
   end
 end.
