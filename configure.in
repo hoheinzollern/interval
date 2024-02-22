@@ -245,11 +245,11 @@ fi
 AC_SUBST([LANG_FILES])
 
 if test "$prim_float" = "yes"; then
+   PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Missing/Flocq Float/Primitive_ops"
    if test "$lang_tac" = "yes"; then
-      PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops Interval/Float_full_primfloat"
+      PRIM_FLOAT="$PRIM_FLOAT Interval/Float_full_primfloat"
       PRIM_FLOAT_TAC=src/Tactic_primfloat_opt.v
    else
-      PRIM_FLOAT="$INT63_FILE Missing/Int63Compat Float/Primitive_ops"
       PRIM_FLOAT_TAC=src/Tactic_primfloat.v
    fi
 else
