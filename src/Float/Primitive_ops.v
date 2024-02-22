@@ -16,7 +16,7 @@ End Z.
 Import Floats.
 Import Zaux BinarySingleNaN.
 
-Require Import Stdlib.
+Require Import Missing.Stdlib Missing.Flocq.
 Require Import Xreal.
 Require Import Basic.
 Require Import Sig.
@@ -2109,11 +2109,8 @@ rewrite Rabs_left1.
 intros H.
 apply Ropp_le_contravar in H.
 rewrite Ropp_involutive in H.
-rewrite <- (SF2B_B2SF_valid _ _ b_mxy).
-generalize (valid_binary_B2SF FloatOps.prec emax b_mxy).
-rewrite H1.
+rewrite <- (SF2B'_B2SF b_mxy), H1.
 change (BtoX (Bsucc _)) with (Xreal (FtoR radix2 true (shift_pos (Z.to_pos FloatOps.prec) 1 - 1) (emax - FloatOps.prec))).
-intros _.
 apply Rnot_lt_le.
 intros H'.
 apply (Rle_not_lt _ _ H).
@@ -2217,11 +2214,8 @@ rewrite Rabs_pos_eq.
   now apply Float_prop.F2R_gt_0.
 }
 intros H.
-rewrite <- (SF2B_B2SF_valid _ _ b_mxy).
-generalize (valid_binary_B2SF FloatOps.prec emax b_mxy).
-rewrite H1.
+rewrite <- (SF2B'_B2SF b_mxy), H1.
 change (BtoX (Bpred _)) with (Xreal (FtoR radix2 false (shift_pos (Z.to_pos FloatOps.prec) 1 - 1) (emax - FloatOps.prec))).
-intros _.
 apply Ropp_le_contravar.
 apply Rnot_lt_le.
 intros H'.

@@ -21,6 +21,7 @@ From Coq Require Import Reals Psatz PrimInt63 Uint63 Sint63 PArray Floats.
 
 From Flocq Require Import Core PrimFloat BinarySingleNaN.
 
+Require Import Missing.Flocq.
 Require Import Xreal.
 Require Import Basic.
 Require Import Sig.
@@ -746,17 +747,9 @@ rewrite Rlt_bool_true. 2: { apply Rlt_le_trans with (1 := Hb). interval with (i_
 set (f := Bldexp _ _ _). intros [Heq [Hfin _]].
 generalize (Bpred_correct prec emax Hprec Hmax f). rewrite Hfin, Heq.
 rewrite <-is_finite_SF_B2SF, B2SF_Prim2B. intros H. specialize (H Hconv).
-revert H. rewrite Rlt_bool_true.
-2: { apply Rabs_lt_inv in Hb. destruct Hb as [Hlb _]. generalize (pred_ge_gt radix2).
-  intros Haux. specialize (Haux (fexp prec emax)). apply Haux in Hlb;
-   [| now apply fexp_correct | change (fexp _ _) with (FLT_exp (-1074) 53)
-    | apply generic_format_round; [now apply fexp_correct | apply valid_rnd_N]].
-  2: { apply generic_format_FLT.
-    apply (FLT_spec _ _ _ _ (Defs.Float radix2 (-9007199254740991) 971)); [| easy..].
-    unfold F2R. simpl. lra. }
-  apply Rlt_le_trans with (2 := Hlb).
-  interval with (i_prec 60). }
-intros [Heqpred [Hfinpred _]].
+revert H. case Rlt_bool_spec.
+2: { intros _ H. now rewrite <- (SF2B'_B2SF (Bpred f)), H. }
+intros _ [Heqpred [Hfinpred _]].
 
 replace (Beqb _ _) with false.
 2: { simpl. unfold Beqb, SFeqb, SFcompare. now destruct Bpred. }
@@ -825,18 +818,9 @@ rewrite Rlt_bool_true. 2: { apply Rlt_le_trans with (1 := Hb). interval with (i_
 set (f := Bldexp _ _ _). intros [Heq [Hfin _]].
 generalize (Bsucc_correct prec emax Hprec Hmax f). rewrite Hfin, Heq.
 rewrite <-is_finite_SF_B2SF, B2SF_Prim2B. intros H. specialize (H Hconv).
-revert H. rewrite Rlt_bool_true.
-2: { apply Rabs_lt_inv in Hb. destruct Hb as [_ Hub]. generalize (succ_le_lt radix2).
-  intros Haux. specialize (Haux (fexp prec emax)). apply Haux in Hub;
-   [| now apply fexp_correct
-    | apply generic_format_round; [now apply fexp_correct | apply valid_rnd_N]
-    | change (fexp _ _) with (FLT_exp (-1074) 53)].
-  2: { apply generic_format_FLT.
-    apply (FLT_spec _ _ _ _ (Defs.Float radix2 9007199254740991 971)); [| easy..].
-    unfold F2R. simpl. lra. }
-  apply Rle_lt_trans with (1 := Hub).
-  interval with (i_prec 60). }
-intros [Heqsucc [Hfinsucc _]].
+revert H. case Rlt_bool_spec.
+2: { intros _ H. now rewrite <- (SF2B'_B2SF (Bsucc f)), H. }
+intros _ [Heqsucc [Hfinsucc _]].
 
 replace (Beqb _ _) with false.
 2: { simpl. unfold Beqb, SFeqb, SFcompare. simpl. simpl in Hfin, Hfinsucc.
