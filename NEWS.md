@@ -1,3 +1,11 @@
+Version 4.10.0
+--------------
+
+* ensured compatibility from Coq 8.11 to 8.19
+* optimized `exp` for native floating-point numbers
+* allowed goals with strict inequalities, e.g., `f1 < e <= f2`
+* strengthened specifications of `FloatOps.{mul,div}_{DN,UP}`
+
 Version 4.9.0
 -------------
 
