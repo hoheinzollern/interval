@@ -467,15 +467,9 @@ assert (Hkr3 : (0 <= IZR (to_Z kr) <= 63)) by (now split; apply IZR_le).
 set (k0 := (x * InvLog2_64 + 6755399441055744)%float). fold k0 in ki.
 
 change (consts.[kr]) with (@evalPrim (Integer :: nil) _ (ArrayAcc consts (Var 0)) (kr, tt)).
-let Q := constr:(fun C => 0.984375 <= C <= 1.984375 /\
+assert_float_transparent (fun C => 0.984375 <= C <= 1.984375 /\
   (Uint63.to_Z kr = 0%Z -> C = 1) /\
-  Rabs (C - Rtrigo_def.exp (IZR (Uint63.to_Z kr) * (Rpower.ln 2 / 64))) <= Rpow2 (-53)) in
-lazymatch goal with
-| |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
-  pattern (@evalPrim Tl BinFloat t lP);
-  refine (cut_transparent_Prim_BinFloat Tl _ Q t lP _ _ _ _ _);
-  [ try now intuition | clear; now vm_compute | simpl P2M_list | | ]
-end.
+  Rabs (C - Rtrigo_def.exp (IZR (Uint63.to_Z kr) * (Rpower.ln 2 / 64))) <= Rpow2 (-53)).
 { split. easy. cbn. fold kr. lia. }
 { simpl evalRounded. rewrite <- Hkr1.
   split; [| split].

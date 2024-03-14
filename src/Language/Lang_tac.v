@@ -5,6 +5,12 @@ Require Import Lang_expr Lang_simpl.
 
 Local Open Scope R_scope.
 
+Module Import Private.
+
+Ltac vm_reflexivity :=
+  (repeat match reverse goal with | H: _ |- _ => clear H end);
+  vm_compute; reflexivity.
+
 Lemma destructLet : forall Tl T1 T2
     (P  : evalExprTypeRounded T1 -> evalExprTypeRounded T2 -> Prop)
     (Q  : evalExprTypeRounded T1 -> Prop)
@@ -67,15 +73,6 @@ lazymatch goal with
   end
 end.
 
-
-Tactic Notation "assert_let" open_constr(Q) := do_assert_let Q.
-
-Tactic Notation "assert_let" open_constr(Q) "as"
-    ident(xM) simple_intropattern(H) :=
-  do_assert_let Q; [| | intros xM H].
-
-Tactic Notation "assert_multilet" open_constr(Q) := do_assert_multilet Q.
-
 Ltac compute_vars v := match v with
   | tt        => constr:(@nil R)
   | (?a, ?v') => let l := compute_vars v' in
@@ -88,30 +85,6 @@ Ltac compute_vars_Real v := match v with
   | tt        => constr:(@nil R)
   | (?a, ?v') => let l := compute_vars v' in constr:(a :: l)
   end.
-
-Ltac simplify_wb :=
-let P := fresh "__P" in evar (P : Prop);
-lazymatch goal with
-  | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
-    cut P;
-   [Reify.find_hyps l; change l with (@toList Tl (@M2R_list Tl v));
-    simple refine (@generateCProp_correct Tl T t _ v md _ _ _ _);
-    [try easy.. | let n := eval lazy in (length l) in
-      change (length _) with n; (repeat match reverse goal with
-        | H: _ |- _ => clear H end); vm_compute; reflexivity |]
-   |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
-end.
-
-Ltac simplify_wb_taylor :=
-let P := fresh "__P" in evar (P : Prop);
-lazymatch goal with
-  | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
-    cut P;
-   [Reify.find_hyps l; change l with (@toList Tl (@M2R_list Tl v));
-    eapply (@generateCProp_taylor_correct Tl T t _ v md);
-    [try easy.. | vm_compute; reflexivity |]
-   |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
-end.
 
 Ltac remove P G := match G with
 | context G' [P /\ ?P'] => let G'' := context G' [P'] in remove P G''
@@ -141,17 +114,63 @@ revert dependent x; intros x; cut (generic_format radix2 (FLT_exp (-1074) 53) (B
   [| apply generic_format_B2R]; generalize (B2R x); let r := fresh "__r" in intros r;
   intros; clear dependent x; revert dependent r. (* TODO: Add hypothesis -maxval <= B2R x <= maxval *)
 
-Tactic Notation "reify_var" ident(x) "as" ident(xM) ident(Hformat_xM) :=
-  do_reify_var x; intros xM Hformat_xM.
-
 Ltac do_reify_var' x :=
 revert dependent x; intros x; rewrite <-(Prim2SF2R_Prim2B2R x);
   cut (generic_format radix2 (FLT_exp (-1074) 53) (B2R (PrimFloat.Prim2B x)));
   [| apply generic_format_B2R]; generalize (B2R (PrimFloat.Prim2B x)); let r := fresh "__r" in intros r;
   intros; clear dependent x; revert dependent r. (* TODO: merge with previous tactic *)
 
-Tactic Notation "reify_var'" ident(x) "as" ident(xM) ident(Hformat_xM) :=
-  do_reify_var' x; intros xM Hformat_xM.
+Lemma cut_transparent_Prim_Integer : forall Tl
+    (P : PrimInt63.int -> Prop) (Q : Z -> Prop)
+    (t : ArithExpr Tl Integer) (lP : evalExprTypePrim_list Tl),
+    convertiblePrim_list lP ->
+  let lR := P2M_list lP in wellFormed t = true ->
+  wellBehaved t lR mode_NE -> Q (evalRounded t lR mode_NE) ->
+ (forall x, Q (Sint63.to_Z x) -> Sint63.to_Z x = evalRounded t lR mode_NE -> P x) ->
+  P (evalPrim t lP).
+Proof. intros Tl P Q t lP IC lR IWF IWB IQ H.
+destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
+now rewrite H1. easy.
+Qed.
+
+Lemma cut_transparent_Prim_BinFloat : forall Tl
+    (P : PrimFloat.float -> Prop) (Q : R -> Prop)
+    (t : ArithExpr Tl BinFloat) (lP : evalExprTypePrim_list Tl),
+    convertiblePrim_list lP ->
+  let lR := P2M_list lP in wellFormed t = true ->
+  wellBehaved t lR mode_NE -> Q (evalRounded t lR mode_NE) ->
+ (forall x, Q (SF2R radix2 (FloatOps.Prim2SF x)) -> is_finite_SF (FloatOps.Prim2SF x) = true -> SF2R radix2 (FloatOps.Prim2SF x) = evalRounded t lR mode_NE -> P x) ->
+  P (evalPrim t lP).
+Proof. intros Tl P Q t lP IC lR IWF IWB IQ H.
+destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
+now rewrite H1. easy. easy.
+Qed.
+
+End Private.
+
+Ltac simplify_wb :=
+let P := fresh "__P" in evar (P : Prop);
+lazymatch goal with
+  | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
+    cut P;
+   [Reify.find_hyps l; change l with (@toList Tl (@M2R_list Tl v));
+    simple refine (@generateCProp_correct Tl T t _ v md _ _ _ _);
+    [easy.. | let n := eval lazy in (length l) in
+      change (length _) with n; vm_reflexivity |]
+   |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
+end.
+
+Ltac simplify_wb_taylor :=
+let P := fresh "__P" in evar (P : Prop);
+lazymatch goal with
+  | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
+    cut P;
+   [Reify.find_hyps l; change l with (@toList Tl (@M2R_list Tl v));
+    eapply (@generateCProp_taylor_correct Tl T t _ v md);
+    [easy.. | let n := eval lazy in (length l) in
+      change (length _) with n; vm_reflexivity |]
+   |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
+end.
 
 Ltac remove_floats :=
   let G0 := lazymatch goal with |- ?G0 => G0 end in
@@ -200,40 +219,28 @@ Ltac remove_floats :=
      | simpl P2M_list]
   end.
 
-Lemma cut_transparent_Prim_Integer : forall Tl
-    (P : PrimInt63.int -> Prop) (Q : Z -> Prop)
-    (t : ArithExpr Tl Integer) (lP : evalExprTypePrim_list Tl),
-    convertiblePrim_list lP ->
-  let lR := P2M_list lP in wellFormed t = true ->
-  wellBehaved t lR mode_NE -> Q (evalRounded t lR mode_NE) ->
- (forall x, Q (Sint63.to_Z x) -> Sint63.to_Z x = evalRounded t lR mode_NE -> P x) ->
-  P (evalPrim t lP).
-Proof. intros Tl P Q t lP IC lR IWF IWB IQ H.
-destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
-now rewrite H1. easy.
-Qed.
+Tactic Notation "reify_var" ident(x) "as" ident(xM) ident(Hformat_xM) :=
+  do_reify_var x; intros xM Hformat_xM.
 
-Lemma cut_transparent_Prim_BinFloat : forall Tl
-    (P : PrimFloat.float -> Prop) (Q : R -> Prop)
-    (t : ArithExpr Tl BinFloat) (lP : evalExprTypePrim_list Tl),
-    convertiblePrim_list lP ->
-  let lR := P2M_list lP in wellFormed t = true ->
-  wellBehaved t lR mode_NE -> Q (evalRounded t lR mode_NE) ->
- (forall x, Q (SF2R radix2 (FloatOps.Prim2SF x)) -> is_finite_SF (FloatOps.Prim2SF x) = true -> SF2R radix2 (FloatOps.Prim2SF x) = evalRounded t lR mode_NE -> P x) ->
-  P (evalPrim t lP).
-Proof. intros Tl P Q t lP IC lR IWF IWB IQ H.
-destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
-now rewrite H1. easy. easy.
-Qed.
+Tactic Notation "reify_var'" ident(x) "as" ident(xM) ident(Hformat_xM) :=
+  do_reify_var' x; intros xM Hformat_xM.
+
+Tactic Notation "assert_let" open_constr(Q) := do_assert_let Q.
+
+Tactic Notation "assert_let" open_constr(Q) "as"
+    ident(xM) simple_intropattern(H) :=
+  do_assert_let Q; [| | intros xM H].
+
+Tactic Notation "assert_multilet" open_constr(Q) := do_assert_multilet Q.
 
 Ltac assert_float_transparent Q :=
   lazymatch goal with
   | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
     pattern (@evalPrim Tl Integer t lP);
     refine (cut_transparent_Prim_Integer Tl _ Q t lP _ _ _ _ _);
-    [ try now intuition | clear; now vm_compute | simpl P2M_list ; simplify_wb ; try easy | | ]
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | | ]
   | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
     pattern (@evalPrim Tl BinFloat t lP);
     refine (cut_transparent_Prim_BinFloat Tl _ Q t lP _ _ _ _ _);
-    [ try now intuition | clear; now vm_compute | simpl P2M_list ; simplify_wb ; try easy | | ]
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | | ]
   end.
