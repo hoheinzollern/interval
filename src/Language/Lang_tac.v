@@ -199,3 +199,24 @@ Ltac remove_floats :=
         try easy]
      | simpl P2M_list]
   end.
+
+Lemma cut_transparent_Prim_Integer : forall Tl
+    (P : PrimInt63.int -> Prop) (Q  : Z -> Prop)
+    (t : ArithExpr Tl Integer) (lP : evalExprTypePrim_list Tl),
+    convertiblePrim_list lP ->
+  let lR := P2M_list lP in wellFormed t = true ->
+  wellBehaved t lR mode_NE -> Q (evalRounded t lR mode_NE) ->
+ (forall x, Q (Sint63.to_Z x) -> Sint63.to_Z x = evalRounded t lR mode_NE ->  P x) ->
+  P (evalPrim t lP).
+Proof. intros Tl P Q t lP IC lR IWF IWB IQ H.
+destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
+now rewrite H1. easy.
+Qed.
+
+Ltac assert_float_transparent Q :=
+  lazymatch goal with
+  | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
+    pattern (@evalPrim Tl Integer t lP);
+    refine (cut_transparent_Prim_Integer Tl _ Q t lP _ _ _ _ _);
+    [ try now intuition | clear; now vm_compute | simpl P2M_list ; try now simplify_wb | | ]
+  end.
