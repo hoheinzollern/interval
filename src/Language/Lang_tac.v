@@ -120,8 +120,8 @@ revert dependent x; intros x; rewrite <-(Prim2SF2R_Prim2B2R x);
   [| apply generic_format_B2R]; generalize (B2R (PrimFloat.Prim2B x)); let r := fresh "__r" in intros r;
   intros; clear dependent x; revert dependent r. (* TODO: merge with previous tactic *)
 
-Lemma cut_transparent_Prim_Integer : forall Tl
-    (P : PrimInt63.int -> Prop) (Q : Z -> Prop)
+Lemma cut_Prim_Integer :
+  forall Tl (P : PrimInt63.int -> Prop) (Q : Z -> Prop)
     (t : ArithExpr Tl Integer) (lP : evalExprTypePrim_list Tl),
     convertiblePrim_list lP ->
   let lR := P2M_list lP in wellFormed t = true ->
@@ -133,8 +133,8 @@ destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
 now rewrite H1. easy.
 Qed.
 
-Lemma cut_transparent_Prim_BinFloat : forall Tl
-    (P : PrimFloat.float -> Prop) (Q : R -> Prop)
+Lemma cut_Prim_BinFloat :
+  forall Tl (P : PrimFloat.float -> Prop) (Q : R -> Prop)
     (t : ArithExpr Tl BinFloat) (lP : evalExprTypePrim_list Tl),
     convertiblePrim_list lP ->
   let lR := P2M_list lP in wellFormed t = true ->
@@ -144,6 +144,32 @@ Lemma cut_transparent_Prim_BinFloat : forall Tl
 Proof. intros Tl P Q t lP IC lR IWF IWB IQ H.
 destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
 now rewrite H1. easy. easy.
+Qed.
+
+Lemma cut_trivial_Prim_Integer :
+  forall Tl (P : PrimInt63.int -> Prop)
+    (t : ArithExpr Tl Integer) (lP : evalExprTypePrim_list Tl),
+    convertiblePrim_list lP ->
+  let lR := P2M_list lP in wellFormed t = true ->
+  wellBehaved t lR mode_NE ->
+ (forall x, Sint63.to_Z x = evalRounded t lR mode_NE -> P x) ->
+  P (evalPrim t lP).
+Proof. intros Tl P t lP IC lR IWF IWB H.
+destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
+now rewrite H1.
+Qed.
+
+Lemma cut_trivial_Prim_BinFloat :
+  forall Tl (P : PrimFloat.float -> Prop)
+    (t : ArithExpr Tl BinFloat) (lP : evalExprTypePrim_list Tl),
+    convertiblePrim_list lP ->
+  let lR := P2M_list lP in wellFormed t = true ->
+  wellBehaved t lR mode_NE ->
+ (forall x, is_finite_SF (FloatOps.Prim2SF x) = true -> SF2R radix2 (FloatOps.Prim2SF x) = evalRounded t lR mode_NE -> P x) ->
+  P (evalPrim t lP).
+Proof. intros Tl P t lP IC lR IWF IWB H.
+destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
+easy. now rewrite H1.
 Qed.
 
 End Private.
@@ -233,14 +259,26 @@ Tactic Notation "assert_let" open_constr(Q) "as"
 
 Tactic Notation "assert_multilet" open_constr(Q) := do_assert_multilet Q.
 
-Ltac assert_float_transparent Q :=
+Ltac assert_float Q :=
   lazymatch goal with
   | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
     pattern (@evalPrim Tl Integer t lP);
-    refine (cut_transparent_Prim_Integer Tl _ Q t lP _ _ _ _ _);
+    refine (cut_Prim_Integer Tl _ Q t lP _ _ _ _ _);
     [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | | ]
   | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
     pattern (@evalPrim Tl BinFloat t lP);
-    refine (cut_transparent_Prim_BinFloat Tl _ Q t lP _ _ _ _ _);
+    refine (cut_Prim_BinFloat Tl _ Q t lP _ _ _ _ _);
     [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | | ]
+  end.
+
+Ltac remove_float :=
+  lazymatch goal with
+  | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
+    pattern (@evalPrim Tl Integer t lP);
+    refine (cut_trivial_Prim_Integer Tl _ t lP _ _ _ _);
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | ]
+  | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
+    pattern (@evalPrim Tl BinFloat t lP);
+    refine (cut_trivial_Prim_BinFloat Tl _ t lP _ _ _ _);
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | ]
   end.
