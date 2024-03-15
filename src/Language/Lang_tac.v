@@ -172,9 +172,7 @@ destruct (equivPrim t lP IC IWB IWF) as [H0 H1]. apply H.
 easy. now rewrite H1.
 Qed.
 
-End Private.
-
-Ltac simplify_wb :=
+Ltac do_simplify_wb :=
 let P := fresh "__P" in evar (P : Prop);
 lazymatch goal with
   | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
@@ -186,7 +184,7 @@ lazymatch goal with
    |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
 end.
 
-Ltac simplify_wb_taylor :=
+Ltac do_simplify_wb_taylor :=
 let P := fresh "__P" in evar (P : Prop);
 lazymatch goal with
   | |- @wellBehaved ?Tl ?T ?t ?v ?md => let l := compute_vars v in
@@ -197,6 +195,36 @@ lazymatch goal with
       change (length _) with n; vm_reflexivity |]
    |unfold P; clear P; cbn -[bpow (* evalCArithExpr2 *)]]
 end.
+
+Ltac do_assert_float Q :=
+  lazymatch goal with
+  | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
+    pattern (@evalPrim Tl Integer t lP);
+    refine (cut_Prim_Integer Tl _ Q t lP _ _ _ _ _);
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try do_simplify_wb ; try easy | | ]
+  | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
+    pattern (@evalPrim Tl BinFloat t lP);
+    refine (cut_Prim_BinFloat Tl _ Q t lP _ _ _ _ _);
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try do_simplify_wb ; try easy | | ]
+  end.
+
+Ltac do_remove_float :=
+  lazymatch goal with
+  | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
+    pattern (@evalPrim Tl Integer t lP);
+    refine (cut_trivial_Prim_Integer Tl _ t lP _ _ _ _);
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try do_simplify_wb ; try easy | ]
+  | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
+    pattern (@evalPrim Tl BinFloat t lP);
+    refine (cut_trivial_Prim_BinFloat Tl _ t lP _ _ _ _);
+    [ try now intuition | vm_reflexivity | simpl P2M_list ; try do_simplify_wb ; try easy | ]
+  end.
+
+End Private.
+
+Ltac simplify_wb := do_simplify_wb.
+
+Ltac simplify_wb_taylor := do_simplify_wb_taylor.
 
 Ltac remove_floats :=
   let G0 := lazymatch goal with |- ?G0 => G0 end in
@@ -259,26 +287,6 @@ Tactic Notation "assert_let" open_constr(Q) "as"
 
 Tactic Notation "assert_multilet" open_constr(Q) := do_assert_multilet Q.
 
-Ltac assert_float Q :=
-  lazymatch goal with
-  | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
-    pattern (@evalPrim Tl Integer t lP);
-    refine (cut_Prim_Integer Tl _ Q t lP _ _ _ _ _);
-    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | | ]
-  | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
-    pattern (@evalPrim Tl BinFloat t lP);
-    refine (cut_Prim_BinFloat Tl _ Q t lP _ _ _ _ _);
-    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | | ]
-  end.
+Tactic Notation "assert_float" open_constr(Q) := do_assert_float Q.
 
-Ltac remove_float :=
-  lazymatch goal with
-  | |- context [@evalPrim ?Tl Integer ?t ?lP] =>
-    pattern (@evalPrim Tl Integer t lP);
-    refine (cut_trivial_Prim_Integer Tl _ t lP _ _ _ _);
-    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | ]
-  | |- context [@evalPrim ?Tl BinFloat ?t ?lP] =>
-    pattern (@evalPrim Tl BinFloat t lP);
-    refine (cut_trivial_Prim_BinFloat Tl _ t lP _ _ _ _);
-    [ try now intuition | vm_reflexivity | simpl P2M_list ; try simplify_wb ; try easy | ]
-  end.
+Tactic Notation "assert_float" := do_remove_float.

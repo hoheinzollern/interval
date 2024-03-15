@@ -571,15 +571,17 @@ assert (Main :
   clear d dlb dub Hdlb Hdub.
   intros d fin_d b_d.
   unfold penult.
-  remove_floats.
-  split. { now simplify_wb. }
+  assert_float.
+  intros z -> ->.
+  apply (conj eq_refl).
 
   simpl in Hki.
   fold xR in xred, Hx, Hxr_, Hki |- *.
   clearbody xR.
   clear ki_ k0 x Fx Ek.
+  simpl evalRounded.
   set (dR := SF2R radix2 (Prim2SF d)).
-  fold dR in b_d |- *.
+  fold dR C y in b_d |- *.
   clearbody dR.
   clear d fin_d.
 
@@ -705,7 +707,7 @@ specialize (Hb dlb eq_refl (eq_sym Hdlb)).
 rewrite <- Prim2SF2R_Prim2B2R.
 change (C' + y'')%float with
   (@evalPrim (BinFloat :: BinFloat :: nil) BinFloat (Op ADD (Var 0) (Var 1)) (C', (y'', tt))).
-remove_float.
+assert_float.
 intros p Fp Ep.
 rewrite Rlt_bool_true.
 2: { rewrite Ep. apply Rlt_le_trans with (1 := Hb). interval with (i_prec 60). }
@@ -774,7 +776,7 @@ specialize (Hb dub eq_refl (eq_sym Hdub)).
 rewrite <- Prim2SF2R_Prim2B2R.
 change (C' + y'')%float with
  (@evalPrim (BinFloat :: BinFloat :: nil) BinFloat (Op ADD (Var 0) (Var 1)) (C', (y'', tt))).
-remove_float.
+assert_float.
 intros p Fp Ep.
 rewrite Rlt_bool_true.
 2: { rewrite Ep. apply Rlt_le_trans with (1 := Hb). interval with (i_prec 60). }
