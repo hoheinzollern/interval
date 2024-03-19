@@ -324,17 +324,6 @@ Definition g0 : ArithExpr (BinFloat :: nil) BinFloat :=
 
 Definition Papprox (t : PrimFloat.float) := Eval cbv in evalPrim g0 (t, tt).
 
-Lemma exp_consts_correct :
-  forall i, (0 <= i <= 63)%Z ->
-  Rabs (SF2R radix2 (Prim2SF consts.[of_Z i]) - Rtrigo_def.exp (IZR i * (Rpower.ln 2 / 64))) <= Rpow2 (-53).
-Proof.
-intros i Hi_.
-assert (Hi : snd (N.iter 64 (fun '(n, P) => (Z.succ n, i = n \/ P)) (0%Z, False))) by (cbn; lia).
-clear Hi_. cbn in Hi. repeat destruct Hi as [-> | Hi]. 65: easy.
-all: cbn -[bpow]; unfold F2R; cbn -[bpow].
-all: interval with (i_prec 61).
-Qed.
-
 Definition exp_aux (x : F.type) :=
   if PrimFloat.ltb x (-0x1.74385446d71c4p9)%float then (0%float, 0x1p-1074%float) else
   if PrimFloat.ltb 0x1.62e42fefa39efp9%float x then (0x1.fffffffffff2ap1023%float, infinity) else
@@ -406,8 +395,8 @@ unfold I.F.valid_lb, I.F.valid_ub.
 rewrite 2eqb_equiv, next_down_equiv, next_up_equiv, 2ldshiftexp_equiv.
 
 revert kr. rename ki into ki_.
-set (ki_expr := @FastNearbyintToInt (BinFloat :: nil) (Op MUL (Var 0) (BinFl InvLog2_64))).
-change ki_ with (evalPrim ki_expr (x, tt)).
+set (ki' := @FastNearbyintToInt (BinFloat :: nil) (Op MUL (Var 0) (BinFl InvLog2_64))).
+change ki_ with (evalPrim ki' (x, tt)).
 assert_float (fun ki => -68736 <= IZR ki <= 65536).
 { cbn -[bpow]; unfold F2R; cbn -[bpow]. unfold Rrnd.rnd, round_mode. interval. }
 
@@ -422,15 +411,12 @@ assert (Hki2 : (-1074 <= to_Z (asr ki 6) <= 1024)%Z).
   cbn in Hki10, Hki11 |- *. lia. }
 
 replace (Uint63.to_Z _) with ((to_Z (asr ki 6)) + 2101)%Z.
-2: { rewrite asr_spec. rewrite <- Zdiv.Z_div_plus by easy.
-  rewrite <-(cmod_small (_ + _)%Z wB) by (cbn; lia).
-  change (_ * _)%Z with (to_Z 134464). rewrite <-Sint63.add_spec, <-asr_spec.
-  rewrite <-to_Z_mod_Uint63to_Z. rewrite Z.mod_small; [easy |].
-  rewrite asr_spec, Sint63.add_spec. rewrite cmod_small by (cbn; lia).
-  destruct Hki1 as [Hki10 Hki11].
-  apply (Z.div_le_mono _ _ 64 ltac:(easy)) in Hki10, Hki11.
-  cbn in Hki10, Hki11 |- *. change 134464%Z with (2101 * 64)%Z.
-  rewrite Zdiv.Z_div_plus by easy. lia. }
+2: { rewrite <- to_Z_mod_Uint63to_Z.
+  rewrite 2!asr_spec, Sint63.add_spec, cmod_small by (cbn; lia).
+  change (to_Z 134464) with (2101 * 64)%Z.
+  rewrite Zdiv.Z_div_plus by easy.
+  apply eq_sym, Z.mod_small.
+  revert Hki2. rewrite asr_spec. cbn; lia. }
 rewrite Z.add_simpl_r.
 set (kq := asr ki 6).
 
@@ -443,9 +429,7 @@ assert (Hkr0 : (0 <= to_Z kr <= 63)%Z).
     change (Uint63.to_Z min_int) with 4611686018427387904%Z. lia. }
 
 assert (Hkr1 : to_Z kr = Uint63.to_Z kr).
-{ rewrite <-(Z.mod_small (to_Z _) wB), <-to_Z_mod_Uint63to_Z; [easy |]. cbn -[kr]. lia. }
-
-assert (Hkr2 : (-2147483648 <= to_Z kr <= 2147483647)%Z) by lia.
+{ rewrite <- to_Z_mod_Uint63to_Z. apply eq_sym, Z.mod_small. cbn -[kr]. lia. }
 
 assert (Hkr3 : (0 <= IZR (to_Z kr) <= 63)) by (now split; apply IZR_le).
 
@@ -455,23 +439,30 @@ change (consts.[kr]) with (@evalPrim (Integer :: nil) _ (ArrayAcc consts (Var 0)
 assert_float (fun C => 0.984375 <= C <= 1.984375 /\
   (Uint63.to_Z kr = 0%Z -> C = 1) /\
   Rabs (C - Rtrigo_def.exp (IZR (Uint63.to_Z kr) * (Rpower.ln 2 / 64))) <= Rpow2 (-53)).
+{ split. simpl. unfold Int32.in_bounds. simpl ; lia. easy. }
 { split. easy. cbn. fold kr. lia. }
 { simpl evalRounded. rewrite <- Hkr1.
+  assert (H: forall i, (0 <= i <= 63)%Z ->
+    Rabs (SF2R radix2 (Prim2SF consts.[of_Z i]) - Rtrigo_def.exp (IZR i * (Rpower.ln 2 / 64))) <= Rpow2 (-53)).
+  { intros i [Hi1 Hi2].
+    assert (Hi: forall j, (i <= j)%Z -> i = j \/ (i <= Z.pred j)%Z) by lia.
+    do 64 (apply Hi in Hi2 ; destruct Hi2 as [->|Hi2] ;
+      [cbn -[bpow]; unfold F2R; cbn -[bpow]; interval with (i_prec 61) | simpl Z.pred in Hi2]).
+    now elim (Z.le_trans _ _ _ Hi1 Hi2). }
   split; [| split].
-  3: { now apply exp_consts_correct. }
+  3: { now apply H. }
   2: { intros ->. now apply Rinv_r, IZR_neq. }
-  simpl.
   replace (SF2R _ _) with
    (SF2R radix2 (Prim2SF consts.[of_Z (to_Z kr)]) - Rtrigo_def.exp (IZR (to_Z kr) * (Rpower.ln 2 / 64))
      + Rtrigo_def.exp (IZR (to_Z kr) * (Rpower.ln 2 / 64))) by ring.
-  generalize (exp_consts_correct (to_Z kr) Hkr0).
+  generalize (H (to_Z kr) Hkr0).
   generalize (SF2R radix2 (Prim2SF consts.[of_Z (to_Z kr)]) - Rtrigo_def.exp (IZR (to_Z kr) * (Rpower.ln 2 / 64))).
   intros; interval. }
 intros C' [bnd_C [HC1 HC2]] FC _.
 set (C := SF2R radix2 (Prim2SF C')).
 
-set (k_64 := FastNearbyint (@Op (BinFloat :: nil) _ MUL (Var 0) (BinFl InvLog2_64))).
-change (k0 - 6755399441055744)%float with (@evalPrim (BinFloat :: nil) _ k_64 (x, tt)).
+set (k'' := FastNearbyint (@Op (BinFloat :: nil) _ MUL (Var 0) (BinFl InvLog2_64))).
+change (k0 - 6755399441055744)%float with (@evalPrim (BinFloat :: nil) _ k'' (x, tt)).
 assert_float (fun k => -68736 <= k <= 65536).
 { cbn -[bpow]; unfold F2R; cbn -[bpow].
   unfold Rrnd.nearbyint, Rrnd.rnd, round_mode.
@@ -479,8 +470,8 @@ assert_float (fun k => -68736 <= k <= 65536).
 intros k Hk Fk Ek.
 
 set (te := xR - IZR (to_Z ki) * (Rpower.ln 2 / 64)).
-set (t_64 := @Op (BinFloat :: BinFloat :: nil) _ SUB (OpExact SUB (Var 1) (OpExact MUL (Var 0) (BinFl Log2div64h))) (Op MUL (Var 0) (BinFl Log2div64l))).
-change (x - _ - _)%float with (@evalPrim (BinFloat :: BinFloat :: nil) _ t_64 (k, (x, tt))).
+set (t'' := @Op (BinFloat :: BinFloat :: nil) _ SUB (OpExact SUB (Var 1) (OpExact MUL (Var 0) (BinFl Log2div64h))) (Op MUL (Var 0) (BinFl Log2div64l))).
+change (x - _ - _)%float with (@evalPrim (BinFloat :: BinFloat :: nil) _ t'' (k, (x, tt))).
 assert_float (fun t => Rabs t <= 355 / 65536 /\ Rabs (t - te) <= 65537 * Rpow2 (-77)).
 { rewrite Ek. cbn -[bpow]; unfold F2R; cbn -[bpow].
   unfold Rrnd.nearbyint, Rrnd.rnd, round_mode, Rrnd.Rnd.
