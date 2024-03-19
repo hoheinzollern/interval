@@ -398,7 +398,7 @@ revert kr. rename ki into ki_.
 set (ki' := @FastNearbyintToInt (BinFloat :: nil) (Op MUL (Var 0) (BinFl InvLog2_64))).
 change ki_ with (evalPrim ki' (x, tt)).
 assert_float (fun ki => -68736 <= IZR ki <= 65536).
-{ cbn -[bpow]; unfold F2R; cbn -[bpow]. unfold Rrnd.rnd, round_mode. interval. }
+{ cbn -[bpow]. unfold Rrnd.rnd, round_mode. interval. }
 
 intros ki Hki0 Hki kr.
 
@@ -447,7 +447,7 @@ assert_float (fun C => 0.984375 <= C <= 1.984375 /\
   { intros i [Hi1 Hi2].
     assert (Hi: forall j, (i <= j)%Z -> i = j \/ (i <= Z.pred j)%Z) by lia.
     do 64 (apply Hi in Hi2 ; destruct Hi2 as [->|Hi2] ;
-      [cbn -[bpow]; unfold F2R; cbn -[bpow]; interval with (i_prec 61) | simpl Z.pred in Hi2]).
+      [cbn -[bpow]; interval with (i_prec 61) | simpl Z.pred in Hi2]).
     now elim (Z.le_trans _ _ _ Hi1 Hi2). }
   split; [| split].
   3: { now apply H. }
@@ -464,8 +464,7 @@ set (C := SF2R radix2 (Prim2SF C')).
 set (k'' := FastNearbyint (@Op (BinFloat :: nil) _ MUL (Var 0) (BinFl InvLog2_64))).
 change (k0 - 6755399441055744)%float with (@evalPrim (BinFloat :: nil) _ k'' (x, tt)).
 assert_float (fun k => -68736 <= k <= 65536).
-{ cbn -[bpow]; unfold F2R; cbn -[bpow].
-  unfold Rrnd.nearbyint, Rrnd.rnd, round_mode.
+{ cbn -[bpow]. unfold Rrnd.nearbyint, Rrnd.rnd, round_mode.
   rewrite round_FIX_IZR. interval. }
 intros k Hk Fk Ek.
 
@@ -525,7 +524,7 @@ set (t := SF2R radix2 (Prim2SF t')).
 
 change (Papprox t') with (@evalPrim (BinFloat :: nil) _ g0 (t', tt)).
 assert_float (fun y => Rabs y <= 0.0055 /\ Rabs (1 + y - Rtrigo_def.exp t) <= Rpow2 (-58)).
-{ cbn -[bpow]; unfold F2R; cbn -[bpow].
+{ cbn -[bpow].
   unfold Rrnd.rnd, Rrnd.emin, round_mode, Rrnd.prec, Rrnd.emax, Format64.prec, Format64.emax.
   split.
   - interval.

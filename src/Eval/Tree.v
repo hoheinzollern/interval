@@ -227,6 +227,13 @@ Ltac get_vars t l :=
     | Rminus ?a ?b => aux_b a b
     | Rmult ?a ?b => aux_b a b
     | Rdiv ?a ?b => aux_b a b
+    | @Defs.F2R ?r ?f =>
+      let r := eval lazy in (Zaux.radix_val r) in
+      let m := eval lazy in (@Defs.Fnum r f) in
+      let e := eval lazy in (@Defs.Fexp r f) in
+      lazymatch is_Z_const r with true =>
+      lazymatch is_Z_const m with true =>
+      lazymatch is_Z_const e with true => l end end end
     | Rpower ?a ?b => aux_b a b
     | Rnearbyint ?a ?b => aux_u b
     | Generic_fmt.round Zaux.radix2 (FLT.FLT_exp ?emin ?prec) ?mode ?a =>
@@ -321,6 +328,14 @@ Ltac reify t l :=
       | _ => constr:(Ebinary Sub u v)
       end
     | Rmult ?a (Rinv ?b) => aux_b Div a b
+    | @Defs.F2R ?r ?f =>
+      let r := eval lazy in (Zaux.radix_val r) in
+      let m := eval lazy in (@Defs.Fnum r f) in
+      let e := eval lazy in (@Defs.Fexp r f) in
+      lazymatch is_Z_const r with true =>
+      lazymatch is_Z_const m with true =>
+      lazymatch is_Z_const e with true =>
+      constr:(Ebinary Mul (Econst (Int m)) (Econst (Bpow r e))) end end end
     | Q2R (QArith_base.Qmake ?a ?b) =>
       aux_b Div constr:(IZR a) constr:(IZR (Zpos b))
     | Rmult ?a ?b => aux_b Mul a b
