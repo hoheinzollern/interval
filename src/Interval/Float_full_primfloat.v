@@ -332,7 +332,7 @@ Definition exp_aux (x : F.type) :=
   let ki := (normfr_mantissa (fst (frshiftexp k0)) - 6755399440921280)%uint63 in
   let C := consts.[PrimInt63.land ki 63] in
   let kq := PrimInt63.asr ki 6 in let y := (C * Papprox tf)%float in
-  let lb := (C + (y + -0x1.8p-57))%float in let ub := (C + (y + 0x1.8p-57))%float in
+  let lb := (C + (y + -0x1.25p-57))%float in let ub := (C + (y + 0x1.25p-57))%float in
   (next_down (ldshiftexp lb kq), next_up (ldshiftexp ub kq)).
 
 Lemma exp_aux_correct :
@@ -375,10 +375,11 @@ replace (PrimInt63.land _ _) with (PrimInt63.land ki 63).
   rewrite 2Z.land_ones by easy. rewrite <-Znumtheory.Zmod_div_mod; [| easy | easy |].
   2: { now exists (2 ^ 57)%Z. } change (_ 134464%uint63) with (2101 * 64)%Z.
   now rewrite Z.mod_add by easy. }
-set (kr := PrimInt63.land ki 63). set (dlb := (-0x1.8p-57)%float).
-set (dub := 0x1.8p-57%float). set (d := 0x1.8p-57).
+set (kr := PrimInt63.land ki 63).
+set (dlb := (-0x1.25p-57)%float). set (dub := 0x1.25p-57%float).
+set (d := 0x1.25p-57).
 assert (d = Rabs (SF2R radix2 (Prim2SF dlb)) /\ d = Rabs (SF2R radix2 (Prim2SF dub))) as [Hdlb Hdub].
-{ cbn. unfold F2R, d. cbn. change (Z.neg 6755399441055744) with (Z.opp 6755399441055744)%Z.
+{ cbn. unfold F2R, d. cbn. change (Z.neg 5154510511013888) with (Z.opp 5154510511013888)%Z.
   rewrite opp_IZR, <-Ropp_mult_distr_l, Rabs_Ropp, Rabs_pos_eq; lra. }
 
 unfold xr in Hx |- *. clear xr.
@@ -523,7 +524,7 @@ intros t' [b_t err_t] Ft _.
 set (t := SF2R radix2 (Prim2SF t')).
 
 change (Papprox t') with (@evalPrim (BinFloat :: nil) _ g0 (t', tt)).
-assert_float (fun y => Rabs y <= 0.0055 /\ Rabs (1 + y - Rtrigo_def.exp t) <= Rpow2 (-58)).
+assert_float (fun y => Rabs y <= 0.0055 /\ Rabs (1 + y - Rtrigo_def.exp t) <= 11 * Rpow2 (-62)).
 { cbn -[bpow].
   unfold Rrnd.rnd, Rrnd.emin, round_mode, Rrnd.prec, Rrnd.emax, Format64.prec, Format64.emax.
   split.
@@ -556,7 +557,7 @@ assert (Main :
   Rabs (SF2R radix2 (Prim2SF z)) <= 0.011 /\
   let Y := Rtrigo_def.exp (IZR (Uint63.to_Z kr) * (Rpower.ln 2 / 64)) + SF2R radix2 (Prim2SF z) in
   0.989 <= Y <= 1.99 /\
-  Rabs (Y - (Rtrigo_def.exp xred + SF2R radix2 (Prim2SF d))) <= 0x1.74134edb6f103p-57).
+  Rabs (Y - (Rtrigo_def.exp xred + SF2R radix2 (Prim2SF d))) <= 0x1.24b34edb6f103p-57).
 {
   clear d dlb dub Hdlb Hdub.
   intros d fin_d b_d.
@@ -606,7 +607,7 @@ assert (Main :
 
 assert (Hb : forall d,
   is_finite_SF (Prim2SF d) = true ->
-  Rabs (SF2R radix2 (Prim2SF d)) = 0x1.8p-57 ->
+  Rabs (SF2R radix2 (Prim2SF d)) = 0x1.25p-57 ->
   Rabs (Rrnd.rnd (Rrnd.rnd (SF2R radix2 (Prim2SF C') + SF2R radix2 (Prim2SF (evalPrim penult (C', (y', (d, tt)))))) *
       Rpow2 (to_Z kq))) < 9007199254740991 * Rpow2 971).
 { intros d' Hd1 Hd2.
@@ -740,11 +741,11 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
   apply Rle_trans with (1 + SF2R radix2 (Prim2SF y'')).
   { apply pred_round_le_id. now apply FLT_exp_valid. apply valid_rnd_N. }
   apply Rabs_le_inv in Hr.
-  change (SF2R radix2 (Prim2SF dlb)) with (-0x18000000000000p-109). lra.
+  change (SF2R radix2 (Prim2SF dlb)) with (-0x12500000000000p-109). lra.
 - apply Rle_trans with (C + SF2R radix2 (Prim2SF y'') - Rpow2 (-53)).
   2: { revert HC2. generalize (C - Rtrigo_def.exp (IZR φ (kr)%uint63 * (Rpower.ln 2 / 64))). intros r0 Hr0.
     apply Rabs_le_inv in Hr, Hr0.
-    change (SF2R radix2 (Prim2SF dlb)) with (-0x18000000000000p-109). lra. }
+    change (SF2R radix2 (Prim2SF dlb)) with (-0x12500000000000p-109). lra. }
   specialize (Haux_ dlb eq_refl ltac:(rewrite <- Hdlb; interval) Hkr).
   revert Haux_. fold y''. generalize (C + SF2R radix2 (Prim2SF y'')). intros r0 Hr0.
   unfold pred, succ. rewrite Rle_bool_false by interval.
@@ -809,11 +810,11 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
   apply Rle_trans with (1 + SF2R radix2 (Prim2SF y'')).
   2: { apply succ_round_ge_id. now apply FLT_exp_valid. apply valid_rnd_N. }
   apply Rabs_le_inv in Hr.
-  change (SF2R radix2 (Prim2SF dub)) with 0x18000000000000p-109. lra.
+  change (SF2R radix2 (Prim2SF dub)) with 0x12500000000000p-109. lra.
 - apply Rle_trans with (C + SF2R radix2 (Prim2SF y'') + Rpow2 (-53)).
   { revert HC2. generalize (C - Rtrigo_def.exp (IZR φ (kr)%uint63 * (Rpower.ln 2 / 64))). intros r0 Hr0.
     apply Rabs_le_inv in Hr, Hr0.
-    change (SF2R radix2 (Prim2SF dub)) with 0x18000000000000p-109. lra. }
+    change (SF2R radix2 (Prim2SF dub)) with 0x12500000000000p-109. lra. }
   specialize (Haux_ dub eq_refl ltac:(rewrite <- Hdub; interval) Hkr).
   revert Haux_. fold y''. generalize (C + SF2R radix2 (Prim2SF y'')). intros r0 Hr0.
   unfold pred, succ. rewrite Rle_bool_true by interval.
@@ -843,13 +844,13 @@ Definition exp (prec : F.precision) xi :=
         if PrimFloat.ltb xl (-0x1.74385446d71c4p9)%float then 0%float else
         if PrimFloat.ltb 0x1.62e42fefa39efp9%float xl then 0x1.fffffffffff2ap1023%float else
         let '(C, y, kq) := aux xl in
-        next_down (ldshiftexp (C + (y + -0x1.8p-57))%float kq)
+        next_down (ldshiftexp (C + (y + -0x1.25p-57))%float kq)
       else 0%float)
      (if F.real xu then
         if PrimFloat.ltb xu (-0x1.74385446d71c4p9)%float then 0x1p-1074%float else
         if PrimFloat.ltb 0x1.62e42fefa39efp9%float xu then infinity else
         let '(C, y, kq) := aux xu in
-        next_up (ldshiftexp (C + (y + 0x1.8p-57))%float kq)
+        next_up (ldshiftexp (C + (y + 0x1.25p-57))%float kq)
       else nan)
   | Inan => Inan
   end.
