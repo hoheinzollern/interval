@@ -206,6 +206,132 @@ apply pred_round_FLT_le_FLX; [easy.. |].
 now apply Mult_error.mult_bpow_exact_FLX, generic_format_FLX_FLT with emin.
 Qed.
 
+Lemma pred_round_N_le :
+  forall beta fexp choice, Valid_exp fexp ->
+  forall x y e,
+  bpow beta (e - 1) < Rabs (Generic_fmt.round beta fexp (Znearest choice) x) < bpow beta e ->
+  (x - y <= /2 * bpow beta (fexp e))%R ->
+  (pred beta fexp (Generic_fmt.round beta fexp (Znearest choice) x) <= y)%R.
+Proof.
+intros beta fexp choice Vexp x y e [He1 He2] Hxy.
+apply Rle_trans with (x - /2 * bpow beta (fexp e))%R.
+2: lra.
+clear Hxy.
+unfold pred, succ, pred_pos, ulp, cexp.
+rewrite Ropp_involutive.
+assert (Ha: (Rabs (Generic_fmt.round beta fexp (Znearest choice) x) <> 0)%R).
+{ intros H.
+  apply Rlt_not_le with (1 := He1).
+  rewrite H.
+  apply bpow_ge_0. }
+rewrite 2!(Req_bool_false _ 0).
+2: { contradict Ha. rewrite Ha. apply Rabs_R0. }
+2: { contradict Ha. rewrite <- Rabs_Ropp, Ha. apply Rabs_R0. }
+assert (Hm: mag beta (Generic_fmt.round beta fexp (Znearest choice) x) = e :> Z).
+{ apply mag_unique.
+  refine (conj _ He2).
+  now apply Rlt_le. }
+rewrite mag_opp, Hm.
+generalize (error_le_half_ulp beta fexp choice x).
+unfold ulp, cexp.
+rewrite Req_bool_false.
+2: {
+  intros H.
+  apply Rlt_not_le with (1 := He1).
+  rewrite H, round_0 by apply valid_rnd_N.
+  rewrite Rabs_R0.
+  apply bpow_ge_0. }
+replace (mag beta x : Z) with e.
+2: {
+  destruct (mag_round beta fexp (Znearest choice) x).
+  { contradict Ha.
+    rewrite Ha. apply Rabs_R0. }
+  now rewrite <- H.
+  rewrite H in He1, He2.
+  apply lt_bpow in He1, He2.
+  lia. }
+intros H.
+apply Rabs_le_inv in H.
+case Rle_bool_spec ; intros H'.
+- lra.
+- rewrite Req_bool_false. lra.
+  intros H''.
+  apply Rlt_not_le with (1 := He1).
+  rewrite H'', Rabs_pos_eq.
+  apply Rle_refl.
+  apply bpow_ge_0.
+Qed.
+
+Lemma succ_round_N_ge :
+  forall beta fexp choice, Valid_exp fexp ->
+  forall x y e,
+  bpow beta (e - 1) < Rabs (Generic_fmt.round beta fexp (Znearest choice) x) < bpow beta e ->
+  (y - x <= /2 * bpow beta (fexp e))%R ->
+  (y <= succ beta fexp (Generic_fmt.round beta fexp (Znearest choice) x))%R.
+Proof.
+intros beta fexp choice Vexp x y e [He1 He2] Hxy.
+apply Rle_trans with (x + /2 * bpow beta (fexp e))%R.
+lra.
+clear Hxy.
+unfold succ, pred_pos, ulp, cexp.
+assert (Ha: (Rabs (Generic_fmt.round beta fexp (Znearest choice) x) <> 0)%R).
+{ intros H.
+  apply Rlt_not_le with (1 := He1).
+  rewrite H.
+  apply bpow_ge_0. }
+rewrite 2!(Req_bool_false _ 0).
+2: { contradict Ha. rewrite <- Rabs_Ropp, Ha. apply Rabs_R0. }
+2: { contradict Ha. rewrite Ha. apply Rabs_R0. }
+assert (Hm: mag beta (Generic_fmt.round beta fexp (Znearest choice) x) = e :> Z).
+{ apply mag_unique.
+  refine (conj _ He2).
+  now apply Rlt_le. }
+rewrite mag_opp, Hm.
+generalize (error_le_half_ulp beta fexp choice x).
+unfold ulp, cexp.
+rewrite Req_bool_false.
+2: {
+  intros H.
+  apply Rlt_not_le with (1 := He1).
+  rewrite H, round_0 by apply valid_rnd_N.
+  rewrite Rabs_R0.
+  apply bpow_ge_0. }
+replace (mag beta x : Z) with e.
+2: {
+  destruct (mag_round beta fexp (Znearest choice) x).
+  { contradict Ha.
+    rewrite Ha. apply Rabs_R0. }
+  now rewrite <- H.
+  rewrite H in He1, He2.
+  apply lt_bpow in He1, He2.
+  lia. }
+intros H.
+apply Rabs_le_inv in H.
+case Rle_bool_spec ; intros H'.
+- lra.
+- rewrite Req_bool_false. lra.
+  intros H''.
+  apply Rlt_not_le with (1 := He1).
+  rewrite <- Rabs_Ropp, H'', Rabs_pos_eq.
+  apply Rle_refl.
+  apply bpow_ge_0.
+Qed.
+
+Lemma pred_succ_round_N_le :
+  forall beta fexp choice, Valid_exp fexp ->
+  forall x y e,
+  bpow beta (e - 1) < Rabs (Generic_fmt.round beta fexp (Znearest choice) x) < bpow beta e ->
+  (Rabs (x - y) <= /2 * bpow beta (fexp e))%R ->
+  (pred beta fexp (Generic_fmt.round beta fexp (Znearest choice) x) <= y <= succ beta fexp (Generic_fmt.round beta fexp (Znearest choice) x))%R.
+Proof.
+intros beta fexp choice Vexp x y e He Hxy.
+apply Rabs_le_inv in Hxy.
+split.
+now apply pred_round_N_le with (1 := Vexp) (2 := He).
+apply succ_round_N_ge with (1 := Vexp) (2 := He).
+lra.
+Qed.
+
 Module PrimFloatIntervalFull <: IntervalOps.
 
 Module Faux := SpecificFloat BigIntRadix2.
@@ -740,20 +866,13 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
   rewrite Rmult_0_l, exp_0, Rminus_eq_0, Rminus_0_r.
   apply Rle_trans with (1 + SF2R radix2 (Prim2SF y'')).
   { apply pred_round_le_id. now apply FLT_exp_valid. apply valid_rnd_N. }
-  apply Rabs_le_inv in Hr.
-  change (SF2R radix2 (Prim2SF dlb)) with (-0x12500000000000p-109). lra.
-- apply Rle_trans with (C + SF2R radix2 (Prim2SF y'') - Rpow2 (-53)).
-  2: { revert HC2. generalize (C - Rtrigo_def.exp (IZR φ (kr)%uint63 * (Rpower.ln 2 / 64))). intros r0 Hr0.
-    apply Rabs_le_inv in Hr, Hr0.
-    change (SF2R radix2 (Prim2SF dlb)) with (-0x12500000000000p-109). lra. }
-  specialize (Haux_ dlb eq_refl ltac:(rewrite <- Hdlb; interval) Hkr).
-  revert Haux_. fold y''. generalize (C + SF2R radix2 (Prim2SF y'')). intros r0 Hr0.
-  unfold pred, succ. rewrite Rle_bool_false by interval.
-  rewrite 2Ropp_involutive. unfold pred_pos. unfold ulp, cexp.
-  rewrite (mag_unique _ _ 1) by interval.
-  rewrite Req_bool_false by interval. rewrite Req_bool_false by interval.
-  cut (Generic_fmt.round radix2 (FLT_exp Rrnd.emin Rrnd.prec) ZnearestE r0 - r0 <= Rpow2 (FLT_exp emin prec 1) - Rpow2 (-53)). lra.
-  interval. }
+  apply Rminus_le. ring_simplify. cbn -[bpow]. interval.
+- apply pred_round_N_le with (e := 1%Z).
+  now apply FLT_exp_valid.
+  generalize (Haux_ dlb eq_refl ltac:(rewrite <- Hdlb; interval) Hkr).
+  fold y''. generalize (C + SF2R radix2 (Prim2SF y'')). intros r0 Hr0. interval.
+  revert HC2. generalize (C - Rtrigo_def.exp (IZR φ (kr)%uint63 * (Rpower.ln 2 / 64))). intros r0 Hr0.
+  ring_simplify. cbn -[bpow]. interval. }
 
 clear dlb Hdlb.
 
@@ -809,20 +928,13 @@ destruct (Z.eq_dec (Uint63.to_Z kr) 0) as [Hkr | Hkr].
   rewrite Rmult_0_l, exp_0, Rminus_eq_0, Rminus_0_r.
   apply Rle_trans with (1 + SF2R radix2 (Prim2SF y'')).
   2: { apply succ_round_ge_id. now apply FLT_exp_valid. apply valid_rnd_N. }
-  apply Rabs_le_inv in Hr.
-  change (SF2R radix2 (Prim2SF dub)) with 0x12500000000000p-109. lra.
-- apply Rle_trans with (C + SF2R radix2 (Prim2SF y'') + Rpow2 (-53)).
-  { revert HC2. generalize (C - Rtrigo_def.exp (IZR φ (kr)%uint63 * (Rpower.ln 2 / 64))). intros r0 Hr0.
-    apply Rabs_le_inv in Hr, Hr0.
-    change (SF2R radix2 (Prim2SF dub)) with 0x12500000000000p-109. lra. }
-  specialize (Haux_ dub eq_refl ltac:(rewrite <- Hdub; interval) Hkr).
-  revert Haux_. fold y''. generalize (C + SF2R radix2 (Prim2SF y'')). intros r0 Hr0.
-  unfold pred, succ. rewrite Rle_bool_true by interval.
-  unfold ulp, cexp.
-  rewrite (mag_unique _ _ 1) by interval.
-  rewrite Req_bool_false by interval.
-  cut (- (Generic_fmt.round radix2 (FLT_exp Rrnd.emin Rrnd.prec) ZnearestE r0 - r0) <= Rpow2 (FLT_exp emin prec 1) - Rpow2 (-53)). lra.
-  interval.
+  apply Rminus_le. ring_simplify. cbn -[bpow]. interval.
+- apply succ_round_N_ge with (e := 1%Z).
+  now apply FLT_exp_valid.
+  generalize (Haux_ dub eq_refl ltac:(rewrite <- Hdub; interval) Hkr).
+  fold y''. generalize (C + SF2R radix2 (Prim2SF y'')). intros r0 Hr0. interval.
+  revert HC2. generalize (C - Rtrigo_def.exp (IZR φ (kr)%uint63 * (Rpower.ln 2 / 64))). intros r0 Hr0.
+  ring_simplify. cbn -[bpow]. interval.
 Qed.
 
 End ExpImpl.
