@@ -91,10 +91,10 @@ let rec tr_R evd t =
   | _ ->
       raise (NotPlot t)
 
-let rec tr_list evd t =
+let rec tr_point_list evd t acc =
   match EConstr.kind evd t with
   | Constr.App (f, [|_|]) when is_global evd coq_nil f ->
-      []
+      List.rev acc
   | Constr.App (f, [|_;a;b|]) when is_global evd coq_cons f ->
       let h =
         match EConstr.kind evd a with
@@ -102,15 +102,17 @@ let rec tr_list evd t =
             (tr_Z evd a, tr_Z evd b)
         | _ ->
             raise (NotPlot a) in
-      h :: tr_list evd b
+      tr_point_list evd b (h :: acc)
   | Constr.Cast (t, _, _) ->
-      tr_list evd t
+      tr_point_list evd t acc
   | _ -> raise (NotPlot t)
 
-let tr_goal evd p =
+let tr_point_list evd t = tr_point_list evd t []
+
+let tr_plot evd p =
   match decompose_app evd p with
   | c, [|_; ox; dx; oy; dy; h; l|] when is_global evd interval_plot2 c ->
-      (tr_R evd ox, tr_R evd dx, tr_R evd oy, tr_R evd dy, tr_Z evd h, tr_list evd l)
+      (tr_R evd ox, tr_R evd dx, tr_R evd oy, tr_R evd dy, tr_Z evd h, tr_point_list evd l)
   | _ ->
       raise (NotPlot p)
 
@@ -133,8 +135,8 @@ let generate fmt h l =
   print_row (List.length l) (fst !z) (snd !z);
   Format.fprintf fmt "e@\npause mouse close@\n@."
 
-let display_plot env evd p f =
-  match tr_goal evd p with
+let display_plot_aux env evd p f =
+  match tr_plot evd p with
   | (ox, dx, oy, dy, h, l) ->
       let file =
         match f with
@@ -164,17 +166,51 @@ let display_plot p f ~pstate =
     | Some lemma -> get_current_context lemma in
   let evd, p = Constrintern.interp_constr_evars env evd p in
   let p = Retyping.get_type_of env evd p in
-  display_plot env evd p f
+  display_plot_aux env evd p f
+
+#if COQVERSION >= 81800
+let cgenarg a = Constrexpr.CGenarg a
+#else
+let cgenarg a = Constrexpr.CHole (None, Namegen.IntroAnonymous, Some a)
+#endif
+
+#if COQVERSION >= 81300
+let perform_tac nam bl tac =
+  let arg = Genarg.in_gen (Genarg.rawwit Ltac_plugin.Tacarg.wit_tactic) tac in
+  let term = CAst.make (cgenarg arg) in
+  let env = Global.env () in
+  let name =
+    match nam with
+    | None -> Namegen.next_global_ident_away (Names.Id.of_string "__") Names.Id.Set.empty
+    | Some n -> n in
+  let evd = Evd.from_env env in
+  let evd, (body, typ), impargs =
+    ComDefinition.interp_definition ~program_mode:false env evd Names.Id.Map.empty bl None term None in
+  let typ =
+    match typ with
+    | Some t -> t
+    | None -> Retyping.get_type_of ~lax:true env evd body in
+  let cinfo = Declare.CInfo.make ~name ~typ:(Some typ) () in
+  let info = Declare.Info.make () in
+  let _r = Flags.silently (Declare.declare_definition ~info ~cinfo ~opaque:true ~body) evd in
+  match decompose_app evd typ with
+  | c, [|_; ox; dx; oy; dy; h; l|] when is_global evd interval_plot2 c ->
+      if nam = None then display_plot_aux env evd typ None
+  | _ -> Feedback.msg_notice (Printer.pr_econstr_env env evd typ)
+#endif
 
 let __coq_plugin_name = PLOTPLUGIN
 let _ = Mltop.add_known_module __coq_plugin_name
 
 #if COQVERSION >= 81900
 let vtreadproofopt = Vernactypes.vtreadproofopt
+let vtdefault = Vernactypes.vtdefault
 #elif COQVERSION >= 81500
 let vtreadproofopt = Vernacextend.vtreadproofopt
+let vtdefault = Vernacextend.vtdefault
 #else
 let vtreadproofopt x = Vernacextend.VtReadProofOpt x
+let vtdefault x = Vernacextend.VtDefault x
 #endif
 
 #if COQVERSION >= 81800
@@ -183,17 +219,16 @@ let vernac_extend = Vernacextend.static_vernac_extend ~plugin:(Some "coq-interva
 let vernac_extend = Vernacextend.vernac_extend
 #endif
 
+open Vernacextend
+
 let () =
   vernac_extend
     ~command:"VernacPlot"
-    ~classifier:(fun _ -> Vernacextend.classify_as_query) ?entry:None
-    [Vernacextend.TyML
-       (false,
-        Vernacextend.TyTerminal
-          ("Plot",
-           Vernacextend.TyNonTerminal
-             (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_constr),
-              Vernacextend.TyNil)),
+    ~classifier:(fun _ -> classify_as_query) ?entry:None
+    [TyML (false,
+        TyTerminal ("Plot",
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_constr),
+        TyNil)),
 #if COQVERSION >= 81400
         (fun r ?loc ~atts () ->
 #else
@@ -202,17 +237,12 @@ let () =
           Attributes.unsupported_attributes atts;
           vtreadproofopt (display_plot r None)),
         None);
-     Vernacextend.TyML
-       (false,
-        Vernacextend.TyTerminal
-          ("Plot",
-           Vernacextend.TyNonTerminal
-             (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_constr),
-              Vernacextend.TyTerminal
-                ("as",
-                 Vernacextend.TyNonTerminal
-                   (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_string),
-                    Vernacextend.TyNil)))),
+     TyML (false,
+        TyTerminal ("Plot",
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_constr),
+        TyTerminal ("as",
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_string),
+        TyNil)))),
 #if COQVERSION >= 81400
         (fun r s ?loc ~atts () ->
 #else
@@ -221,3 +251,37 @@ let () =
           Attributes.unsupported_attributes atts;
           vtreadproofopt (display_plot r (Some s))),
         None)]
+
+#if COQVERSION >= 81300
+let () =
+  vernac_extend
+    ~command:"VernacDo"
+    ?entry:None
+    [TyML (false,
+        TyTerminal ("Def",
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Stdarg.wit_ident),
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Ltac_plugin.G_rewrite.wit_binders),
+        TyTerminal (":=",
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Ltac_plugin.Tacarg.wit_tactic),
+        TyNil))))),
+#if COQVERSION >= 81400
+        (fun name bl tac ?loc ~atts () ->
+#else
+        (fun name bl tac ~atts ->
+#endif
+          Attributes.unsupported_attributes atts;
+          vtdefault (fun () -> perform_tac (Some name) bl tac)),
+        Some (fun name bl tac -> VtSideff ([name], VtLater)));
+     TyML (false,
+        TyTerminal ("Do",
+        TyNonTerminal (Extend.TUentry (Genarg.get_arg_tag Ltac_plugin.Tacarg.wit_tactic),
+        TyNil)),
+#if COQVERSION >= 81400
+        (fun tac ?loc ~atts () ->
+#else
+        (fun tac ~atts ->
+#endif
+          Attributes.unsupported_attributes atts;
+          vtdefault (fun () -> perform_tac None [] tac)),
+        Some (fun tac -> VtSideff ([], VtLater)))]
+#endif
