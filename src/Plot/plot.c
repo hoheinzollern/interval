@@ -34,6 +34,9 @@ let coq_cons = coq_ref_Datatypes "cons"
 let coq_nil = coq_ref_Datatypes "nil"
 let coq_pair = coq_ref_Datatypes "pair"
 
+let coq_ref_Logic = find_reference ["Coq"; "Init"; "Logic"]
+let coq_and = coq_ref_Logic "and"
+
 let coq_ref_BinNums = find_reference ["Coq"; "Numbers"; "BinNums"]
 let coq_Z0 = coq_ref_BinNums "Z0"
 let coq_Zpos = coq_ref_BinNums "Zpos"
@@ -44,11 +47,12 @@ let coq_xO = coq_ref_BinNums "xO"
 
 let coq_ref_Rdefinitions = find_reference ["Coq"; "Reals"; "Rdefinitions"]
 let coq_Rdiv = coq_ref_Rdefinitions "Rdiv"
+let coq_Rle = coq_ref_Rdefinitions "Rle"
 let coq_IZR = coq_ref_Rdefinitions "IZR"
 
 let interval_plot2 = find_reference ["Interval"; "Tactics"; "Plot_helper"] "plot2"
 
-exception NotPlot of EConstr.t
+exception Unrecognized of EConstr.t
 
 let rec tr_positive evd p =
   match EConstr.kind evd p with
@@ -61,7 +65,7 @@ let rec tr_positive evd p =
   | Constr.Cast (p, _, _) ->
       tr_positive evd p
   | _ ->
-      raise (NotPlot p)
+      raise (Unrecognized p)
 
 let rec tr_Z evd t =
   match EConstr.kind evd t with
@@ -74,7 +78,7 @@ let rec tr_Z evd t =
   | Constr.Cast (t, _, _) ->
       tr_Z evd t
   | _ ->
-      raise (NotPlot t)
+      raise (Unrecognized t)
 
 type rval =
   | Rcst of big_int
@@ -89,7 +93,24 @@ let rec tr_R evd t =
   | Constr.Cast (t, _, _) ->
       tr_R evd t
   | _ ->
-      raise (NotPlot t)
+      raise (Unrecognized t)
+
+let rec tr_ineq evd t =
+  match EConstr.kind evd t with
+  | Constr.App (f, [|a;b|]) when is_global evd coq_Rle f ->
+      (a, b)
+  | _ ->
+      raise (Unrecognized t)
+
+let rec tr_bounds evd t =
+  match EConstr.kind evd t with
+  | Constr.App (f, [|i1;i2|]) when is_global evd coq_and f ->
+      let (b1, x1) = tr_ineq evd i1 in
+      let (x2, b2) = tr_ineq evd i2 in
+      if x1 != x2 then raise (Unrecognized t);
+      (tr_R evd b1, x1, tr_R evd b2)
+  | _ ->
+      raise (Unrecognized t)
 
 let rec tr_point_list evd t acc =
   match EConstr.kind evd t with
@@ -101,11 +122,11 @@ let rec tr_point_list evd t acc =
         | Constr.App (f, [|_;_;a;b|]) when is_global evd coq_pair f ->
             (tr_Z evd a, tr_Z evd b)
         | _ ->
-            raise (NotPlot a) in
+            raise (Unrecognized a) in
       tr_point_list evd b (h :: acc)
   | Constr.Cast (t, _, _) ->
       tr_point_list evd t acc
-  | _ -> raise (NotPlot t)
+  | _ -> raise (Unrecognized t)
 
 let tr_point_list evd t = tr_point_list evd t []
 
@@ -114,11 +135,16 @@ let tr_plot evd p =
   | c, [|_; ox; dx; oy; dy; h; l|] when is_global evd interval_plot2 c ->
       (tr_R evd ox, tr_R evd dx, tr_R evd oy, tr_R evd dy, tr_Z evd h, tr_point_list evd l)
   | _ ->
-      raise (NotPlot p)
+      raise (Unrecognized p)
 
 let rec pr_R fmt = function
   | Rcst n -> Format.fprintf fmt "%s." (string_of_big_int n)
   | Rdiv (a,b) -> Format.fprintf fmt "(%a / %a)" pr_R a pr_R b
+
+let of_R = function
+  | Rcst n -> float_of_big_int n
+  | Rdiv (Rcst a, Rcst b) -> float_of_big_int a /. float_of_big_int b
+  | _ -> assert false
 
 let generate fmt h l =
   Format.fprintf fmt "set xrange [] noextend@\n";
@@ -155,7 +181,7 @@ let display_plot_aux env evd p f =
             CErrors.user_err ~hdr:"plot" (Pp.str "Gnuplot not found")
       | Some _ -> ()
       end
-  | exception (NotPlot e) ->
+  | exception (Unrecognized e) ->
       CErrors.user_err ~hdr:"plot"
         Pp.(str "Cannot parse" ++ spc () ++ Printer.pr_econstr_env env evd e)
 
@@ -167,6 +193,27 @@ let display_plot p f ~pstate =
   let evd, p = Constrintern.interp_constr_evars env evd p in
   let p = Retyping.get_type_of env evd p in
   display_plot_aux env evd p f
+
+#if COQVERSION >= 81800
+let decompose_prod_decls = EConstr.decompose_prod_decls
+#else
+let decompose_prod_decls = EConstr.decompose_prod_assum
+#endif
+
+let pr_type env evd typ =
+  let (rel, typ) = decompose_prod_decls evd typ in
+  let penv = EConstr.push_rel_context rel env in
+  match tr_bounds evd typ with
+  | (b1, x, b2) ->
+      let b1 = of_R b1 in
+      let b2 = of_R b2 in
+      let c = (b1 +. b2) *. 0.5 in
+      if (b2 -. b1) <= 1e-13 *. c then
+        Pp.(Printer.pr_econstr_env penv evd x ++ str " ≈ " ++ real c)
+      else
+        Pp.(Printer.pr_econstr_env penv evd x ++ str " ∈ [" ++ real b1 ++ str "; " ++ real b2 ++ str "]")
+  | exception Unrecognized _ ->
+      Printer.pr_econstr_env penv evd typ
 
 #if COQVERSION >= 81800
 let cgenarg a = Constrexpr.CGenarg a
@@ -196,7 +243,8 @@ let perform_tac nam bl tac =
   match decompose_app evd typ with
   | c, [|_; ox; dx; oy; dy; h; l|] when is_global evd interval_plot2 c ->
       if nam = None then display_plot_aux env evd typ None
-  | _ -> Feedback.msg_notice (Printer.pr_econstr_env env evd typ)
+  | _ ->
+       Feedback.msg_notice (pr_type env evd typ)
 #endif
 
 let __coq_plugin_name = PLOTPLUGIN
