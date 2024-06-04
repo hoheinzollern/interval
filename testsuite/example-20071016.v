@@ -136,3 +136,12 @@ Plot p2 as "picture.gnuplot".
 
 Plot ltac:(plot (fun x => sqrt (1 - x^2) * sin (x * 200)) (-1) 1
   with (i_degree 1, i_size 100 300)) as "picture.gnuplot".
+
+(* Commands Do and Def *)
+
+Do interval (PI²/6).
+
+Do integral (RInt_gen (fun x => 1/(1 + x)^2 * (ln x)^2) (at_right 0) (at_point 1))
+  with (i_relwidth 30).
+
+Def quintic x := root (x^5 - x = 1).

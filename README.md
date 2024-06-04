@@ -124,6 +124,16 @@ which thus needs to be installed. If a string is passed as an optional
 argument, instead of invoking `gnuplot`, a file is created with the
 corresponding Gnuplot script.
 
+This file also provides a `Def` command, which has a syntax similar to
+the `Definition`, except that the right-hand side is not a Gallina
+term but an Ltac term. This command is meant to be used in conjunction
+with the degenerate forms of the tactics `interval`, `integral`, and
+`root`. If the name given to the term does not matter, the simpler
+`Do` command can be used instead. Both commands display the type of
+the generated term with some syntactic sugar. If the type is a
+function graph (as produced by `plot`), then the command `Plot` is
+invoked on it.
+
 Fine-tuning
 -----------
 
@@ -397,4 +407,13 @@ Plot p2 as "picture.gnuplot".
 
 Plot ltac:(plot (fun x => sqrt (1 - x^2) * sin (x * 200)) (-1) 1
   with (i_degree 1, i_size 100 300)).
+
+(* Commands Do and Def *)
+
+Do interval (PI²/6).
+
+Do integral (RInt_gen (fun x => 1/(1 + x)^2 * (ln x)^2) (at_right 0) (at_point 1))
+  with (i_relwidth 30).
+
+Def quintic x := root (x^5 - x = 1).
 ```
