@@ -1,16 +1,4 @@
-#if COQVERSION >= 81300
 open Big_int_Z
-#else
-open Big_int
-#endif
-
-#if COQVERSION >= 81300
-let get_current_context = Declare.Proof.get_current_context
-#elif COQVERSION >= 81200
-let get_current_context = Declare.get_current_context
-#else
-let get_current_context = Pfedit.get_current_context
-#endif
 
 #if COQVERSION >= 81500
 let constr_of_global gr = UnivGen.constr_of_monomorphic_global (Global.env ()) gr
@@ -189,7 +177,7 @@ let display_plot p f ~pstate =
   let evd, env =
     match pstate with
     | None -> let env = Global.env () in Evd.from_env env, env
-    | Some lemma -> get_current_context lemma in
+    | Some lemma -> Declare.Proof.get_current_context lemma in
   let evd, p = Constrintern.interp_constr_evars env evd p in
   let p = Retyping.get_type_of env evd p in
   display_plot_aux env evd p f
@@ -221,7 +209,6 @@ let cgenarg a = Constrexpr.CGenarg a
 let cgenarg a = Constrexpr.CHole (None, Namegen.IntroAnonymous, Some a)
 #endif
 
-#if COQVERSION >= 81300
 let perform_tac nam bl tac =
   let arg = Genarg.in_gen (Genarg.rawwit Ltac_plugin.Tacarg.wit_tactic) tac in
   let term = CAst.make (cgenarg arg) in
@@ -245,7 +232,6 @@ let perform_tac nam bl tac =
       if nam = None then display_plot_aux env evd typ None
   | _ ->
        Feedback.msg_notice (pr_type env evd typ)
-#endif
 
 let __coq_plugin_name = PLOTPLUGIN
 let _ = Mltop.add_known_module __coq_plugin_name
@@ -300,7 +286,6 @@ let () =
           vtreadproofopt (display_plot r (Some s))),
         None)]
 
-#if COQVERSION >= 81300
 let () =
   vernac_extend
     ~command:"VernacDo"
@@ -332,4 +317,3 @@ let () =
           Attributes.unsupported_attributes atts;
           vtdefault (fun () -> perform_tac None [] tac)),
         Some (fun tac -> VtSideff ([], VtLater)))]
-#endif

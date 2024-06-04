@@ -31,16 +31,6 @@ build-image:
 build-minimal:
   stage: build
   script:
-    - opam switch minimal
-    - eval `opam env`
-    - autoconf
-    - ./configure
-    - ./remake -j2 all check
-  extends: .docker_template
-
-build-fp:
-  stage: build
-  script:
     - opam switch fp
     - eval `opam env`
     - autoconf
@@ -66,11 +56,6 @@ build-latest:
   extends: .docker_template
 
 opam-minimal:
-  before_script:
-    - opam switch minimal
-  extends: .opam_template
-
-opam-fp:
   before_script:
     - opam switch fp
   extends: .opam_template

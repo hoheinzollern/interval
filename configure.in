@@ -31,8 +31,8 @@ AC_SUBST(COQVERSION)
 
 AC_MSG_CHECKING([Coq version])
 COQVERSION=[`$COQC -v | sed -n -e 's/^.*version \([0-9][0-9.]*\).*$/\1/p' | awk -F. '{ printf("%d%02d%02d\n", $1,$2,$3); }'`]
-if test "$COQVERSION" -lt 81100; then
-   AC_MSG_ERROR([must be at least 8.11 (you have version $COQVERSION).])
+if test "$COQVERSION" -lt 81301; then
+   AC_MSG_ERROR([must be at least 8.13.1 (you have version $COQVERSION).])
 fi
 AC_MSG_RESULT($COQVERSION)
 
@@ -106,9 +106,6 @@ AS_IF(
     $COQC conftest.v 2> conftest.err ],
   [prim_float=yes], [prim_float=no])
 rm -f conftest.v conftest.vo conftest.err
-if test $COQVERSION -eq 81300; then
-   prim_float=no
-fi
 AC_MSG_RESULT([$prim_float])
 
 AC_MSG_CHECKING([for Ssreflect])
@@ -150,15 +147,6 @@ AS_IF(
     AC_MSG_ERROR([ *** Unable to find library Bignums (https://github.com/coq/bignums/)])])
 rm -f conftest.v conftest.vo conftest.err
 
-if test "$COQVERSION" -ge 81300; then
-   BIGINTPKG=zarith
-   BIGINTMOD=Big_int_Z
-else
-   BIGINTPKG=num
-   BIGINTMOD=Big_int
-fi
-AC_SUBST(BIGINTPKG)
-
 AC_ARG_ENABLE([tactic],
   AS_HELP_STRING([--disable-tactic], [do not compile a "plot" tactic]),
   [if test "$enable_tactic" = "no"; then native_tactic=no ; byte_tactic=no ; fi], [])
@@ -174,8 +162,8 @@ AC_ARG_ENABLE([byte-tactic],
 if test "$native_tactic" = yes; then
   AC_MSG_CHECKING([for native development files])
   AS_IF(
-    [ echo "let _ = (Evd.empty, $BIGINTMOD.zero_big_int)" > conftest.ml
-      $OCAMLFIND ocamlopt -rectypes -thread -package $COQROOT.engine -package $BIGINTPKG -shared conftest.ml -o conftest.cmxs ],
+    [ echo "let _ = (Evd.empty, Big_int_Z.zero_big_int)" > conftest.ml
+      $OCAMLFIND ocamlopt -rectypes -thread -package $COQROOT.engine -package zarith -shared conftest.ml -o conftest.cmxs ],
     [ AC_MSG_RESULT(yes) ],
     [ AC_MSG_RESULT(no)
       AC_MSG_ERROR([ *** Failed to compile a native OCaml library ]) ])
@@ -184,8 +172,8 @@ fi
 if test "$byte_tactic" = yes; then
   AC_MSG_CHECKING([for bytecode development files])
   AS_IF(
-    [ echo "let _ = (Evd.empty, $BIGINTMOD.zero_big_int)" > conftest.ml
-      $OCAMLFIND ocamlc -rectypes -thread -package $COQROOT.engine -package $BIGINTPKG -c conftest.ml -o conftest.cmo ],
+    [ echo "let _ = (Evd.empty, Big_int_Z.zero_big_int)" > conftest.ml
+      $OCAMLFIND ocamlc -rectypes -thread -package $COQROOT.engine -package zarith -c conftest.ml -o conftest.cmo ],
     [ AC_MSG_RESULT(yes) ],
     [ AC_MSG_RESULT(no)
       AC_MSG_ERROR([ *** Failed to compile a bytecode OCaml library ]) ])

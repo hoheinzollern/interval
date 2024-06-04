@@ -74,7 +74,7 @@ src/Tactic_float.v: @PRIM_FLOAT_TAC@ Remakefile
 	@COQC@ @COQEXTRAFLAGS@ -R src Interval $<
 
 COQPKGS = clib engine kernel interp lib library parsing pretyping printing proofs tactics toplevel vernac plugins.ltac
-PACKAGES = $(addprefix -package @COQROOT@., $(COQPKGS)) -package @BIGINTPKG@
+PACKAGES = $(addprefix -package @COQROOT@., $(COQPKGS)) -package zarith
 
 src/Plot/interval_plot.ml: src/Plot/plot.c Remakefile
 	@CPP@ -DCOQVERSION=@COQVERSION@ -DPLOTPLUGIN=\"@PLOTPLUGIN@\" $< -o $@
