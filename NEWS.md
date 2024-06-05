@@ -1,3 +1,11 @@
+Version 4.11.0
+--------------
+
+* added commands `Def` and `Do` to ease the use of degenerate forms of tactics
+* made the tactics recognize `F2R` from Flocq
+* added tactic `assert_float` in `Language`
+* minimal Coq version is now 8.13
+
 Version 4.10.0
 --------------
 
