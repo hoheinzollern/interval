@@ -60,8 +60,6 @@ Inductive output_bound : Set :=
   | BDecimal : QArith_base.Q -> output_bound
   | BFraction : Z -> Z -> output_bound.
 
-Import Stdlib.Compatibility Rdefinitions.
-
 Definition convert_bound b :=
   match b with
   | BInteger n => IZR n

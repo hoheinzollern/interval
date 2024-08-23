@@ -24,7 +24,6 @@ From Coquelicot Require Import Coquelicot.
 From mathcomp.ssreflect Require Import ssreflect.
 
 Require Import Stdlib.
-Require Import Coquelicot.
 Require Import Xreal.
 Require Import Xreal_derive.
 Require Import Basic.

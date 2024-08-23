@@ -25,160 +25,6 @@ From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat se
 Require Import Stdlib.
 Require Import MathComp.
 
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_Rinv x :
-  x <> 0 ->
-  continuous (fun x => / x) x.
-Proof.
-move => Hxneq0.
-apply continuity_pt_filterlim. (* strange: apply works but not apply: *)
-apply: continuity_pt_inv => // .
-apply continuity_pt_filterlim.
-apply: continuous_id.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_Rinv_comp (f : R -> R) x:
-  continuous f x ->
-  f x <> 0 ->
-  continuous (fun x => / (f x)) x.
-Proof.
-move => Hcont Hfxneq0.
-apply: continuous_comp => //.
-by apply: continuous_Rinv.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_cos x : continuous cos x.
-Proof.
-apply continuity_pt_filterlim.
-by apply: continuity_cos => // .
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_cos_comp (f : R -> R) x:
-  continuous f x ->
-  continuous (fun x => cos (f x)) x.
-Proof.
-move => Hcont.
-apply: continuous_comp => //.
-by apply: continuous_cos.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_sin x : continuous sin x.
-Proof.
-apply continuity_pt_filterlim.
-by apply: continuity_sin => // .
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_sin_comp (f : R -> R) x:
-  continuous f x ->
-  continuous (fun x => sin (f x)) x.
-Proof.
-move => Hcont.
-apply: continuous_comp => //.
-by apply: continuous_sin.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_tan x : cos x <> 0 -> continuous tan x.
-Proof.
-move => Hcos.
-rewrite /tan.
-apply: continuous_mult; first by apply: continuous_sin.
-by apply: continuous_Rinv_comp; first by apply: continuous_cos.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_atan x : continuous atan x.
-Proof.
-apply: ex_derive_continuous.
-apply: ex_derive_Reals_1.
-exact: derivable_pt_atan.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_atan_comp (f : R -> R) x:
-  continuous f x ->
-  continuous (fun x => atan (f x)) x.
-Proof.
-move => Hcont.
-apply: continuous_comp => //.
-by apply: continuous_atan.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_exp x : continuous exp x.
-Proof.
-apply: ex_derive_continuous.
-apply: ex_derive_Reals_1.
-exact: derivable_pt_exp.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_exp_comp (f : R -> R) x:
-  continuous f x ->
-  continuous (fun x => exp (f x)) x.
-Proof.
-move => Hcont.
-apply: continuous_comp => //.
-by apply: continuous_exp.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_sqrt (x : R) : continuous sqrt x.
-Proof.
-destruct (Rle_or_lt 0 x) as [Hx|Hx].
-apply continuity_pt_filterlim.
-by apply: continuity_pt_sqrt.
-assert (Hs: forall t, t < 0 -> sqrt t = 0).
-  intros t Ht.
-  unfold sqrt.
-  case Rcase_abs.
-  easy.
-  intros Ht'.
-  now elim Rge_not_lt with (1 := Ht').
-intros P H.
-rewrite Hs // in H.
-unfold filtermap.
-eapply locally_open.
-apply open_lt. 2: exact Hx.
-move => /= t Ht.
-rewrite Hs //.
-now apply locally_singleton.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_sqrt_comp (f : R -> R) x:
-  continuous f x ->
-  continuous (fun x => sqrt (f x)) x.
-Proof.
-move => Hcont.
-apply: continuous_comp => // .
-by apply: continuous_sqrt.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_ln x : (0 < x) -> continuous ln x.
-Proof.
-move => Hxgt0.
-apply: ex_derive_continuous.
-exists (/x).
-apply is_derive_Reals.
-exact: derivable_pt_lim_ln.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma continuous_Rabs_comp f (x : R) :
-  continuous f x -> continuous (fun x0 => Rabs (f x0)) x.
-Proof.
-move => Hcontfx.
-apply: continuous_comp => // .
-apply: continuous_Rabs.
-Qed.
-
 Lemma is_RInt_translation_add V g a b x Ig :
   @is_RInt V g (a + x) (b + x) Ig ->
   is_RInt (fun y : R => g (y + x)%R) a b Ig.
@@ -334,14 +180,6 @@ Ltac help_is_derive_n fresh_n fresh_x :=
    clear IHn]]]
   end.
 
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma is_derive_n_exp : forall n x, is_derive_n exp n x (exp x).
-Proof.
-help_is_derive_n_whole n x.
-- by auto_derive; last by rewrite Rmult_1_l.
-- by auto_derive; last by rewrite Rmult_1_l.
-Qed.
-
 Lemma is_derive_n_pow :
   forall m, (0 < m)%nat -> forall n x,
   is_derive_n (fun x => x ^ m)%R n x
@@ -470,11 +308,6 @@ apply sym_eq, is_derive_unique.
 now apply is_derive_Reals, derivable_pt_lim_ln.
 Qed.
 
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma is_derive_ln x :
-  0 < x -> is_derive ln x (/ x)%R.
-Proof. move=> H; exact/is_derive_Reals/derivable_pt_lim_ln. Qed.
-
 Lemma is_derive_n_sqrt n x :
   0 < x ->
   is_derive_n sqrt n x
@@ -570,33 +403,6 @@ apply sym_eq, is_derive_n_unique.
 rewrite -addnn; apply: is_derive_2n_cos.
 apply is_derive_scal.
 apply is_derive_Reals, derivable_pt_lim_cos.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Definition is_derive_atan x :
-  is_derive atan x (/ (1 + x²)).
-Proof.
-rewrite Rsqr_pow2.
-apply is_derive_Reals, derivable_pt_lim_atan.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Definition is_derive_tan x :
-  cos x <> 0%R -> is_derive tan x (tan x ^ 2 + 1)%R.
-Proof. now intros Hx; unfold tan; auto_derive; trivial; field_simplify. Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma filterlimi_lim_ext_loc {T U} {F G} {FF : Filter F} (f : T -> U) (g : T -> U -> Prop) :
-  F (fun x => g x (f x)) ->
-  filterlim f F G ->
-  filterlimi g F G.
-Proof.
-intros HF Hf P HP.
-generalize (filter_and (fun x => g x (f x)) _ HF (Hf P HP)).
-unfold filtermapi.
-apply: filter_imp.
-intros x [H1 H2].
-now exists (f x).
 Qed.
 
 Lemma prod_to_single {T U V : UniformSpace} {F: (U -> Prop) -> Prop} {FF : Filter F}
@@ -696,36 +502,6 @@ apply: (is_lim_mult (fun x => exp (-(lam * x))) (fun x => / lam) p_infty 0 (/ la
       rewrite /ex_Rbar_mult; lra.
       exists 0 => // .
 exact: is_lim_const.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma ex_RInt_gen_Chasles :
-  forall {V : NormedModule R_AbsRing} {Fa Fc : (R -> Prop) -> Prop},
-  forall {FFa : Filter Fa} {FFc : Filter Fc},
-  forall (f : R -> V) (b : R),
-  ex_RInt_gen f Fa (at_point b) ->
-  ex_RInt_gen f (at_point b) Fc ->
-  ex_RInt_gen f Fa Fc.
-Proof.
-intros V Fa Fc FFa FFc f b [Iab Hab] [Ibc Hbc].
-exists (plus Iab Ibc).
-now apply is_RInt_gen_Chasles with b.
-Qed.
-
-(* TODO: remove once Coquelicot is >= 3.1 *)
-Lemma RInt_gen_Chasles :
-  forall {V : CompleteNormedModule R_AbsRing} {Fa Fc : (R -> Prop) -> Prop},
-  forall {FFa : ProperFilter' Fa} {FFc : ProperFilter' Fc},
-  forall (f : R -> V) (b : R),
-  ex_RInt_gen f Fa (at_point b) ->
-  ex_RInt_gen f (at_point b) Fc ->
-  plus (RInt_gen f Fa (at_point b)) (RInt_gen f (at_point b) Fc) = RInt_gen f Fa Fc.
-Proof.
-intros V Fa Fc FFa FFc f b Hab Hbc.
-apply esym, is_RInt_gen_unique.
-apply: is_RInt_gen_Chasles.
-now apply RInt_gen_correct.
-now apply RInt_gen_correct.
 Qed.
 
 Lemma RInt_gen_ext :

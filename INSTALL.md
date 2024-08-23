@@ -4,9 +4,9 @@ Prerequisites
 In addition to the [Coq proof assistant](https://coq.inria.fr/) (>= 8.13.1),
 you need the following libraries:
 
-- [Mathematical Components](https://math-comp.github.io/) (>= 1.6),
-- [Flocq](https://flocq.gitlabpages.inria.fr/) (>= 3.1),
-- [Coquelicot](http://coquelicot.saclay.inria.fr/) (>= 3.0)
+- [Mathematical Components](https://math-comp.github.io/) (>= 1.12),
+- [Flocq](https://flocq.gitlabpages.inria.fr/) (>= 3.2),
+- [Coquelicot](http://coquelicot.saclay.inria.fr/) (>= 3.1)
 - [BigNums](https://github.com/coq/bignums/)
 
 The `.tar.gz` file is distributed with a working set of configure files. They

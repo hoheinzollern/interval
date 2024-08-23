@@ -20,7 +20,6 @@ liability. See the COPYING file for more details.
 From Coq Require Import BinPos Reals List.
 From Coquelicot Require Import Coquelicot.
 
-Require Import Coquelicot.
 Require Import Xreal.
 Require Import Interval.
 Require Import Priority.

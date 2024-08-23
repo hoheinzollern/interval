@@ -84,11 +84,11 @@ if test ! "$OCAMLFIND"; then OCAMLFIND=ocamlfind; fi
 AC_MSG_CHECKING([for Flocq])
 AS_IF(
   [ echo "Require Import Flocq.Version BinNat." \
-         "Goal (30100 <= Flocq_version)%N. easy. Qed." > conftest.v
+         "Goal (30200 <= Flocq_version)%N. easy. Qed." > conftest.v
     $COQC conftest.v 2> conftest.err ],
   [ AC_MSG_RESULT([yes]) ],
   [ AC_MSG_RESULT([no])
-    AC_MSG_ERROR([ *** Unable to find library Flocq >= 3.1 (http://flocq.gitlabpages.inria.fr/)])])
+    AC_MSG_ERROR([ *** Unable to find library Flocq >= 3.2 (http://flocq.gitlabpages.inria.fr/)])])
 rm -f conftest.v conftest.vo conftest.err
 
 AC_MSG_CHECKING([for Flocq >= 4.1])
@@ -114,7 +114,7 @@ AS_IF(
     $COQC conftest.v 2> conftest.err ],
   [ AC_MSG_RESULT([yes]) ],
   [ AC_MSG_RESULT([no])
-    AC_MSG_ERROR([ *** Unable to find library mathcomp.ssreflect >= 1.6 (http://math-comp.github.io/math-comp/)])])
+    AC_MSG_ERROR([ *** Unable to find library mathcomp.ssreflect (http://math-comp.github.io/math-comp/)])])
 rm -f conftest.v conftest.vo conftest.err
 # meet_morphism is a random constant that only exists in MathComp 2
 AC_MSG_CHECKING([for MathComp version])

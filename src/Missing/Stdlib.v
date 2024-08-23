@@ -1293,12 +1293,6 @@ Qed.
 
 End Integral.
 
-(* To obtain Q2R, "Import Stdlib.Compatibility Rdefinitions." *)
-(* TODO: remove once we require Coq >= 8.13. *)
-Module Compatibility.
-Definition Q2R x := (IZR (QArith_base.Qnum x) / IZR (Z.pos (QArith_base.Qden x)))%R.
-End Compatibility.
-
 (* TODO: remove once we require Coq >= 8.14. *)
 Lemma Z_div_mod_eq : forall a b : Z, (b > 0)%Z -> a = (b * (a / b) + a mod b)%Z.
 Proof.

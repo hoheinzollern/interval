@@ -282,8 +282,6 @@ Ltac get_vars t l :=
     end in
   aux t l true.
 
-Import Stdlib.Compatibility Rdefinitions.
-
 Ltac reify t l :=
   let rec aux t :=
     let aux_u o a :=

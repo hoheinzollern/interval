@@ -48,8 +48,6 @@ Ltac tuple_to_list params l :=
   | ?b => fail 100 "Unknown tactic parameter" b
   end.
 
-Import Stdlib.Compatibility Rdefinitions.
-
 Ltac do_interval_generalize output :=
   let H := fresh "H" in
   intro H ;
@@ -60,8 +58,6 @@ Ltac do_interval_generalize output :=
     let b' := eval vm_compute in b in
     replace b with b' by (vm_cast_no_check (eq_refl b')) ;
     let o := eval cbv -[IZR Rdiv Rle Q2R] in (contains_output b') in
-    let o := eval unfold Stdlib.Compatibility.Q2R in o in
-    let o := eval cbv -[IZR Rdiv Rle Q2R] in o in
     let o := eval cbv beta in (o t) in
     lazymatch o with
     | True => fail "Nothing known about" t
