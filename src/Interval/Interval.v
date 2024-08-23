@@ -163,13 +163,12 @@ destruct yi as [|yl yu].
 easy.
 destruct xi as [|xl xu].
 easy.
-intros [H|H]; revert H.
-{ case xl; [now simpl|]; intro rxl.
-  case xu; [now simpl|]; intros rxu Hr [|x] H; [now simpl|].
-  exfalso; apply (Rlt_irrefl rxl); revert Hr; apply Rle_lt_trans.
-  elim H; apply Rle_trans. }
-intros [H1 H2] [|v] Hv.
+intros H [|v] Hv.
 easy.
+destruct H as [H|[H1 H2]].
+{ destruct xl as [|xl]. easy.
+  destruct xu as [|xu]. easy.
+  simpl in Hv. lra. }
 apply contains_le in Hv.
 apply le_contains.
 now apply le_lower_trans with (1 := H1).
