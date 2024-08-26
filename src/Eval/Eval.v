@@ -422,6 +422,35 @@ Fixpoint bisect bounds idx check steps { struct steps } :=
     bisect_step bounds i check (fun b => bisect b idx check steps)
   end.
 
+Lemma change_nth_bisect :
+  forall bounds idx x,
+  contains_all bounds x ->
+  contains_all (change_nth idx bounds (fun xi : I.type => fst (I.bisect xi))) x \/
+  contains_all (change_nth idx bounds (fun xi : I.type => snd (I.bisect xi))) x.
+Proof.
+intros bounds i x H.
+destruct (I.bisect_correct (nth i bounds I.nai) (Xreal (nth i x 0))) as [Hi|Hi].
+- apply H.
+- left.
+  split.
+    rewrite length_change_nth.
+    apply H.
+  intros n.
+  generalize (change_nth_correct n i bounds I.nai (fun xi => fst (I.bisect xi))).
+  intros [[_ [<- ->]] | ->].
+  exact Hi.
+  apply H.
+- right.
+  split.
+    rewrite length_change_nth.
+    apply H.
+  intros n.
+  generalize (change_nth_correct n i bounds I.nai (fun xi => snd (I.bisect xi))).
+  intros [[_ [<- ->]] | ->].
+  exact Hi.
+  apply H.
+Qed.
+
 Theorem bisect_correct :
   forall steps bounds idx check (P : _ -> Prop),
   ( forall xi x, contains_all xi x ->
@@ -451,28 +480,9 @@ intros H1 Hc.
 specialize (H1 eq_refl x).
 assert (H2 := IH _ _ Hc x).
 clear -H H1 H2.
-destruct (I.bisect_correct (nth i bounds I.nai) (Xreal (nth i x 0))) as [Hi|Hi].
-- apply H.
-- apply H1.
-  clear -H Hi.
-  split.
-    rewrite length_change_nth.
-    apply H.
-  intros n.
-  generalize (change_nth_correct n i bounds I.nai (fun xi => fst (I.bisect xi))).
-  intros [[_ [<- ->]] | ->].
-  exact Hi.
-  apply H.
-- apply H2.
-  clear -H Hi.
-  split.
-    rewrite length_change_nth.
-    apply H.
-  intros n.
-  generalize (change_nth_correct n i bounds I.nai (fun xi => snd (I.bisect xi))).
-  intros [[_ [<- ->]] | ->].
-  exact Hi.
-  apply H.
+destruct (change_nth_bisect bounds i x H) as [H0|H0].
+- now apply H1.
+- now apply H2.
 Qed.
 
 Definition lookup_step fi (bounds : list I.type) i output cont :=
@@ -480,10 +490,10 @@ Definition lookup_step fi (bounds : list I.type) i output cont :=
   else
     let bounds' := change_nth i bounds (fun xi => fst (I.bisect xi)) in
     let output := cont bounds' output in
-    if I.lower_bounded output || I.upper_bounded output then
+    if I.subset I.whole output then output
+    else
       let bounds' := change_nth i bounds (fun xi => snd (I.bisect xi)) in
-      cont bounds' output
-    else output.
+      cont bounds' output.
 
 Fixpoint lookup_main fi bounds idx output steps { struct steps } :=
   match steps, idx with
@@ -508,9 +518,76 @@ Fixpoint lookup_piece bounds idx steps { struct steps } :=
 Definition lookup fi bounds idx extend steps :=
   let bounds' := lookup_piece bounds idx steps in
   let output := extend (fi bounds') in
-  if I.lower_bounded output || I.upper_bounded output then
-    lookup_main fi bounds idx output steps
-  else output.
+  if I.subset I.whole output then output
+  else lookup_main fi bounds idx output steps.
+
+Theorem lookup_correct :
+  forall steps bounds idx extend fi f,
+  ( forall xi x, contains_all xi x -> contains (I.convert (fi xi)) (Xreal (f x)) ) ->
+  let output := lookup fi bounds idx extend steps in
+  forall x,
+  contains_all bounds x ->
+  contains (I.convert output) (Xreal (f x)).
+Proof.
+assert (Su: forall b1 b2,
+  forall y, contains (I.convert b1) (Xreal y) ->
+  contains (I.convert (if I.subset I.whole b2 then b2 else b1)) (Xreal y)).
+{ intros b1 b2 y Hy.
+  destruct I.subset eqn:H.
+  apply I.subset_correct with (2 := H).
+  apply I.whole_correct.
+  easy. }
+intros depth bounds idx extend fi f Hf.
+unfold lookup.
+set (b := extend _).
+clearbody b.
+set (b0 := lookup_main _ _ _ _ _).
+intros x Hx.
+apply Su.
+revert x Hx.
+refine (@proj2 (forall y, contains (I.convert b) (Xreal y) -> contains (I.convert b0) (Xreal y)) _ _).
+unfold b0.
+clear -Hf Su. revert idx bounds b.
+induction depth as [|depth IH] ; simpl.
+{ intros _ bounds b.
+  split.
+  intros y Hy.
+  apply I.join_correct.
+  now right.
+  intros x Hx.
+  apply I.join_correct.
+  left.
+  now apply Hf. }
+intros [|idx] bounds b.
+{ split.
+  intros y Hy.
+  apply I.join_correct.
+  now right.
+  intros x Hx.
+  apply I.join_correct.
+  left.
+  now apply Hf. }
+specialize (IH (app l (idx :: nil))).
+unfold bisect_step, lookup_step.
+set (b2 := lookup_main _ _ _ _ _).
+set (b3 := lookup_main _ _ _ _ _).
+destruct (I.subset (fi bounds) b) eqn:Hb.
+{ split. easy.
+  intros x Hx.
+  apply I.subset_correct with (2 := Hb).
+  now apply Hf. }
+clear Hb.
+split.
+{ intros y Hy.
+  apply Su.
+  now apply IH, IH. }
+intros x Hx.
+apply Su.
+destruct (change_nth_bisect bounds idx x Hx) as [H0|H0].
+- apply (proj1 (IH _ _)).
+  now apply IH.
+- now apply IH.
+Qed.
 
 Lemma continuous_eval_ext :
   forall prog vars x m,
