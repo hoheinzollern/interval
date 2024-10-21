@@ -452,7 +452,7 @@ Definition Papprox (t : PrimFloat.float) := Eval cbv in evalPrim g0 (t, tt).
 
 Definition exp_aux (x : F.type) :=
   if PrimFloat.ltb x (-0x1.74385446d71c4p9)%float then (0%float, 0x1p-1074%float) else
-  if PrimFloat.ltb 0x1.62e42fefa39efp9%float x then (0x1.fffffffffff2ap1023%float, infinity) else
+  if PrimFloat.ltb 0x1.62e42fefa39efp9%float x then (0x1.fffffffffffffp1023%float, infinity) else
   let k0 := (x * InvLog2_64 + 0x1.8p52)%float in let kf := (k0 - 0x1.8p52)%float in
   let tf := (x - kf * Log2div64h - kf * Log2div64l)%float in
   let ki := (normfr_mantissa (fst (frshiftexp k0)) - 6755399440921280)%uint63 in
@@ -483,9 +483,18 @@ set (xr := B2R (Prim2B x)). fold xr in Fx. case Rlt_bool_spec.
   refine ((fun J => conj (conj eq_refl (proj1 J)) (conj eq_refl (proj2 J))) _).
   interval with (i_prec 80). }
 case Rlt_bool_spec.
-{ intros. change ((true = true /\ IZR (9007199254740778 * 2 ^ 971) <= Rtrigo_def.exp xr) /\
-    true = true /\ True). clearbody xr. cbv -[Rinv Rmult Rlt IZR] in H.
+{ intros H _.
+  change ((true = true /\ IZR (9007199254740991 * 2 ^ 971) <= Rtrigo_def.exp xr) /\ true = true /\ True).
   refine ((fun J => conj (conj eq_refl J) (conj eq_refl I)) _).
+  apply (@succ_le_lt radix2 (FLT_exp (-1074) 53)) in H.
+  2: now apply FLT_exp_valid.
+  2, 3: apply generic_format_B2R.
+  clearbody xr. revert H. unfold succ.
+  rewrite Rle_bool_true by now apply F2R_ge_0.
+  set (f := Prim2B _).
+  generalize (@Bulp_correct prec emax Hprec Hmax f eq_refl).
+  change (fexp prec emax) with (FLT_exp (-1074) 53). intros [<- _] H.
+  cbv -[Rinv Rmult Rle IZR] in H.
   interval with (i_prec 80). }
 intros H0 H1.
 assert (Hx : -6548164122079684 * Rpow2 (-43) <= xr <= 6243314768165359 * Rpow2 (-43)).
@@ -954,7 +963,7 @@ Definition exp (prec : F.precision) xi :=
     Ibnd
      (if F.real xl then
         if PrimFloat.ltb xl (-0x1.74385446d71c4p9)%float then 0%float else
-        if PrimFloat.ltb 0x1.62e42fefa39efp9%float xl then 0x1.fffffffffff2ap1023%float else
+        if PrimFloat.ltb 0x1.62e42fefa39efp9%float xl then 0x1.fffffffffffffp1023%float else
         let '(C, y, kq) := aux xl in
         next_down (ldshiftexp (C + (y + -0x1.25p-57))%float kq)
       else 0%float)
