@@ -95,7 +95,7 @@ let rec tr_bounds evd t =
   | Constr.App (f, [|i1;i2|]) when is_global evd coq_and f ->
       let (b1, x1) = tr_ineq evd i1 in
       let (x2, b2) = tr_ineq evd i2 in
-      if x1 != x2 then raise (Unrecognized t);
+      if x1 <> x2 then raise (Unrecognized t);
       (tr_R evd b1, x1, tr_R evd b2)
   | _ ->
       raise (Unrecognized t)
