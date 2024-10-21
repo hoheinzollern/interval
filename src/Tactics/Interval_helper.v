@@ -452,28 +452,22 @@ Ltac do_interval_intro y extend fvar bvars prec degree depth native nocheck eval
   let idx := get_var_indices vars bvars in
   let i := fresh "__i" in
   evar (i : I.type) ;
-  cut (contains (I.convert i) (Xreal y))%R ; cycle 1 ; [
+  cut (contains (I.convert i) (Xreal y)) ; cycle 1 ; [
     let vars := get_vars y vars in
     reify_partial y vars ;
     apply (eq_ind _ (fun z => contains (I.convert i) (Xreal z))) ;
     find_hyps vars ;
-    lazymatch eval_tac with
-    | itm_naive =>
-      apply (eval_bisect_contains_correct prec depth idx) ;
-      match goal with
-      | |- _ ?hyps ?prog ?consts _ = true =>
+    lazymatch goal with
+    | |- eval_hyps ?hyps ?vars (contains _ (Xreal (eval_real' ?prog _ ?consts))) =>
+      lazymatch eval_tac with
+      | itm_naive =>
+        apply (eval_bisect_contains_correct prec depth idx vars hyps prog consts) ;
         do_instantiate i extend native (eval_bisect_plain prec depth extend idx hyps prog consts)
-      end
-    | itm_autodiff =>
-      apply (eval_bisect_contains_diff_correct prec depth idx) ;
-      match goal with
-      | |- _ ?hyps ?prog ?consts _ = true =>
+      | itm_autodiff =>
+        apply (eval_bisect_contains_diff_correct prec depth idx vars hyps prog consts) ;
         do_instantiate i extend native (eval_bisect_diff_plain prec depth extend idx hyps prog consts)
-      end
-    | itm_taylor =>
-      apply (eval_bisect_contains_taylor_correct prec degree depth idx) ;
-      match goal with
-      | |- _ ?hyps ?prog ?consts _ = true =>
+      | itm_taylor =>
+        apply (eval_bisect_contains_taylor_correct prec degree depth idx vars hyps prog consts) ;
         do_instantiate i extend native (eval_bisect_taylor_plain prec degree depth extend idx hyps prog consts)
       end
     end ;
