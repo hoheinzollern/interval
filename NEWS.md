@@ -1,3 +1,10 @@
+Version 4.11.1
+--------------
+
+* worked around some impedance mismatch between `Do` and Coq 8.20.0 (fixed in 8.20.1)
+* proved the correctness of function `lookup`
+* tightened the enclosure of `exp` in case of overflow
+
 Version 4.11.0
 --------------
 
