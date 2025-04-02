@@ -256,23 +256,25 @@ Proof.
 Qed.
 
 Lemma is_lim_RInv_p_infty:
-is_lim [eta Rinv] p_infty 0.
+  is_lim Rinv p_infty 0.
 Proof.
-suff -> : 0 = Rbar_inv p_infty => // .
-apply: (is_lim_inv (fun x => x) p_infty p_infty) => // .
+suff -> : 0 = real (Rbar_inv p_infty) => //.
+exact: (is_lim_inv (fun x => x) p_infty p_infty).
 Qed.
 
 Lemma is_lim_RInv_m_infty:
-is_lim [eta Rinv] m_infty 0.
+  is_lim Rinv m_infty 0.
 Proof.
-suff -> : 0 = Rbar_inv m_infty => // .
-apply: (is_lim_inv (fun x => x) m_infty m_infty) => // .
+suff -> : 0 = real (Rbar_inv m_infty) => //.
+exact: (is_lim_inv (fun x => x) m_infty m_infty).
 Qed.
 
 
-Lemma is_lim_powerRZ_0 alpha (Halpha : (alpha < 0)%Z) :
-  is_lim (powerRZ^~ (alpha)%Z) p_infty (0%R).
+Lemma is_lim_powerRZ_0 :
+  forall alpha, (alpha < 0)%Z ->
+  is_lim (fun x => powerRZ x alpha) p_infty 0.
 Proof.
+intros alpha Halpha.
 apply: (powerRZ_ind (fun n f => (n < 0)%Z -> is_lim f p_infty (0%R))) => // [n Hn|n Hn|].
 - move: Hn. have -> : 0%Z = (Z.of_nat 0%N)%Z by [].
   rewrite -Nat2Z.inj_lt; lia.
@@ -286,18 +288,16 @@ apply: (powerRZ_ind (fun n f => (n < 0)%Z -> is_lim f p_infty (0%R))) => // [n H
       by lra.
   case: m Hm Hn => [|m Hm] Hn.
   + move => _ /=.
-    have -> : 0 = Rbar_mult (Finite 0) (Finite 1) by rewrite /= Rmult_0_l.
+    have -> : 0 = real (Rbar_mult (Finite 0) (Finite 1)) by apply eq_sym, Rmult_0_l.
     apply: (is_lim_mult (fun x => / x) (fun x => / 1) p_infty 0 1) => // .
     exact: is_lim_RInv_p_infty.
     by rewrite Rinv_1; exact: is_lim_const.
 
-  have -> : 0 = Rbar_mult (Finite 0) (Finite 0) by rewrite /= Rmult_0_l.
-  (* why so much detail needed ? *)
+  have -> : 0 = real (Rbar_mult (Finite 0) (Finite 0)) by apply eq_sym, Rmult_0_l.
   apply: (is_lim_mult (fun x => / x) (fun x => / x^m.+1) p_infty 0 0) => // .
   exact: is_lim_RInv_p_infty.
-  apply: Hm. rewrite Z.opp_neg_pos.
-  have -> : 0%Z = (Z.of_nat 0%N)%Z by [].
-  by rewrite -Nat2Z.inj_lt; lia.
+  apply: Hm.
+  lia.
 move => f g Hfg n H1 H2.
 apply: (is_lim_ext f g _ _ Hfg).
 by apply: H1.
@@ -324,8 +324,8 @@ elim: n => [|n Hn].
 - move =>  Hf0.
 apply: (is_lim_ext (fun x => (f x) * (f x)^n.+1)).
   by move => y.
-have {1}-> : 0 = Rbar_mult 0 0 by rewrite /= Rmult_0_l.
-apply: (is_lim_mult f (fun x => (f x)^n.+1) p_infty 0 0) => // .
+have {1}-> : 0 = real (Rbar_mult 0 0) by apply eq_sym, Rmult_0_l.
+apply: (is_lim_mult f (fun x => (f x)^n.+1) p_infty 0 0) => //.
 exact: Hn.
 Qed.
 
@@ -451,8 +451,7 @@ apply: (is_lim_ext_loc (fun x => (- (INR beta.+1 / IZR (alpha + 1)) * (ln (X x) 
                ^ beta.+1) ).
   by exists 0; move => x Hx ; rewrite Htransform // .
 apply: is_lim_pow_0.
-have -> : 0 = Rbar_mult (- (INR beta.+1 / IZR (alpha + 1))) 0.
-  by rewrite /Rbar_mult /Rbar_mult' Rmult_0_r.
+have -> : 0 = real (Rbar_mult (- (INR beta.+1 / IZR (alpha + 1))) 0) by apply eq_sym, Rmult_0_r.
 apply (is_lim_scal_l (fun (x : R) => (ln (X x) * / X x)) (- (INR beta.+1 / IZR (alpha + 1))) p_infty 0).
 apply: (is_lim_comp (fun x => ln x / x) X p_infty 0 p_infty).
   + exact: is_lim_div_ln_p.
