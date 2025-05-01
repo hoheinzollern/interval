@@ -23,7 +23,7 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import ZArith Reals.
 From Flocq Require Import Raux.
-From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
 
 Require Import Interval.
 Require Import Datatypes Basic_rec.

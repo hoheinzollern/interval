@@ -22,7 +22,7 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import ZArith Reals.
 From Coquelicot Require Import Coquelicot.
-From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
 From Flocq Require Import Core.
 
 Require Import Stdlib.

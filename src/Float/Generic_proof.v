@@ -19,7 +19,7 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import Reals Bool ZArith Psatz.
 From Flocq Require Import Core Digits Bracket Round Operations.
-From mathcomp.ssreflect Require Import ssrbool.
+From mathcomp Require Import ssrbool.
 
 Require Import Stdlib.
 Require Import Xreal.

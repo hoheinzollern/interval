@@ -21,7 +21,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import ZArith Rfunctions NaryFunctions Lia.
-From mathcomp.ssreflect Require Import ssreflect ssrbool ssrfun eqtype ssrnat seq fintype bigop tuple.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype ssrnat seq fintype bigop tuple.
 
 Require Import MathComp.
 

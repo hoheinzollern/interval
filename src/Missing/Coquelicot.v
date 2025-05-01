@@ -20,7 +20,7 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import Reals Psatz.
 From Coquelicot Require Import Coquelicot.
-From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq fintype bigop.
 
 Require Import Stdlib.
 Require Import MathComp.

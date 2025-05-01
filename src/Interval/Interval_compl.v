@@ -21,7 +21,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import ZArith Reals Psatz.
-From mathcomp.ssreflect Require Import ssreflect ssrbool ssrfun eqtype ssrnat bigop.
+From mathcomp Require Import ssreflect ssrbool ssrfun eqtype ssrnat bigop.
 From Coquelicot Require Import Coquelicot.
 
 Require Import Stdlib.

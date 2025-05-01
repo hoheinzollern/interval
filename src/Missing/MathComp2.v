@@ -22,7 +22,7 @@ liability. See the COPYING file for more details.
 
 From HB Require Import structures.
 From Coq Require Import Rdefinitions Raxioms RIneq Rbasic_fun.
-From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq bigop.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq bigop.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
