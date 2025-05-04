@@ -19,7 +19,7 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import ZArith Reals Lia Bool Psatz.
 From Flocq Require Import Zaux Raux Digits Bracket.
-From mathcomp.ssreflect Require Import ssrbool.
+From mathcomp Require Import ssrbool.
 
 Require Import Xreal.
 Require Import Basic.

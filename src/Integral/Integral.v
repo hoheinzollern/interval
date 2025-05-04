@@ -19,7 +19,7 @@ liability. See the COPYING file for more details.
 
 From Coq Require Import Reals List Psatz.
 From Coquelicot Require Import Coquelicot.
-From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool.
+From mathcomp Require Import ssreflect ssrfun ssrbool.
 
 Require Import Stdlib.
 Require Import Coquelicot.

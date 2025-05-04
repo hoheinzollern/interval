@@ -18,7 +18,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import List Arith ZArith Psatz.
-From mathcomp.ssreflect Require Import ssrfun ssrbool fintype.
+From mathcomp Require Import ssrfun ssrbool fintype.
 
 Section Permut.
 

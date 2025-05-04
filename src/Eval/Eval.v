@@ -21,7 +21,7 @@ From Coq Require Import Bool Reals.
 From Flocq Require Import Zaux Raux.
 From Coq Require Import List.
 From Coquelicot Require Import Coquelicot.
-From mathcomp.ssreflect Require Import ssreflect.
+From mathcomp Require Import ssreflect.
 
 Require Import Stdlib.
 Require Import Xreal.

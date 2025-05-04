@@ -21,7 +21,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import Rdefinitions Raxioms RIneq Rbasic_fun.
-From mathcomp.ssreflect Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq bigop.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq bigop.
 Require Export MathComp1or2.
 
 Set Implicit Arguments.

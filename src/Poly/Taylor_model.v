@@ -18,7 +18,7 @@ liability. See the COPYING file for more details.
 *)
 
 From Coq Require Import Reals ZArith Psatz.
-From mathcomp.ssreflect Require Import ssreflect ssrbool ssrfun eqtype ssrnat seq bigop.
+From mathcomp Require Import ssreflect ssrfun ssrbool eqtype ssrnat seq bigop.
 
 Require Import Interval.
 Require Import Xreal.
