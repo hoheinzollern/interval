@@ -116,15 +116,15 @@ AS_IF(
   [ AC_MSG_RESULT([no])
     AC_MSG_ERROR([ *** Unable to find ssreflect from mathcomp library (http://math-comp.github.io/math-comp/)])])
 rm -f conftest.v conftest.vo conftest.err
-# meet_morphism is a random constant that only exists in MathComp 2
+# sub_choiceMixin is a random constant that only exists in MathComp 1
 AC_MSG_CHECKING([for MathComp version])
 AS_IF(
-  [ echo "From mathcomp Require Import order. Definition foo := Order.meet_morphism." > conftest.v
+  [ echo "From mathcomp Require Import choice. Definition foo := sub_choiceMixin." > conftest.v
     $COQC conftest.v 2> conftest.err ],
-  [ AC_MSG_RESULT([2])
-    MATHCOMP_1_OR_2=2 ],
   [ AC_MSG_RESULT([1])
-    MATHCOMP_1_OR_2=1 ])
+    MATHCOMP_1_OR_2=1 ],
+  [ AC_MSG_RESULT([2])
+    MATHCOMP_1_OR_2=2 ])
 rm -f conftest.v conftest.vo conftest.err
 AC_SUBST(MATHCOMP_1_OR_2)
 
