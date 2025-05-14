@@ -35,6 +35,8 @@ Definition plot2 (f : R -> R) (ox dx oy dy : R) (h : Z) (l : list (Z * Z)) :=
   let r := nth i l (0%Z, h) in
   (oy + dy * IZR (fst r) <= f x <= oy + dy * IZR (snd r))%R.
 
+Register plot2 as interval.tactics.plot_helper.plot2.
+
 Module PlotTacticAux (F : FloatOps with Definition radix := Zaux.radix2 with Definition sensible_format := true) (I : IntervalOps with Module F := F).
 
 Module F' := FloatExt F.

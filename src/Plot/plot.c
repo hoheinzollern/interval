@@ -1,4 +1,6 @@
 open Big_int_Z
+open Util
+open Names
 
 #if COQVERSION >= 81500
 let constr_of_global gr = UnivGen.constr_of_monomorphic_global (Global.env ()) gr
@@ -12,33 +14,39 @@ let decompose_app = EConstr.decompose_app
 let decompose_app = Termops.decompose_app_vect
 #endif
 
+exception Foo of string
+
 let find_reference t x =
-  lazy (EConstr.of_constr (constr_of_global (Coqlib.gen_reference_in_modules "Interval" [t] x)))
+  lazy (EConstr.of_constr (constr_of_global (
+    Rocqlib.lib_ref (String.concat "." (t @ [x])))))
 
 let is_global evd c t = EConstr.eq_constr evd (Lazy.force c) t
 
-let coq_ref_Datatypes = find_reference ["Coq"; "Init"; "Datatypes"]
-let coq_cons = coq_ref_Datatypes "cons"
-let coq_nil = coq_ref_Datatypes "nil"
-let coq_pair = coq_ref_Datatypes "pair"
+let coq_ref_list = find_reference ["core"; "list"]
+let coq_cons = coq_ref_list "cons"
+let coq_nil = coq_ref_list "nil"
 
-let coq_ref_Logic = find_reference ["Coq"; "Init"; "Logic"]
-let coq_and = coq_ref_Logic "and"
+let coq_pair = find_reference ["core"; "prod"] "intro"
 
-let coq_ref_BinNums = find_reference ["Coq"; "Numbers"; "BinNums"]
-let coq_Z0 = coq_ref_BinNums "Z0"
-let coq_Zpos = coq_ref_BinNums "Zpos"
-let coq_Zneg = coq_ref_BinNums "Zneg"
-let coq_xH = coq_ref_BinNums "xH"
-let coq_xI = coq_ref_BinNums "xI"
-let coq_xO = coq_ref_BinNums "xO"
+let coq_ref_and = find_reference ["core"; "and"]
+let coq_and = coq_ref_and "type"
 
-let coq_ref_Rdefinitions = find_reference ["Coq"; "Reals"; "Rdefinitions"]
-let coq_Rdiv = coq_ref_Rdefinitions "Rdiv"
-let coq_Rle = coq_ref_Rdefinitions "Rle"
-let coq_IZR = coq_ref_Rdefinitions "IZR"
+let coq_ref_num_Z = find_reference ["num"; "Z"]
+let coq_Z0 = coq_ref_num_Z "Z0"
+let coq_Zpos = coq_ref_num_Z "Zpos"
+let coq_Zneg = coq_ref_num_Z "Zneg"
 
-let interval_plot2 = find_reference ["Interval"; "Tactics"; "Plot_helper"] "plot2"
+let coq_ref_num_positive = find_reference ["num"; "pos"]
+let coq_xH = coq_ref_num_positive "xH"
+let coq_xI = coq_ref_num_positive "xI"
+let coq_xO = coq_ref_num_positive"xO"
+
+let coq_ref_reals_R = find_reference ["reals"; "R"]
+let coq_Rdiv = coq_ref_reals_R "Rdiv"
+let coq_Rle = coq_ref_reals_R "Rle"
+let coq_IZR = coq_ref_reals_R "IZR"
+
+let interval_plot2 = find_reference ["interval"; "tactics"; "plot_helper"] "plot2"
 
 exception Unrecognized of EConstr.t
 
