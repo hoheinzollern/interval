@@ -309,7 +309,11 @@ unfold classify.
 rewrite classify_spec.
 unfold SF64classify, SFclassify.
 case Prim2SF; [now intros [ | ]..|now simpl| ].
-now intros [ | ] m e; case Pos.eqb.
+intros [] m e; case Pos.eqb.
+all: auto; simpl; destruct (match digits2_pos m with
+             | 53%positive => true
+             | _ => false
+             end); auto.
 Qed.
 
 Lemma valid_ub_correct :
@@ -322,7 +326,11 @@ unfold classify.
 rewrite classify_spec.
 unfold SF64classify, SFclassify.
 case Prim2SF; [now intros [ | ]..|now simpl| ].
-now intros [ | ] m e; case Pos.eqb.
+intros [] m e; case Pos.eqb.
+all: auto; simpl; destruct (match digits2_pos m with
+             | 53%positive => true
+             | _ => false
+             end); auto.
 Qed.
 
 Lemma classify_correct :
@@ -338,7 +346,11 @@ rewrite classify_spec.
 unfold SF64classify, SFclassify.
 unfold toX, toF, FtoX.
 case Prim2SF; [now intros [ | ]..|reflexivity| ].
-now intros [ | ] m e; case Pos.eqb.
+intros [] m e; case Pos.eqb.
+all: auto; simpl; destruct (match digits2_pos m with
+             | 53%positive => true
+             | _ => false
+             end); auto.
 Qed.
 
 Lemma is_nan_correct :
@@ -2528,7 +2540,7 @@ assert (Hmagmh : (mh <> 0 -> 0 < Raux.mag radix2 (IZR mh) <= FloatOps.prec)%Z).
   now apply IZR_lt. }
 assert (Hmagmh1 : (mh + 1 = 2 ^ FloatOps.prec
                    \/ 0 < Raux.mag radix2 (IZR (mh + 1)) <= FloatOps.prec)%Z).
-{ assert (H := Ztac.Zlt_le_add_1 _ _ (proj2 Hmh)).
+{ assert (H := Zlt_le_succ _ _ (proj2 Hmh)).
   rewrite Z.le_lteq in H; destruct H as [H|H]; [right|now left].
   split.
   { now apply mag_gt_bpow; simpl; rewrite Rabs_pos_eq; apply IZR_le; lia. }

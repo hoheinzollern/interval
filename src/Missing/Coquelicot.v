@@ -94,7 +94,9 @@ Lemma Derive_nS f n :
   Derive_n f n.+1 = Derive_n (Derive f) n.
 Proof.
 elim: n => [//|n IHn].
-by rewrite -[in LHS]addn1 /= -addnE addn1 IHn. (* SSReflect trick *)
+simpl.
+transitivity ([eta Derive (Derive_n f n.+1)]); [ auto | ].
+by rewrite IHn.
 Qed.
 
 Lemma ex_derive_nSS f n :

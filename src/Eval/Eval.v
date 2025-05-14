@@ -33,6 +33,8 @@ Require Import Taylor_model.
 Require Import Tree.
 Require Import Prog.
 
+Import Compare_dec.
+
 Definition no_floor_op op :=
   match op with
   | Nearbyint _ => false

@@ -27,6 +27,8 @@ Require Import Sig.
 Require Import Interval.
 Require Import Float.
 
+Import Factorial.
+
 Module TranscendentalFloatFast (F : FloatOps with Definition sensible_format := true).
 
 Module I := FloatInterval F.
@@ -952,7 +954,7 @@ assert (Ix: contains (I.convert xi) (Xreal (toR x))).
   2: now apply I.valid_ub_real; rewrite Rx.
   split ; apply Rle_refl.
 set (x2i := I.sqr prec xi).
-assert (Hexit: forall k powi divi,
+assert (Hexit : forall k powi divi,
     contains (I.convert powi) (Xreal (toR x ^ (2 * k))) ->
     contains (I.convert divi) (Xreal (INR (fact (2 * (k + 1))))) ->
     contains (I.convert (I.bnd F.zero (I.upper (I.div prec (I.mul prec powi x2i) divi))))

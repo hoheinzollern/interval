@@ -3,6 +3,8 @@ From Coq Require Import Bool List Reals Lia Lra.
 
 From Flocq Require Import Core PrimFloat BinarySingleNaN Operations.
 
+Import BinNat Zbool Zorder.
+
 Require Generic_proof.
 
 Local Open Scope R_scope.
@@ -2023,9 +2025,16 @@ destruct (Uint63.eqb (- x) 0) eqn:H.
   apply PrimInt63_opp_inj in H. rewrite H in P'. cbn in P'. lia. }
 destruct (eqbP (- x) 0) as [_ | P'']; [easy |].
 assert (H': x <> 0%uint63) by now intros ->. apply Zle_lt_or_eq in P.
-destruct P as [P | P]; [generalize (Uint63.to_Z_bounded (- x)); lia |].
+assert (H2 : (0 - x = - x)%uint63); [ auto | ].
+destruct P as [P | P].
+  generalize (Uint63.to_Z_bounded (- x)).
+  rewrite H2 in P.
+  lia.
 change 0%Z with (- 0)%Z in P. apply Z.opp_inj in P.
-change 0%Z with (Uint63.to_Z 0) in P. apply Uint63.to_Z_inj in P.
+change 0%Z with (Uint63.to_Z 0) in P. rewrite H2 in P.
+apply Uint63.to_Z_inj in P.
+exfalso.
+apply H'.
 now rewrite <- P in P''.
 Qed.
 

@@ -26,6 +26,8 @@ Require Import Basic.
 Require Import Sig.
 Require Import Interval.
 
+Import Zbool Zorder.
+
 Definition output_bnd (fmt upp : bool) radix (s : bool) m e :=
   let m := if s then Zneg m else Zpos m in
   match e with

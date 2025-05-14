@@ -23,6 +23,8 @@ From Flocq Require Import Raux.
 Require Import Stdlib.
 Require Import Xreal.
 
+Import Znat.
+
 Theorem derivable_imp_defined :
   forall f r d u v,
   f (Xreal r) = Xreal u -> u <> v ->

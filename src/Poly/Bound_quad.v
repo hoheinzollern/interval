@@ -143,7 +143,8 @@ apply: eq_bigr=> i _.
 rewrite /PolR.tail /PolR.nth nth_drop.
 (* some bookkeeping about powers *)
 rewrite -!(pow_powerRZ _ 3).
-rewrite /= !Rmult_assoc; f_equal; ring.
+rewrite /= !Rmult_assoc; f_equal.
+  by rewrite add0n Rmult_1_r -!Rmult_assoc Rmult_comm !Rmult_assoc.
 by rewrite addnC leq_subnK.
 move=> i /andP [Hi _].
 by rewrite PolR.nth_default ?Rmult_0_l.

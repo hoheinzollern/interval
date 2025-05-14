@@ -23,6 +23,8 @@ liability. See the COPYING file for more details.
 From Coq Require Import Reals Psatz.
 From Coquelicot Require Import Coquelicot.
 
+Import Factorial.
+
 Require Import Stdlib.
 
 Local Open Scope R_scope.

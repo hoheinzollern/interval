@@ -1567,7 +1567,7 @@ constructor.
       rewrite PolR.Derive_horner.
       rewrite -{1}(Rmult_1_r (qk^`().[x])) -Rmult_plus_distr_l.
       rewrite SuccNat2Pos.id_succ.
-      rewrite -addnE addn1 Rmult_1_r Rmult_1_l; simpl predn.
+      rewrite addn1 Rmult_1_r Rmult_1_l; simpl predn.
       (* Now, some reals' bookkeeping *)
       rewrite -mul2n (fact_simpl k.+1) 2!mult_INR -[INR 2]/2%R.
       rewrite -pow_mult multE muln2 -addnn addSnnS pow_add.

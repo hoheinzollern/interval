@@ -24,6 +24,8 @@ Require Import Generic_proof.
 Require Import Interval_helper.
 Require Import Xreal Interval Tree Reify Prog.
 
+Import Znat.
+
 Definition reify_var : R.
 Proof. exact 0%R. Qed.
 
